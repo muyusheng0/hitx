@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>吉大自动化八班 - 同学录</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='80' font-size='80'>📖</text></svg>">
+</head>
+<body>
+    <!-- 顶部标题栏 -->
+    <header class="top-header">
+        <h1 class="header-title">吉大<span>自动化</span>八班</h1>
+        <div id="userStatus" class="user-status"></div>
+        <div class="notification-container" id="notificationContainer" style="display: none;">
+            <button class="notification-bell" id="notificationBell" onclick="toggleNotificationDropdown()">
+                <span class="bell-icon">🔔</span>
+                <span class="notification-badge" id="notificationBadge" style="display: none;">0</span>
+            </button>
+            <div class="notification-dropdown" id="notificationDropdown">
+                <div class="notification-header">
+                    <span>消息通知</span>
+                    <button class="notification-mark-read" onclick="markAllNotificationsRead()">全部已读</button>
+                </div>
+                <div class="notification-list" id="notificationList">
+                    <div class="notification-empty">暂无通知</div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- 主内容 -->
+    <main class="main-content">
+        <div class="container">
+            <!-- 最新动态 -->
+            {% if activities %}
+            <section class="latest-activities">
+                <h2 class="section-title">📅 最新动态<span id="unreadBadge" class="unread-badge" style="display:none;">0</span></h2>
+                <div class="activity-carousel">
+                    <div class="carousel-viewport" id="activityCarousel">
+                        {% for act in activities %}
+                        <div class="carousel-item"
+                             data-type="{{ act.type }}"
+                             data-actor="{{ act.actor }}"
+                             data-msg-id="{{ act.msg_id | default('') }}"
+                             data-msg-content="{{ act.msg_content | default('') }}"
+                             data-img-name="{{ act.img_name | default('') }}"
+                             data-img-url="{{ act.img_url | default('') }}"
+                             data-video-title="{{ act.video_title | default('') }}"
+                             data-target-name="{{ act.target_name | default('') }}"
+                             onclick="handleActivityClick(this)">
+                            <div class="carousel-item-inner">
+                                <span class="type-tag">
+                                    {% if act.type == 'profile_update' %}📝 更新
+                                    {% elif act.type == 'message' %}
+                                        {% if act.msg_type == 'voice' %}🎤 语音
+                                        {% elif act.msg_type == 'voice_image' %}🎤📷 语音图文
+                                        {% elif act.msg_type == 'image' %}📷 图文
+                                        {% else %}💬 留言
+                                        {% endif %}
+                                    {% elif act.type == 'photo' %}📷 照片
+                                    {% elif act.type == 'video' %}🎬 视频
+                                    {% elif act.type == 'voice_shout' %}📢 喊话
+                                    {% endif %}
+                                </span>
+                                <div class="carousel-actor">{{ act.actor }}</div>
+                                <div class="carousel-content">{{ act.content }}</div>
+                                <div class="carousel-time">{{ act.time }}</div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <div class="carousel-nav">
+                        <button class="carousel-btn prev" onclick="scrollActivity(-1)">◀</button>
+                        <div class="carousel-dots" id="activityDots"></div>
+                        <button class="carousel-btn next" onclick="scrollActivity(1)">▶</button>
+                    </div>
+                </div>
+            </section>
+            {% endif %}
+
+            <!-- 最新留言 -->
+            <section class="recent-messages">
+                <h2 class="section-title" onclick="window.location.href='/lyb'" style="cursor:pointer;">📝 最新留言</h2>
+                <div class="message-list">
+                    {% for msg in recent_messages %}
+                    <div class="message-item" onclick="window.location.href='/lyb#msg-{{ msg.id }}'" style="cursor:pointer;">
+                        <div class="message-nickname">{{ msg.nickname }}</div>
+                        <div class="message-content">{{ msg.content }}</div>
+                        {% if msg.image %}
+                        <img src="{{ msg.image }}" style="max-width: 150px; max-height: 150px; margin-top: 10px; border-radius: 8px; display: block;">
+                        {% endif %}
+                        <div class="message-time">{{ msg.time }}</div>
+                    </div>
+                    {% else %}
+                    <div class="empty-message">还没有留言，快去写下第一句吧~</div>
+                    {% endfor %}
+                </div>
+            </section>
+
+            <!-- 时光轴 -->
+            <section class="timeline-section">
+                <h2 class="section-title">我们的时光</h2>
+                <div class="timeline">
+                    <div class="timeline-item">
+                        <div class="timeline-year">2015年 秋</div>
+                        <div class="timeline-event">金秋九月，带着梦想与期待，我们相聚在吉大南岭校区，军训场上挥洒汗水</div>
+                        {% if photos_by_year.get(2015) %}
+                        <div class="timeline-photos">
+                            {% for img in photos_by_year[2015] %}
+                            <img src="{{ img.url }}" onclick="showLightbox('{{ img.url }}')" style="width: 80px; height: 80px; object-fit: cover; border-radius: 8px; margin: 0.5rem 0.25rem; cursor: pointer;">
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-year">2016年</div>
+                        <div class="timeline-event">运动会上奋勇拼搏，元旦晚会上载歌载舞，班级凝聚力日益增强</div>
+                        {% if photos_by_year.get(2016) %}
+                        <div class="timeline-photos">
+                            {% for img in photos_by_year[2016] %}
+                            <img src="{{ img.url }}" onclick="showLightbox('{{ img.url }}')" style="width: 80px; height: 80px; object-fit: cover; border-radius: 8px; margin: 0.5rem 0.25rem; cursor: pointer;">
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-year">2017年</div>
+                        <div class="timeline-event">课程难度增加，我们互帮互助，实验室里共同探索通信的奥秘</div>
+                        {% if photos_by_year.get(2017) %}
+                        <div class="timeline-photos">
+                            {% for img in photos_by_year[2017] %}
+                            <img src="{{ img.url }}" onclick="showLightbox('{{ img.url }}')" style="width: 80px; height: 80px; object-fit: cover; border-radius: 8px; margin: 0.5rem 0.25rem; cursor: pointer;">
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-year">2018年 冬</div>
+                        <div class="timeline-event">考研复习的深夜，通宵自习室里的陪伴，梦想在心中发芽</div>
+                        {% if photos_by_year.get(2018) %}
+                        <div class="timeline-photos">
+                            {% for img in photos_by_year[2018] %}
+                            <img src="{{ img.url }}" onclick="showLightbox('{{ img.url }}')" style="width: 80px; height: 80px; object-fit: cover; border-radius: 8px; margin: 0.5rem 0.25rem; cursor: pointer;">
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-year">2019年 夏</div>
+                        <div class="timeline-event">毕业季，不说再见，穿着学士服定格青春，愿此去前程似锦</div>
+                        {% if photos_by_year.get(2019) %}
+                        <div class="timeline-photos">
+                            {% for img in photos_by_year[2019] %}
+                            <img src="{{ img.url }}" onclick="showLightbox('{{ img.url }}')" style="width: 80px; height: 80px; object-fit: cover; border-radius: 8px; margin: 0.5rem 0.25rem; cursor: pointer;">
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-year">2020年</div>
+                        <div class="timeline-event">疫情来袭，我们各自坚守，云端联络心系彼此</div>
+                        {% if photos_by_year.get(2020) %}
+                        <div class="timeline-photos">
+                            {% for img in photos_by_year[2020] %}
+                            <img src="{{ img.url }}" onclick="showLightbox('{{ img.url }}')" style="width: 80px; height: 80px; object-fit: cover; border-radius: 8px; margin: 0.5rem 0.25rem; cursor: pointer;">
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-year">2022年</div>
+                        <div class="timeline-event">疫情缓解，线下重聚，畅谈人生规划，共谋发展</div>
+                        {% if photos_by_year.get(2022) %}
+                        <div class="timeline-photos">
+                            {% for img in photos_by_year[2022] %}
+                            <img src="{{ img.url }}" onclick="showLightbox('{{ img.url }}')" style="width: 80px; height: 80px; object-fit: cover; border-radius: 8px; margin: 0.5rem 0.25rem; cursor: pointer;">
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-year">2024年</div>
+                        <div class="timeline-event">同学录网站上线，重建联系，记录青春，延续友情</div>
+                        {% if photos_by_year.get(2024) %}
+                        <div class="timeline-photos">
+                            {% for img in photos_by_year[2024] %}
+                            <img src="{{ img.url }}" onclick="showLightbox('{{ img.url }}')" style="width: 80px; height: 80px; object-fit: cover; border-radius: 8px; margin: 0.5rem 0.25rem; cursor: pointer;">
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-year">2025年</div>
+                        <div class="timeline-event">各自在职场奋斗，有人在通信行业深耕，有人在新兴领域探索</div>
+                        {% if photos_by_year.get(2025) %}
+                        <div class="timeline-photos">
+                            {% for img in photos_by_year[2025] %}
+                            <img src="{{ img.url }}" onclick="showLightbox('{{ img.url }}')" style="width: 80px; height: 80px; object-fit: cover; border-radius: 8px; margin: 0.5rem 0.25rem; cursor: pointer;">
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-year">2026年</div>
+                        <div class="timeline-event">时光荏苒，友情不变，期待更多重逢，续写我们的故事</div>
+                        {% if photos_by_year.get(2026) %}
+                        <div class="timeline-photos">
+                            {% for img in photos_by_year[2026] %}
+                            <img src="{{ img.url }}" onclick="showLightbox('{{ img.url }}')" style="width: 80px; height: 80px; object-fit: cover; border-radius: 8px; margin: 0.5rem 0.25rem; cursor: pointer;">
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- 灯箱 -->
+    <div class="lightbox" id="lightbox" onclick="closeLightbox()">
+        <button class="lightbox-close" onclick="closeLightbox()">✕</button>
+        <img id="lightboxImg" src="" alt="">
+    </div>
+
+    <!-- 底部标签栏（微信小程序风格） -->
+    <nav class="bottom-tab-bar">
+        <a href="/" class="tab-item active">
+            <span class="tab-icon">🏠</span>
+            <span class="tab-label">首页</span>
+        </a>
+        <a href="/txl" class="tab-item">
+            <span class="tab-icon">👥</span>
+            <span class="tab-label">通讯录</span>
+        </a>
+        <a href="/lyb" class="tab-item">
+            <span class="tab-icon">💬</span>
+            <span class="tab-label">留言板</span>
+        </a>
+        <a href="/media" class="tab-item">
+            <span class="tab-icon">📷</span>
+            <span class="tab-label">媒体</span>
+        </a>
+        <a href="/about" class="tab-item">
+            <span class="tab-icon">👤</span>
+            <span class="tab-label">我的</span>
+        </a>
+    </nav>
+
+    <!-- 验证模态框 -->
+    <div class="modal-overlay" id="verifyModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">身份验证</h3>
+                <button class="modal-close" onclick="closeVerifyModal()">✕</button>
+            </div>
+            <form class="verify-form" onsubmit="submitVerify(event)">
+                <div class="input-group">
+                    <label>姓名</label>
+                    <input type="text" id="verifyName" placeholder="请输入你的姓名" required>
+                </div>
+                <div class="input-group">
+                    <label>学号</label>
+                    <input type="text" id="verifyStudentId" placeholder="请输入你的学号" required>
+                </div>
+                <div class="input-group">
+                    <label>验证码</label>
+                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                        <span id="captchaQuestion" style="font-size: 1.2rem; font-weight: bold; color: var(--secondary); min-width: 60px;">加载中...</span>
+                        <input type="text" id="verifyCaptcha" placeholder="请输入答案" required style="flex: 1;">
+                        <button type="button" onclick="refreshCaptcha()" style="background: none; border: none; cursor: pointer; font-size: 1.2rem;" title="刷新验证码">🔄</button>
+                    </div>
+                </div>
+                <div class="verify-error" id="verifyError"></div>
+                <button type="submit" class="verify-btn">验证身份</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="/static/js/main.js"></script>
+    <script>
+        // 页面加载后隐藏已删除的照片
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(hideHomeDeletedPhotos, 100);
+            // 加载未读活动数量
+            loadUnreadActivityCount();
+        });
+
+        function loadUnreadActivityCount() {
+            fetch('/api/get_unread_activity_count', { credentials: 'same-origin' })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success && data.count > 0) {
+                        const badge = document.getElementById('unreadBadge');
+                        badge.textContent = data.count > 99 ? '99+' : data.count;
+                        badge.style.display = 'inline-flex';
+                        // 延迟标记已读，等用户看到动态后
+                        setTimeout(markActivitiesViewed, 3000);
+                    }
+                })
+                .catch(() => {});
+        }
+
+        function markActivitiesViewed() {
+            fetch('/api/mark_activities_viewed', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {'Content-Type': 'application/json'}
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    const badge = document.getElementById('unreadBadge');
+                    if (badge) badge.style.display = 'none';
+                }
+            })
+            .catch(() => {});
+        }
+
+        function hideHomeDeletedPhotos() {
+            const deletedPhotos = JSON.parse(localStorage.getItem('deletedPhotos') || '[]');
+            const gallery = document.getElementById('homeGallery');
+            if (!gallery) return;
+
+            deletedPhotos.forEach(imgName => {
+                const item = gallery.querySelector(`.gallery-mini-item[data-img-name="${imgName}"]`);
+                if (item) {
+                    item.style.display = 'none';
+                }
+            });
+        }
+    </script>
+
+    <!-- 返回顶部按钮 -->
+    <button id="backToTopBtn" class="back-to-top" onclick="scrollToTop()">↑</button>
+    <!-- 页面底部提示 -->
+    <div id="pageEndMessage" class="page-end-message">已加载全部内容</div>
+</body>
+</html>

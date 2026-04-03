@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>通讯录 - 吉大自动化八班</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='80' font-size='80'>📖</text></svg>">
+</head>
+<body>
+    <!-- 顶部标题栏 -->
+    <header class="top-header">
+        <h1 class="header-title">吉大<span>自动化</span>八班</h1>
+        <div id="userStatus" class="user-status"></div>
+        <div class="notification-container" id="notificationContainer" style="display: none;">
+            <button class="notification-bell" id="notificationBell" onclick="toggleNotificationDropdown()">
+                <span class="bell-icon">🔔</span>
+                <span class="notification-badge" id="notificationBadge" style="display: none;">0</span>
+            </button>
+            <div class="notification-dropdown" id="notificationDropdown">
+                <div class="notification-header">
+                    <span>消息通知</span>
+                    <button class="notification-mark-read" onclick="markAllNotificationsRead()">全部已读</button>
+                </div>
+                <div class="notification-list" id="notificationList">
+                    <div class="notification-empty">暂无通知</div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- 主内容 -->
+    <main class="main-content">
+        <div class="container">
+            <div class="page-header">
+                <h1 class="page-title">📖 同学通讯录</h1>
+                <p class="page-subtitle">珍藏回忆，联络你我</p>
+            </div>
+
+            <!-- 搜索框 -->
+            <div class="search-box">
+                <input type="text" id="searchInput" placeholder="搜索同学姓名或籍贯...">
+            </div>
+
+            <!-- 离我最近的同学 -->
+            {% if nearest_classmates %}
+            <div class="nearest-section">
+                <h2 class="section-title">📍 离我最近的同学</h2>
+                <div class="nearest-list">
+                    {% for mate, dist in nearest_classmates %}
+                    <a href="#student-{{ mate.name }}" class="nearest-item" onclick="scrollToStudent('{{ mate.name }}')">
+                        <div class="nearest-avatar">
+                            {% if mate.avatar %}
+                            <img src="{{ mate.avatar }}" alt="{{ mate.name }}">
+                            {% else %}
+                            {{ mate.name[0] }}
+                            {% endif %}
+                        </div>
+                        <div class="nearest-info">
+                            <div class="nearest-name">{{ mate.name }}</div>
+                            <div class="nearest-location">{{ mate.hometown_name or '' }}{{ mate.city or '' }}</div>
+                        </div>
+                        <div class="nearest-distance">{{ dist }}公里</div>
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- 学生卡片网格 -->
+            <div class="student-grid" id="studentGrid">
+                {% for student in students %}
+                <div class="student-card"
+                     id="student-{{ student.name }}"
+                     data-name="{{ student.name }}"
+                     data-hometown="{{ student.hometown_name }}"
+                     data-custom-intro="{{ student.custom_intro or '' }}"
+                     data-hobby="{{ student.hobby or '' }}">
+                    <div style="text-align: center;">
+                        <div class="student-avatar {% if student.avatar %}avatar-has{% endif %}" style="margin: 0 auto;">
+                            {% if student.avatar %}
+                            <img src="{{ student.avatar }}" alt="{{ student.name }}">
+                            {% else %}
+                            {{ student.name[0] }}
+                            {% endif %}
+                        </div>
+                        <div class="student-name">{{ student.name }}</div>
+                        {% if student.custom_intro %}
+                        <div class="student-custom-intro">"{{ student.custom_intro }}"</div>
+                        {% endif %}
+                    </div>
+                    <div class="student-info">
+                        <span>📍 {{ student.hometown_name }} {% if student.city %}{{ student.city }}{% endif %} {% if student.district %}{{ student.district }}{% endif %}</span>
+                        <span>📞 {{ student.phone if student.phone else '暂无' }} {% if student.phone %}<button type="button" class="copy-phone-btn" onclick="copyPhone('{{ student.phone }}')" title="复制号码">⧉</button>{% endif %}</span>
+                        {% if student.position %}
+                        <span>💼 {{ student.position }}</span>
+                        {% endif %}
+                        {% if student.industry %}
+                        <span>🏢 {{ student.industry }}</span>
+                        {% endif %}
+                        {% if student.company %}
+                        <span>🏗️ {{ student.company }}</span>
+                        {% endif %}
+                        {% if student.hobby %}
+                        <span>💫 {{ student.hobby }}</span>
+                        {% endif %}
+                    </div>
+
+                    <!-- 喊话区域 -->
+                    <div class="voice-shout-section">
+                        {% set voice_shouts_for_this = [] %}
+                        {% for shout in voice_shouts %}
+                            {% if shout.to_name == student.name %}
+                                {% set _ = voice_shouts_for_this.append(shout) %}
+                            {% endif %}
+                        {% endfor %}
+                        {% if voice_shouts_for_this %}
+                        <div class="voice-shout-list">
+                            {% for shout in voice_shouts_for_this %}
+                            <div class="voice-shout-item" data-shout-id="{{ shout.id }}" data-audio-url="{{ shout.audio_url }}" data-from="{{ shout.from_name }}">
+                                <span class="voice-shout-from">{{ shout.from_name }}:</span>
+                                <div class="voice-message-player small">
+                                    <button class="voice-play-btn" onclick="toggleVoiceShoutPlay(this, '{{ shout.audio_url }}')">
+                                        <span class="voice-play-icon">▶️</span>
+                                    </button>
+                                </div>
+                                {% if session.get('verified_student') and (session['verified_student']['name'] == shout.from_name or session['verified_student']['name'] == shout.to_name) %}
+                                <button type="button" class="del-voice-btn" onclick="deleteVoice({{ shout.id }})" title="删除">🗑️</button>
+                                {% endif %}
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                        <button type="button" class="voice-shout-btn" onclick="openVoiceShoutModal('{{ student.name }}', '{{ student.gender }}')">🎤 向{{ '她' if student.gender == '女' else '他' }}喊话</button>
+                    </div>
+                </div>
+                {% else %}
+                <div class="empty-message">暂无同学信息</div>
+                {% endfor %}
+            </div>
+        </div>
+    </main>
+
+    <!-- 底部标签栏（微信小程序风格） -->
+    <nav class="bottom-tab-bar">
+        <a href="/" class="tab-item">
+            <span class="tab-icon">🏠</span>
+            <span class="tab-label">首页</span>
+        </a>
+        <a href="/txl" class="tab-item active">
+            <span class="tab-icon">👥</span>
+            <span class="tab-label">通讯录</span>
+        </a>
+        <a href="/lyb" class="tab-item">
+            <span class="tab-icon">💬</span>
+            <span class="tab-label">留言板</span>
+        </a>
+        <a href="/media" class="tab-item">
+            <span class="tab-icon">📷</span>
+            <span class="tab-label">媒体</span>
+        </a>
+        <a href="/about" class="tab-item">
+            <span class="tab-icon">👤</span>
+            <span class="tab-label">我的</span>
+        </a>
+    </nav>
+
+    <!-- 验证模态框 -->
+    <div class="modal-overlay" id="verifyModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">身份验证</h3>
+                <button class="modal-close" onclick="closeVerifyModal()">✕</button>
+            </div>
+            <form class="verify-form" onsubmit="submitVerify(event)">
+                <div class="input-group">
+                    <label>姓名</label>
+                    <input type="text" id="verifyName" placeholder="请输入你的姓名" required>
+                </div>
+                <div class="input-group">
+                    <label>学号</label>
+                    <input type="text" id="verifyStudentId" placeholder="请输入你的学号" required>
+                </div>
+                <div class="input-group">
+                    <label>验证码</label>
+                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                        <span id="captchaQuestion" style="font-size: 1.2rem; font-weight: bold; color: var(--secondary); min-width: 60px;">加载中...</span>
+                        <input type="text" id="verifyCaptcha" placeholder="请输入答案" required style="flex: 1;">
+                        <button type="button" onclick="refreshCaptcha()" style="background: none; border: none; cursor: pointer; font-size: 1.2rem;" title="刷新验证码">🔄</button>
+                    </div>
+                </div>
+                <div class="verify-error" id="verifyError"></div>
+                <button type="submit" class="verify-btn">验证身份</button>
+            </form>
+            <div style="margin-top: 1rem; text-align: center; font-size: 0.85rem; color: var(--text-light);">
+                登录后可访问留言板和媒体上传功能<br>编辑个人信息请到「我的」页面
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/main.js"></script>
+    <script>
+        // 喊话模态框
+        let currentVoiceTarget = '';
+        let mediaRecorder = null;
+        let audioChunks = [];
+        let currentMimeType = '';
+
+        function openVoiceShoutModal(targetName, targetGender) {
+            if (!window.currentUser) {
+                showVerifyModal();
+                return;
+            }
+            if (window.currentUser.name === targetName) {
+                alert('不能对自己喊话');
+                return;
+            }
+            currentVoiceTarget = targetName;
+            document.getElementById('voiceShoutTarget').textContent = targetName;
+            const pronoun = targetGender === '女' ? '她' : '他';
+            document.getElementById('voiceShoutPronoun').textContent = pronoun;
+            document.getElementById('voiceShoutModal').classList.add('active');
+            // 重置状态
+            document.getElementById('voicePreview').innerHTML = '';
+            document.getElementById('recordBtn').disabled = false;
+            document.getElementById('sendVoiceBtn').disabled = true;
+        }
+
+        function closeVoiceShoutModal() {
+            document.getElementById('voiceShoutModal').classList.remove('active');
+            stopRecording();
+        }
+
+        async function startRecording() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                // 尝试使用 Safari 支持的音频格式
+                currentMimeType = 'audio/wav';
+                if (MediaRecorder.isTypeSupported) {
+                    if (MediaRecorder.isTypeSupported('audio/mp4')) {
+                        currentMimeType = 'audio/mp4';
+                    } else if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+                        currentMimeType = 'audio/webm;codecs=opus';
+                    }
+                }
+                mediaRecorder = new MediaRecorder(stream, { mimeType: currentMimeType });
+                // 确保使用浏览器实际支持的格式
+                if (mediaRecorder.mimeType) {
+                    currentMimeType = mediaRecorder.mimeType;
+                }
+                audioChunks = [];
+
+                mediaRecorder.ondataavailable = e => {
+                    audioChunks.push(e.data);
+                };
+
+                mediaRecorder.onstop = () => {
+                    const mimeType = mediaRecorder.mimeType || 'audio/wav';
+                    const audioBlob = new Blob(audioChunks, { type: mimeType });
+                    const audioUrl = URL.createObjectURL(audioBlob);
+                    const previewEl = document.getElementById('voicePreview');
+                    previewEl.innerHTML = `<audio src="${audioUrl}" controls></audio>`;
+                    const audioEl = previewEl.querySelector('audio');
+                    audioEl.play().catch(err => console.log('播放需要用户点击:', err));
+                    document.getElementById('sendVoiceBtn').disabled = false;
+                    stream.getTracks().forEach(track => track.stop());
+                };
+
+                mediaRecorder.start();
+                document.getElementById('recordBtn').disabled = true;
+                let remaining = 4;
+                document.getElementById('recordingStatus').textContent = `录音中... (${remaining}秒)`;
+                const timer = setInterval(() => {
+                    remaining--;
+                    if (remaining > 0) {
+                        document.getElementById('recordingStatus').textContent = `录音中... (${remaining}秒)`;
+                    }
+                    if (remaining <= 0) {
+                        clearInterval(timer);
+                        if (mediaRecorder && mediaRecorder.state === 'recording') {
+                            stopRecording();
+                        }
+                    }
+                }, 1000);
+                // 4秒后自动停止
+                setTimeout(() => {
+                    clearInterval(timer);
+                    if (mediaRecorder && mediaRecorder.state === 'recording') {
+                        stopRecording();
+                    }
+                }, 4000);
+
+            } catch (err) {
+                alert('无法访问麦克风，请检查权限设置');
+                console.error(err);
+            }
+        }
+
+        function stopRecording() {
+            if (mediaRecorder && mediaRecorder.state === 'recording') {
+                mediaRecorder.stop();
+                document.getElementById('recordBtn').disabled = false;
+                document.getElementById('recordingStatus').textContent = '录音完成';
+            }
+        }
+
+        function sendVoiceShout() {
+            if (audioChunks.length === 0) {
+                alert('请先录音');
+                return;
+            }
+
+            const mimeExt = currentMimeType.includes('mp4') ? 'mp4' : (currentMimeType.includes('webm') ? 'webm' : 'wav');
+            const audioBlob = new Blob(audioChunks, { type: currentMimeType });
+            const formData = new FormData();
+            formData.append('file', audioBlob, `voice.${mimeExt}`);
+            formData.append('to_name', currentVoiceTarget);
+
+            fetch('/api/upload_voice_shout', {
+                method: 'POST',
+                credentials: 'same-origin',
+                body: formData
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    alert('喊话成功！');
+                    closeVoiceShoutModal();
+                    location.reload();
+                } else {
+                    alert(data.message || '喊话失败');
+                }
+            })
+            .catch(() => {
+                alert('喊话失败，请稍后重试');
+            });
+        }
+
+        let currentAudio = null;
+        function toggleVoiceShoutPlay(btn, audioUrl) {
+            if (currentAudio && currentAudio.src.includes(audioUrl)) {
+                currentAudio.pause();
+                currentAudio = null;
+                btn.querySelector('.voice-play-icon').textContent = '▶️';
+                btn.classList.remove('playing');
+            } else {
+                if (currentAudio) {
+                    currentAudio.pause();
+                    document.querySelectorAll('.voice-shout-item .voice-play-btn').forEach(b => {
+                        b.querySelector('.voice-play-icon').textContent = '▶️';
+                        b.classList.remove('playing');
+                    });
+                }
+                currentAudio = new Audio(audioUrl);
+                currentAudio.play();
+                btn.querySelector('.voice-play-icon').textContent = '⏸️';
+                btn.classList.add('playing');
+                currentAudio.onended = () => {
+                    btn.querySelector('.voice-play-icon').textContent = '▶️';
+                    btn.classList.remove('playing');
+                    currentAudio = null;
+                };
+            }
+        }
+
+        function deleteVoice(shoutId) {
+            if (!window.currentUser) {
+                showVerifyModal();
+                return;
+            }
+            if (!confirm('确定要删除这条喊话吗？')) return;
+            fetch('/api/voice_shout/delete', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({id: shoutId})
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert(data.message || '删除失败');
+                }
+            })
+            .catch(() => {
+                alert('删除失败，请稍后重试');
+            });
+        }
+
+        // 页面加载时如果有 hash，滚动到对应卡片
+        function scrollToHashCard() {
+            if (window.location.hash) {
+                const targetId = window.location.hash.substring(1);
+                const targetEl = document.getElementById(targetId);
+                if (targetEl) {
+                    // 直接设置 scrollTop 立即跳转到目标位置
+                    targetEl.scrollIntoView();
+                    targetEl.classList.add('highlight');
+                    setTimeout(() => targetEl.classList.remove('highlight'), 1000);
+                }
+            }
+        }
+        // DOMReady 时执行一次
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', scrollToHashCard);
+        } else {
+            scrollToHashCard();
+        }
+
+        function scrollToStudent(name) {
+            const targetEl = document.getElementById('student-' + name);
+            if (targetEl) {
+                targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                targetEl.classList.add('highlight');
+                setTimeout(() => targetEl.classList.remove('highlight'), 2000);
+            }
+        }
+    </script>
+
+    <!-- 喊话模态框 -->
+    <div class="modal-overlay" id="voiceShoutModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">对 <span id="voiceShoutTarget"></span> 喊话</h3>
+                <button class="modal-close" onclick="closeVoiceShoutModal()">✕</button>
+            </div>
+            <div style="text-align: center; padding: 2rem;">
+                <p style="margin-bottom: 1rem; color: var(--text-light);">录制一段4秒的语音，对<span id="voiceShoutPronoun">他</span>说点什么吧！</p>
+                <div id="voicePreview" style="margin: 1rem 0;"></div>
+                <p id="recordingStatus" style="margin-bottom: 1rem; color: var(--secondary);"></p>
+                <div style="display: flex; gap: 1rem; justify-content: center;">
+                    <button type="button" id="recordBtn" class="verify-btn" onclick="startRecording()" style="background: var(--secondary);">🎤 录音</button>
+                    <button type="button" id="sendVoiceBtn" class="verify-btn" onclick="sendVoiceShout()" disabled>发送喊话</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 返回顶部按钮 -->
+    <button id="backToTopBtn" class="back-to-top" onclick="scrollToTop()">↑</button>
+    <!-- 页面底部提示 -->
+    <div id="pageEndMessage" class="page-end-message">已加载全部内容</div>
+</body>
+</html>

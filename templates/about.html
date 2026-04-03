@@ -1,0 +1,1373 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>个人中心 - 吉大自动化八班</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='80' font-size='80'>📖</text></svg>">
+</head>
+<body>
+    <!-- 顶部标题栏 -->
+    <header class="top-header">
+        <h1 class="header-title">个人中心</h1>
+        <div id="userStatus" class="user-status"></div>
+        <!-- 通知铃铛 -->
+        <div class="notification-container" id="notificationContainer" style="display: none;">
+            <button class="notification-bell" id="notificationBell" onclick="toggleNotificationDropdown()">
+                <span class="bell-icon">🔔</span>
+                <span class="notification-badge" id="notificationBadge" style="display: none;">0</span>
+            </button>
+            <div class="notification-dropdown" id="notificationDropdown">
+                <div class="notification-header">
+                    <span>消息通知</span>
+                    <button class="notification-mark-read" onclick="markAllNotificationsRead()">全部已读</button>
+                </div>
+                <div class="notification-list" id="notificationList">
+                    <div class="notification-empty">暂无通知</div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- 主内容 -->
+    <main class="main-content">
+        <div class="container">
+            <!-- 未登录状态 -->
+            <div id="unloggedView" class="profile-unlogged">
+                <div class="profile-avatar-large">
+                    <span>👤</span>
+                </div>
+                <h2 class="profile-welcome">欢迎回来</h2>
+                <p class="profile-desc">登录后可查看和编辑你的个人信息</p>
+                <button class="profile-login-btn" onclick="showVerifyModal()">立即登录</button>
+            </div>
+
+            <!-- 已登录状态 -->
+            <div id="loggedView" class="profile-logged" style="display: none;">
+                <!-- 用户信息卡片 -->
+                <div class="profile-card">
+                    <div class="profile-card-header">
+                        <div class="profile-avatar" id="profileAvatar">
+                            <span id="profileAvatarInitial">?</span>
+                        </div>
+                        <div class="profile-info">
+                            <h2 class="profile-name" id="profileName">未设置</h2>
+                            <p class="profile-id" id="profileId">学号：未设置</p>
+                        </div>
+                        <button class="profile-edit-btn" onclick="showEditProfileModal()">编辑资料</button>
+                    </div>
+                </div>
+
+                <!-- 详细信息 -->
+                <div class="profile-detail-card">
+                    <h3 class="profile-detail-title">基本信息</h3>
+                    <div class="profile-detail-list">
+                        <div class="profile-detail-item">
+                            <span class="detail-label">姓名</span>
+                            <span class="detail-value" id="detailName">-</span>
+                        </div>
+                        <div class="profile-detail-item">
+                            <span class="detail-label">性别</span>
+                            <span class="detail-value" id="detailGender">-</span>
+                        </div>
+                        <div class="profile-detail-item">
+                            <span class="detail-label">生日</span>
+                            <span class="detail-value" id="detailBirthday">-</span>
+                        </div>
+                        <div class="profile-detail-item">
+                            <span class="detail-label">当前所在地</span>
+                            <span class="detail-value" id="detailHometown">-</span>
+                        </div>
+                        <div class="profile-detail-item">
+                            <span class="detail-label">手机</span>
+                            <span class="detail-value" id="detailPhone">-</span>
+                        </div>
+                        <div class="profile-detail-item">
+                            <span class="detail-label">从事行业</span>
+                            <span class="detail-value" id="detailIndustry">-</span>
+                        </div>
+                        <div class="profile-detail-item">
+                            <span class="detail-label">工作单位</span>
+                            <span class="detail-value" id="detailCompany">-</span>
+                        </div>
+                        <div class="profile-detail-item">
+                            <span class="detail-label">职位</span>
+                            <span class="detail-value" id="detailPosition">-</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 社交媒体 -->
+                <div class="profile-detail-card" id="socialMediaCard" style="display: none;">
+                    <h3 class="profile-detail-title">社交媒体</h3>
+                    <div class="profile-detail-list">
+                        <div class="profile-detail-item" id="detailGithubItem" style="display: none;">
+                            <span class="detail-label">GitHub</span>
+                            <span class="detail-value" id="detailGithub">-</span>
+                        </div>
+                        <div class="profile-detail-item" id="detailDouyinItem" style="display: none;">
+                            <span class="detail-label">抖音</span>
+                            <span class="detail-value" id="detailDouyin">-</span>
+                        </div>
+                        <div class="profile-detail-item" id="detailXiaohongshuItem" style="display: none;">
+                            <span class="detail-label">小红书</span>
+                            <span class="detail-value" id="detailXiaohongshu">-</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 兴趣爱好 -->
+                <div class="profile-detail-card" id="hobbyCard" style="display: none;">
+                    <h3 class="profile-detail-title">兴趣爱好</h3>
+                    <div class="profile-hobby-list" id="profileHobby">-</div>
+                </div>
+
+                <!-- 登出按钮 -->
+                <button class="profile-logout-btn" onclick="logout()">退出登录</button>
+
+                <!-- 已删除内容模块 -->
+                <div class="profile-detail-card" id="deletedItemsCard" style="margin-top: 1.5rem;">
+                    <h3 class="profile-detail-title">📦 已删除的内容</h3>
+                    <div id="deletedItemsList">
+                        <p style="color: var(--text-light); text-align: center; padding: 1rem;">加载中...</p>
+                    </div>
+                    <div id="deletedPagination" style="display: none; justify-content: center; gap: 0.5rem; margin-top: 1rem;"></div>
+                </div>
+
+                <!-- 管理员设置模块（仅超级管理员） -->
+                <div class="profile-detail-card" id="adminManagementCard" style="margin-top: 1.5rem; display: none;">
+                    <h3 class="profile-detail-title">👑 管理员设置</h3>
+                    <div id="adminManagementContent">
+                        <p style="color: var(--text-light); text-align: center; padding: 1rem;">加载中...</p>
+                    </div>
+                </div>
+
+                <!-- 管理员密码设置模块 -->
+                <div class="profile-detail-card" id="loginPasswordCard" style="margin-top: 1.5rem; display: none;">
+                    <h3 class="profile-detail-title">🔑 管理员密码</h3>
+                    <div id="loginPasswordContent">
+                        <p style="color: var(--text-light); text-align: center; padding: 1rem;">加载中...</p>
+                    </div>
+                </div>
+
+                <!-- 动态管理模块（仅管理员） -->
+                <div class="profile-detail-card" id="activityManagementCard" style="margin-top: 1.5rem; display: none;">
+                    <h3 class="profile-detail-title">📰 最新动态管理</h3>
+                    <div id="activityManagementList">
+                        <p style="color: var(--text-light); text-align: center; padding: 1rem;">加载中...</p>
+                    </div>
+                </div>
+
+                <!-- 登录日志模块（仅管理员） -->
+                <div class="profile-detail-card" id="loginLogsCard" style="margin-top: 1.5rem; display: none;">
+                    <h3 class="profile-detail-title">🔐 登录日志</h3>
+                    <div id="loginLogsList">
+                        <p style="color: var(--text-light); text-align: center; padding: 1rem;">加载中...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 关于本站 -->
+            <div class="about-content" style="margin-top: 2rem;">
+                <div class="about-section">
+                    <h3>📚 关于我们</h3>
+                    <p>
+                        吉大自动化八班，一个由32位同学组成的大家庭。我们相识于2015年那个金秋，
+                        在吉林大学南岭校区自动化专业共同度过了四年的大学时光。
+                    </p>
+                </div>
+
+                <div class="about-footer">
+                    <p>吉大自动化八班 © 2026</p>
+                    <p>青春不散场，友谊永长存</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- 底部标签栏（微信小程序风格） -->
+    <nav class="bottom-tab-bar">
+        <a href="/" class="tab-item">
+            <span class="tab-icon">🏠</span>
+            <span class="tab-label">首页</span>
+        </a>
+        <a href="/txl" class="tab-item">
+            <span class="tab-icon">👥</span>
+            <span class="tab-label">通讯录</span>
+        </a>
+        <a href="/lyb" class="tab-item">
+            <span class="tab-icon">💬</span>
+            <span class="tab-label">留言板</span>
+        </a>
+        <a href="/media" class="tab-item">
+            <span class="tab-icon">📷</span>
+            <span class="tab-label">媒体</span>
+        </a>
+        <a href="/about" class="tab-item active">
+            <span class="tab-icon">👤</span>
+            <span class="tab-label">我的</span>
+        </a>
+    </nav>
+
+    <!-- 验证模态框 -->
+    <div class="modal-overlay" id="verifyModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">身份验证</h3>
+                <button class="modal-close" onclick="closeVerifyModal()">✕</button>
+            </div>
+            <form class="verify-form" onsubmit="submitVerify(event)">
+                <div class="input-group">
+                    <label>姓名</label>
+                    <input type="text" id="verifyName" placeholder="请输入你的姓名" required>
+                </div>
+                <div class="input-group">
+                    <label>学号</label>
+                    <input type="text" id="verifyStudentId" placeholder="请输入你的学号" required>
+                </div>
+                <div class="input-group">
+                    <label>验证码</label>
+                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                        <span id="captchaQuestion" style="font-size: 1.2rem; font-weight: bold; color: var(--secondary); min-width: 60px;">加载中...</span>
+                        <input type="text" id="verifyCaptcha" placeholder="请输入答案" required style="flex: 1;">
+                        <button type="button" onclick="refreshCaptcha()" style="background: none; border: none; cursor: pointer; font-size: 1.2rem;" title="刷新验证码">🔄</button>
+                    </div>
+                </div>
+                <div class="verify-error" id="verifyError"></div>
+                <button type="submit" class="verify-btn">验证身份</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- 已删除内容预览模态框 -->
+    <div class="modal-overlay" id="deletedPreviewModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">预览已删除内容</h3>
+                <button class="modal-close" onclick="closeDeletedPreviewModal()">✕</button>
+            </div>
+            <div id="deletedPreviewContent" style="padding: 1rem; text-align: center; max-height: 60vh; overflow-y: auto;">
+            </div>
+        </div>
+    </div>
+
+    <!-- 编辑个人资料模态框 -->
+    <div class="modal-overlay" id="editProfileModal">
+        <div class="modal edit-modal-content" style="max-height: 85vh; overflow-y: auto;">
+            <div class="modal-header">
+                <h3 class="modal-title">编辑个人资料</h3>
+                <button class="modal-close" onclick="closeEditProfileModal()">✕</button>
+            </div>
+            <form class="edit-form" onsubmit="submitProfileEdit(event)">
+                <div style="text-align: center; margin-bottom: 1.5rem;">
+                    <div class="avatar-upload" onclick="document.getElementById('avatarInput').click()" style="display: inline-block; position: relative;">
+                        <div class="student-avatar" id="editAvatarPreview" style="width: 80px; height: 80px; font-size: 2rem; margin: 0 auto; overflow: hidden;">
+                            <span id="editAvatarInitial">?</span>
+                        </div>
+                        <input type="file" id="avatarInput" accept="image/*" style="display: none;" onchange="handleAvatarUpload(event)">
+                    </div>
+                    <p style="font-size: 0.8rem; color: var(--secondary); font-weight: 500; margin-top: 0.5rem;">👁️ 通讯录可见</p>
+                    <div id="avatarUploadProgress" class="upload-progress" style="display: none; margin-top: 0.5rem; text-align: left;">
+                        <div class="upload-progress-bar" style="width: 0%;"></div>
+                        <span class="upload-progress-text">0%</span>
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label>📱 手机号</label>
+                    <input type="tel" name="phone" id="editPhone" placeholder="手机号码">
+                    <small style="color: var(--secondary); font-size: 0.75rem; font-weight: 500;">👁️ 通讯录可见</small>
+                </div>
+
+                <div class="input-group">
+                    <label>✉️ 邮箱</label>
+                    <input type="email" name="email" id="editEmail" placeholder="电子邮箱">
+                </div>
+
+                <div class="input-group">
+                    <label>⭐ 个性签名（显示在姓名下方）</label>
+                    <input type="text" name="custom_intro" id="editCustomIntro" placeholder="如：热爱通信技术">
+                    <small style="color: var(--secondary); font-size: 0.75rem; font-weight: 500;">👁️ 通讯录可见</small>
+                </div>
+
+                <div class="input-group">
+                    <label>🏢 从事行业</label>
+                    <select name="industry" id="editIndustry">
+                        <option value="">请选择行业</option>
+                        <option value="互联网/IT">互联网/IT</option>
+                        <option value="金融/银行">金融/银行</option>
+                        <option value="教育/培训">教育/培训</option>
+                        <option value="制造/生产">制造/生产</option>
+                        <option value="建筑/房地产">建筑/房地产</option>
+                        <option value="医疗/健康">医疗/健康</option>
+                        <option value="法律/咨询">法律/咨询</option>
+                        <option value="媒体/广告">媒体/广告</option>
+                        <option value="政府/公共事业">政府/公共事业</option>
+                        <option value="科研/学术">科研/学术</option>
+                        <option value="其他">其他</option>
+                    </select>
+                    <small style="color: var(--secondary); font-size: 0.75rem; font-weight: 500;">👁️ 通讯录可见</small>
+                </div>
+
+                <div class="input-group">
+                    <label>🏢 工作单位</label>
+                    <input type="text" name="company" id="editCompany" placeholder="当前工作单位">
+                    <small style="color: var(--secondary); font-size: 0.75rem; font-weight: 500;">👁️ 通讯录可见</small>
+                </div>
+
+                <div class="input-group">
+                    <label>💼 职位</label>
+                    <input type="text" name="position" id="editPosition" placeholder="你的职位">
+                    <small style="color: var(--secondary); font-size: 0.75rem; font-weight: 500;">👁️ 通讯录可见</small>
+                </div>
+
+                <div class="input-group">
+                    <label>🏠 当前所在地</label>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <select name="hometown" id="editProvince" onchange="onProvinceChange()" style="flex: 1;">
+                            <option value="">省份</option>
+                        </select>
+                        <select name="city" id="editCity" onchange="onCityChange()" style="flex: 1;">
+                            <option value="">城市</option>
+                        </select>
+                        <select name="district" id="editDistrict" style="flex: 1;">
+                            <option value="">区县</option>
+                        </select>
+                    </div>
+                    <div style="display: flex; gap: 0.5rem; align-items: center; margin-top: 0.5rem;">
+                        <button type="button" id="gpsLocateBtn" onclick="getGpsLocation()" style="background: var(--secondary); color: white; border: none; padding: 0.4rem 0.8rem; border-radius: 15px; cursor: pointer; font-size: 0.85rem;">📍 GPS定位</button>
+                        <span id="gpsStatus" style="font-size: 0.8rem; color: var(--text-light);"></span>
+                        <input type="hidden" name="gps_coords" id="editGpsCoords" value="">
+                    </div>
+                    <small style="color: var(--secondary); font-size: 0.75rem; font-weight: 500;">👁️ 通讯录可见</small>
+                </div>
+
+                <div class="input-group">
+                    <label">🎂 生日</label>
+                    <input type="date" name="birthday" id="editBirthday">
+                </div>
+
+                <div class="input-group">
+                    <label">🎮 兴趣爱好</label>
+                    <input type="text" name="hobby" id="editHobby" placeholder="多个兴趣用逗号分隔">
+                    <small style="color: var(--secondary); font-size: 0.75rem; font-weight: 500;">👁️ 通讯录可见</small>
+                </div>
+
+                <div class="input-group">
+                    <label>🐱 GitHub</label>
+                    <input type="url" name="github" id="editGithub" placeholder="GitHub主页链接">
+                    <small style="color: var(--secondary); font-size: 0.75rem; font-weight: 500;">👁️ 通讯录可见</small>
+                </div>
+
+                <div class="input-group">
+                    <label>🎵 抖音</label>
+                    <input type="url" name="douyin" id="editDouyin" placeholder="抖音主页链接">
+                    <small style="color: var(--secondary); font-size: 0.75rem; font-weight: 500;">👁️ 通讯录可见</small>
+                </div>
+
+                <div class="input-group">
+                    <label>📕 小红书</label>
+                    <input type="url" name="xiaohongshu" id="editXiaohongshu" placeholder="小红书主页链接">
+                    <small style="color: var(--secondary); font-size: 0.75rem; font-weight: 500;">👁️ 通讯录可见</small>
+                </div>
+
+                <div class="edit-error" id="editError" style="color: var(--secondary); text-align: center; margin: 0.5rem 0;"></div>
+
+                <!-- 密码设置（仅管理员可见） -->
+                <div id="editPasswordSection" style="display: none; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border);">
+                    <h4 style="margin-bottom: 0.5rem;">🔑 设置登录密码</h4>
+                    <p style="font-size: 0.85rem; color: var(--text-light); margin-bottom: 0.5rem;">设置密码后，可用于删除他人内容时的身份验证</p>
+                    <div class="input-group">
+                        <input type="password" id="editNewPassword" placeholder="请输入新密码（不填则不修改）">
+                    </div>
+                    <div class="input-group">
+                        <input type="password" id="editConfirmPassword" placeholder="请确认新密码">
+                    </div>
+                </div>
+
+                <button type="submit" class="verify-btn">保存修改</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="/static/js/province_data.js"></script>
+    <script src="/static/js/main.js"></script>
+    <script>
+        // 初始化省份下拉框
+        function initProvinceSelect() {
+            const select = document.getElementById('editProvince');
+            if (!select) return;
+            select.innerHTML = '<option value="">省份</option>';
+            for (const key in window.PROVINCE_DATA) {
+                const opt = document.createElement('option');
+                opt.value = key;
+                opt.textContent = window.PROVINCE_DATA[key].name;
+                select.appendChild(opt);
+            }
+        }
+
+        // 省份变更时更新城市下拉框
+        function onProvinceChange() {
+            const provinceKey = document.getElementById('editProvince')?.value;
+            const citySelect = document.getElementById('editCity');
+            const districtSelect = document.getElementById('editDistrict');
+            if (!citySelect) return;
+
+            citySelect.innerHTML = '<option value="">城市</option>';
+            districtSelect.innerHTML = '<option value="">区县</option>';
+
+            if (provinceKey && window.PROVINCE_DATA[provinceKey]) {
+                const cities = window.PROVINCE_DATA[provinceKey].cities;
+                for (const key in cities) {
+                    const opt = document.createElement('option');
+                    opt.value = key;
+                    opt.textContent = window.PINYIN_TO_CITY[key] || key;
+                    citySelect.appendChild(opt);
+                }
+            }
+        }
+
+        // 城市变更时更新区县下拉框
+        function onCityChange() {
+            const provinceKey = document.getElementById('editProvince')?.value;
+            const cityKey = document.getElementById('editCity')?.value;
+            const districtSelect = document.getElementById('editDistrict');
+            if (!districtSelect) return;
+
+            districtSelect.innerHTML = '<option value="">区县</option>';
+
+            if (provinceKey && cityKey && window.PROVINCE_DATA[provinceKey] && window.PROVINCE_DATA[provinceKey].cities[cityKey]) {
+                const districts = window.PROVINCE_DATA[provinceKey].cities[cityKey];
+                districts.forEach(d => {
+                    const opt = document.createElement('option');
+                    opt.value = d;
+                    opt.textContent = d;
+                    districtSelect.appendChild(opt);
+                });
+            }
+        }
+
+        // 页面加载时检查登录状态并更新UI
+        document.addEventListener('DOMContentLoaded', async function() {
+            await checkLoginAndLoadProfile();
+            // 加载已删除内容
+            if (window.currentUser) {
+                loadDeletedItems();
+            }
+        });
+
+        // 检查登录状态并加载个人资料
+        async function checkLoginAndLoadProfile() {
+            try {
+                const verifyRes = await fetch('/api/check_verify', { credentials: 'same-origin' });
+                const verifyData = await verifyRes.json();
+
+                if (!verifyData.verified) {
+                    showUnloggedView();
+                    return;
+                }
+
+                const studentRes = await fetch('/api/get_student', { credentials: 'same-origin' });
+                const studentData = await studentRes.json();
+
+                if (studentData.success) {
+                    window.currentUser = studentData.student;
+                    window.currentUser.student_id = studentData.student.id;
+                    showLoggedView(window.currentUser);
+                } else {
+                    showUnloggedView();
+                }
+            } catch (e) {
+                console.error('检查登录状态失败:', e);
+                showUnloggedView();
+            }
+        }
+
+        function showUnloggedView() {
+            window.currentUser = null;
+            const unloggedView = document.getElementById('unloggedView');
+            const loggedView = document.getElementById('loggedView');
+            if (unloggedView) unloggedView.style.display = 'block';
+            if (loggedView) loggedView.style.display = 'none';
+        }
+
+        function showLoggedView(user) {
+            const unloggedView = document.getElementById('unloggedView');
+            const loggedView = document.getElementById('loggedView');
+            if (unloggedView) unloggedView.style.display = 'none';
+            if (loggedView) loggedView.style.display = 'block';
+
+            if (!user) return;
+
+            document.getElementById('profileName').textContent = user.name || '未设置';
+            document.getElementById('profileId').textContent = '学号：' + (user.id || user.student_id || '未设置');
+            document.getElementById('profileAvatarInitial').textContent = (user.name || '?')[0];
+
+            if (user.avatar) {
+                document.getElementById('profileAvatar').innerHTML = '<img src="' + user.avatar + '" alt="avatar">';
+            }
+
+            document.getElementById('detailName').textContent = user.name || '-';
+            document.getElementById('detailGender').textContent = user.gender || '-';
+            document.getElementById('detailBirthday').textContent = user.birthday || '-';
+            let location = user.hometown_name || user.hometown || '-';
+            if (user.city) location += ' ' + user.city;
+            if (user.district) location += ' ' + user.district;
+            document.getElementById('detailHometown').textContent = location;
+            document.getElementById('detailPhone').textContent = user.phone || '-';
+            document.getElementById('detailIndustry').textContent = user.industry || '-';
+            document.getElementById('detailCompany').textContent = user.company || '-';
+            document.getElementById('detailPosition').textContent = user.position || '-';
+
+            const socialCard = document.getElementById('socialMediaCard');
+            const github = user.github || user.weibo;
+            const douyin = user.douyin;
+            const xiaohongshu = user.xiaohongshu;
+
+            if (github || douyin || xiaohongshu) {
+                socialCard.style.display = 'block';
+                if (github) {
+                    document.getElementById('detailGithubItem').style.display = 'flex';
+                    document.getElementById('detailGithub').textContent = github;
+                }
+                if (douyin) {
+                    document.getElementById('detailDouyinItem').style.display = 'flex';
+                    document.getElementById('detailDouyin').textContent = douyin;
+                }
+                if (xiaohongshu) {
+                    document.getElementById('detailXiaohongshuItem').style.display = 'flex';
+                    document.getElementById('detailXiaohongshu').textContent = xiaohongshu;
+                }
+            } else {
+                socialCard.style.display = 'none';
+            }
+
+            const hobbyCard = document.getElementById('hobbyCard');
+            if (user.hobby) {
+                hobbyCard.style.display = 'block';
+                document.getElementById('profileHobby').textContent = user.hobby;
+            } else {
+                hobbyCard.style.display = 'none';
+            }
+
+            // 密码设置（所有用户可见）
+            document.getElementById('loginPasswordCard').style.display = 'block';
+            loadLoginPasswordStatus();
+
+            // 超级管理员显示管理员设置
+            if (user.is_super_admin) {
+                document.getElementById('adminManagementCard').style.display = 'block';
+                loadAdminManagement();
+            } else {
+                document.getElementById('adminManagementCard').style.display = 'none';
+            }
+        }
+
+        // 加载管理员设置（超级管理员）
+        async function loadAdminManagement() {
+            try {
+                const res = await fetch('/api/txl/list');
+                const data = await res.json();
+                const contentEl = document.getElementById('adminManagementContent');
+                if (!data.students) {
+                    contentEl.innerHTML = '<p style="color: var(--text-light); text-align: center;">加载失败</p>';
+                    return;
+                }
+                const checkRes = await fetch('/api/check_verify', { credentials: 'same-origin' });
+                const checkData = await checkRes.json();
+                const currentStudent = checkData.student;
+
+                let html = '<p style="margin-bottom: 1rem; color: var(--text-light);">设置用户的管理员权限：</p>';
+                data.students.forEach(student => {
+                    if (student.name === currentStudent.name) return; // 跳过自己
+                    const isAdmin = student.is_admin || student.name === '穆玉升';
+                    html += `
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0; border-bottom: 1px solid var(--bg-dark);">
+                            <span>${student.name}</span>
+                            <label class="switch">
+                                <input type="checkbox" onchange="toggleAdmin('${student.name}', this.checked)" ${isAdmin ? 'checked' : ''}>
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                    `;
+                });
+                contentEl.innerHTML = html;
+            } catch (e) {
+                document.getElementById('adminManagementContent').innerHTML = '<p style="color: var(--text-light); text-align: center;">加载失败</p>';
+            }
+        }
+
+        async function toggleAdmin(name, isAdmin) {
+            try {
+                const res = await fetch('/api/super_admin/set_admin', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'same-origin',
+                    body: JSON.stringify({ name: name, is_admin: isAdmin })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    alert('设置成功');
+                } else {
+                    alert(data.message || '设置失败');
+                    loadAdminManagement(); // 刷新列表
+                }
+            } catch (e) {
+                alert('设置失败');
+                loadAdminManagement();
+            }
+        }
+
+        // 加载密码状态
+        async function loadLoginPasswordStatus() {
+            try {
+                const res = await fetch('/api/check_verify', { credentials: 'same-origin' });
+                const data = await res.json();
+                const contentEl = document.getElementById('loginPasswordContent');
+
+                if (data.verified) {
+                    if (data.student.login_password_set) {
+                        // 已设置密码，显示验证/修改界面
+                        contentEl.innerHTML = `
+                            <div style="text-align: center;">
+                                <p style="margin-bottom: 1rem;">登录密码已设置</p>
+                                <input type="password" id="loginPasswordInput" placeholder="请输入登录密码" style="width: 100%; padding: 0.8rem; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 0.5rem; box-sizing: border-box;">
+                                <div style="display: flex; gap: 0.5rem; justify-content: center;">
+                                    <button onclick="verifyLoginPassword()" style="background: var(--secondary); color: white; border: none; padding: 0.6rem 1.5rem; border-radius: 8px; cursor: pointer;">验证</button>
+                                    <button onclick="changeLoginPassword()" style="background: var(--bg-dark); color: var(--text); border: none; padding: 0.6rem 1.5rem; border-radius: 8px; cursor: pointer;">修改密码</button>
+                                </div>
+                                <p id="loginPasswordError" style="color: #e74c3c; margin-top: 0.5rem;"></p>
+                            </div>
+                        `;
+                    } else {
+                        // 未设置密码，显示设置界面
+                        contentEl.innerHTML = `
+                            <div style="text-align: center;">
+                                <p style="margin-bottom: 1rem;">设置登录密码，可用于身份验证等场景</p>
+                                <input type="password" id="newLoginPasswordInput" placeholder="请输入新密码" style="width: 100%; padding: 0.8rem; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 0.5rem; box-sizing: border-box;">
+                                <input type="password" id="confirmLoginPasswordInput" placeholder="请确认密码" style="width: 100%; padding: 0.8rem; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 0.5rem; box-sizing: border-box;">
+                                <button onclick="setLoginPassword()" style="background: var(--secondary); color: white; border: none; padding: 0.6rem 1.5rem; border-radius: 8px; cursor: pointer;">设置密码</button>
+                                <p id="loginPasswordSetError" style="color: #e74c3c; margin-top: 0.5rem;"></p>
+                            </div>
+                        `;
+                    }
+                }
+            } catch (e) {
+                console.error('加载密码状态失败:', e);
+            }
+        }
+
+        // 验证登录密码
+        async function verifyLoginPassword() {
+            const password = document.getElementById('loginPasswordInput').value;
+            if (!password) {
+                document.getElementById('loginPasswordError').textContent = '请输入密码';
+                return;
+            }
+            try {
+                const res = await fetch('/api/user/verify_password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'same-origin',
+                    body: JSON.stringify({ password: password })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    window.dispatchEvent(new CustomEvent('loginPasswordVerified'));
+                    document.getElementById('loginPasswordError').textContent = '';
+                    loadLoginPasswordStatus();
+                } else {
+                    document.getElementById('loginPasswordError').textContent = data.message || '密码错误';
+                }
+            } catch (e) {
+                document.getElementById('loginPasswordError').textContent = '验证失败';
+            }
+        }
+
+        // 设置登录密码
+        async function setLoginPassword() {
+            const newPwd = document.getElementById('newLoginPasswordInput').value;
+            const confirmPwd = document.getElementById('confirmLoginPasswordInput').value;
+            if (!newPwd) {
+                document.getElementById('loginPasswordSetError').textContent = '请输入密码';
+                return;
+            }
+            if (newPwd !== confirmPwd) {
+                document.getElementById('loginPasswordSetError').textContent = '两次密码不一致';
+                return;
+            }
+            try {
+                const res = await fetch('/api/user/set_password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'same-origin',
+                    body: JSON.stringify({ password: newPwd })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    alert('密码设置成功');
+                    loadLoginPasswordStatus();
+                } else {
+                    document.getElementById('loginPasswordSetError').textContent = data.message || '设置失败';
+                }
+            } catch (e) {
+                document.getElementById('loginPasswordSetError').textContent = '设置失败';
+            }
+        }
+
+        // 修改登录密码
+        async function changeLoginPassword() {
+            const newPwd = prompt('请输入新密码:');
+            if (!newPwd) return;
+            const confirmPwd = prompt('请确认新密码:');
+            if (newPwd !== confirmPwd) {
+                alert('两次密码不一致');
+                return;
+            }
+            try {
+                const res = await fetch('/api/user/set_password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'same-origin',
+                    body: JSON.stringify({ password: newPwd })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    alert('密码修改成功');
+                    loadLoginPasswordStatus();
+                } else {
+                    alert(data.message || '修改失败');
+                }
+            } catch (e) {
+                alert('修改失败');
+            }
+        }
+
+        function updateProfileUI() {
+            const user = window.currentUser;
+            if (!user) return;
+
+            document.getElementById('profileName').textContent = user.name || '未设置';
+            document.getElementById('profileId').textContent = '学号：' + (user.id || user.student_id || '未设置');
+            document.getElementById('profileDream').textContent = user.dream || '这个人很懒，什么都没写~';
+
+            if (user.avatar) {
+                document.getElementById('profileAvatar').innerHTML = '<img src="' + user.avatar + '" alt="avatar">';
+            }
+            document.getElementById('profileAvatarInitial').textContent = (user.name || '?')[0];
+
+            document.getElementById('detailName').textContent = user.name || '-';
+            document.getElementById('detailBirthday').textContent = user.birthday || '-';
+            let location = user.hometown_name || user.hometown || '-';
+            if (user.city) location += ' ' + user.city;
+            if (user.district) location += ' ' + user.district;
+            document.getElementById('detailHometown').textContent = location;
+            document.getElementById('detailPhone').textContent = user.phone || '-';
+            document.getElementById('detailIndustry').textContent = user.industry || '-';
+            document.getElementById('detailCompany').textContent = user.company || '-';
+            document.getElementById('detailPosition').textContent = user.position || '-';
+
+            const hobbyCard = document.getElementById('hobbyCard');
+            if (user.hobby) {
+                hobbyCard.style.display = 'block';
+                document.getElementById('profileHobby').textContent = user.hobby;
+            } else {
+                hobbyCard.style.display = 'none';
+            }
+        }
+
+        function showEditProfileModal() {
+            const user = window.currentUser;
+            if (!user) {
+                showVerifyModal();
+                return;
+            }
+
+            initProvinceSelect();
+
+            // 所有用户显示密码设置区块
+            document.getElementById('editPasswordSection').style.display = 'block';
+
+            document.getElementById('editPhone').value = user.phone || '';
+            document.getElementById('editEmail').value = user.email || '';
+            document.getElementById('editIndustry').value = user.industry || '';
+            document.getElementById('editCompany').value = user.company || '';
+            document.getElementById('editPosition').value = user.position || '';
+            document.getElementById('editBirthday').value = user.birthday || '';
+            document.getElementById('editHobby').value = user.hobby || '';
+            document.getElementById('editCustomIntro').value = user.custom_intro || '';
+            document.getElementById('editGithub').value = user.github || '';
+            document.getElementById('editDouyin').value = user.douyin || '';
+            document.getElementById('editXiaohongshu').value = user.xiaohongshu || '';
+            document.getElementById('editGpsCoords').value = user.gps_coords || '';
+            document.getElementById('gpsStatus').textContent = user.gps_coords ? '✓ 已设置GPS' : '';
+
+            const provinceKey = user.hometown;
+            if (provinceKey && window.PROVINCE_DATA[provinceKey]) {
+                document.getElementById('editProvince').value = provinceKey;
+                onProvinceChange();
+                setTimeout(() => {
+                    if (user.city) {
+                        const cityPinyin = window.CITY_TO_PINYIN[user.city] || user.city;
+                        document.getElementById('editCity').value = cityPinyin;
+                        onCityChange();
+                        setTimeout(() => {
+                            if (user.district) {
+                                document.getElementById('editDistrict').value = user.district;
+                            }
+                        }, 50);
+                    }
+                }, 50);
+            }
+
+            if (user.avatar) {
+                document.getElementById('editAvatarPreview').innerHTML = '<img src="' + user.avatar + '" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">';
+            } else {
+                document.getElementById('editAvatarPreview').innerHTML = '<span id="editAvatarInitial">' + (user.name || '?')[0] + '</span>';
+            }
+
+            document.getElementById('editProfileModal').classList.add('active');
+        }
+
+        function getGpsLocation() {
+            const statusEl = document.getElementById('gpsStatus');
+            const coordsEl = document.getElementById('editGpsCoords');
+            const btn = document.getElementById('gpsLocateBtn');
+
+            if (!navigator.geolocation) {
+                statusEl.textContent = '浏览器不支持定位';
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = '定位中...';
+            statusEl.textContent = '正在获取位置...';
+
+            navigator.geolocation.getCurrentPosition(
+                function(position) {
+                    const lat = position.coords.latitude.toFixed(4);
+                    const lon = position.coords.longitude.toFixed(4);
+                    const gpsCoords = lat + ',' + lon;
+
+                    coordsEl.value = gpsCoords;
+                    statusEl.textContent = '✓ 定位成功: ' + lat + ',' + lon;
+                    statusEl.style.color = '#4CAF50';
+                    btn.textContent = '📍 GPS定位';
+                    btn.disabled = false;
+
+                    // 立即保存到服务器
+                    saveGpsCoords(gpsCoords);
+                },
+                function(error) {
+                    let msg = '定位失败';
+                    if (error.code === 1) msg = '请允许定位权限';
+                    else if (error.code === 2) msg = '无法获取位置';
+                    else if (error.code === 3) msg = '定位超时';
+                    statusEl.textContent = msg;
+                    statusEl.style.color = '#ff4d4f';
+                    btn.textContent = '📍 GPS定位';
+                    btn.disabled = false;
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 60000
+                }
+            );
+        }
+
+        function saveGpsCoords(gpsCoords) {
+            fetch('/api/update_gps_coords', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                credentials: 'same-origin',
+                body: JSON.stringify({gps_coords: gpsCoords})
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    // 更新本地用户数据
+                    if (window.currentUser) {
+                        window.currentUser.gps_coords = gpsCoords;
+                        window.currentUser.coords = gpsCoords;
+                    }
+                } else {
+                    // 显示保存失败
+                    const statusEl = document.getElementById('gpsStatus');
+                    if (statusEl) {
+                        statusEl.textContent = '保存失败: ' + (data.message || '');
+                        statusEl.style.color = '#ff4d4f';
+                    }
+                }
+            })
+            .catch(() => {
+                // 网络错误
+                const statusEl = document.getElementById('gpsStatus');
+                if (statusEl) {
+                    statusEl.textContent = '保存失败，请检查网络';
+                    statusEl.style.color = '#ff4d4f';
+                }
+            });
+        }
+
+        function closeEditProfileModal() {
+            document.getElementById('editProfileModal').classList.remove('active');
+            // 清除密码输入框
+            const newPwd = document.getElementById('editNewPassword');
+            const confirmPwd = document.getElementById('editConfirmPassword');
+            if (newPwd) newPwd.value = '';
+            if (confirmPwd) confirmPwd.value = '';
+            document.getElementById('editError').textContent = '';
+        }
+
+        function handleAvatarUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const progressEl = document.getElementById('avatarUploadProgress');
+            if (progressEl) {
+                progressEl.style.display = 'block';
+                progressEl.classList.remove('upload-error');
+                progressEl.querySelector('.upload-progress-bar').style.width = '0%';
+                progressEl.querySelector('.upload-progress-text').textContent = '0%';
+            }
+
+            const formData = new FormData();
+            formData.append('avatar', file);
+            formData.append('student_id', window.currentUser.student_id);
+
+            const xhr = new XMLHttpRequest();
+            xhr.upload.addEventListener('progress', (e) => {
+                if (e.lengthComputable && progressEl) {
+                    const percent = Math.round((e.loaded / e.total) * 100);
+                    progressEl.querySelector('.upload-progress-bar').style.width = percent + '%';
+                    progressEl.querySelector('.upload-progress-text').textContent = percent + '%';
+                }
+            });
+            xhr.addEventListener('load', () => {
+                if (xhr.status >= 200 && xhr.status < 300) {
+                    try {
+                        const data = JSON.parse(xhr.responseText);
+                        if (data.success) {
+                            if (progressEl) {
+                                progressEl.querySelector('.upload-progress-bar').style.width = '100%';
+                                progressEl.querySelector('.upload-progress-text').textContent = '100%';
+                            }
+                            window.currentUser.avatar = data.avatar_url;
+                            document.getElementById('editAvatarPreview').innerHTML = '<img src="' + data.avatar_url + '" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">';
+                            document.getElementById('editAvatarInitial').textContent = '';
+                            setTimeout(() => {
+                                if (progressEl) progressEl.style.display = 'none';
+                                alert('头像上传成功！');
+                            }, 300);
+                        } else {
+                            if (progressEl) {
+                                progressEl.classList.add('upload-error');
+                                progressEl.querySelector('.upload-progress-text').textContent = data.message || '上传失败';
+                            } else {
+                                document.getElementById('editError').textContent = data.message || '上传失败';
+                            }
+                        }
+                    } catch (e) {
+                        if (progressEl) {
+                            progressEl.classList.add('upload-error');
+                            progressEl.querySelector('.upload-progress-text').textContent = '解析响应失败';
+                        }
+                    }
+                } else {
+                    if (progressEl) {
+                        progressEl.classList.add('upload-error');
+                        progressEl.querySelector('.upload-progress-text').textContent = '上传失败: ' + xhr.status;
+                    }
+                }
+            });
+            xhr.addEventListener('error', () => {
+                if (progressEl) {
+                    progressEl.classList.add('upload-error');
+                    progressEl.querySelector('.upload-progress-text').textContent = '网络错误';
+                }
+            });
+            xhr.open('POST', '/upload_avatar');
+            xhr.withCredentials = true;
+            xhr.send(formData);
+        }
+
+        function submitProfileEdit(event) {
+            event.preventDefault();
+
+            const form = event.target;
+            const formData = new FormData(form);
+            formData.append('student_id', window.currentUser.student_id);
+
+            // 处理密码设置
+            const newPwd = document.getElementById('editNewPassword')?.value;
+            const confirmPwd = document.getElementById('editConfirmPassword')?.value;
+            if (newPwd && newPwd !== confirmPwd) {
+                document.getElementById('editError').textContent = '两次密码不一致';
+                return;
+            }
+
+            fetch('/update_profile', {
+                method: 'POST',
+                credentials: 'same-origin',
+                body: formData
+            })
+            .then(res => res.json())
+            .then(async data => {
+                if (data.success) {
+                    // 如果填写了新密码，则更新密码
+                    if (newPwd) {
+                        try {
+                            const pwdRes = await fetch('/api/user/set_password', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                credentials: 'same-origin',
+                                body: JSON.stringify({ password: newPwd })
+                            });
+                            const pwdData = await pwdRes.json();
+                            if (!pwdData.success) {
+                                document.getElementById('editError').textContent = '密码设置失败';
+                                return;
+                            }
+                        } catch (e) {
+                            document.getElementById('editError').textContent = '密码设置失败';
+                            return;
+                        }
+                    }
+
+                    Object.assign(window.currentUser, {
+                        phone: formData.get('phone'),
+                        email: formData.get('email'),
+                        work: formData.get('work'),
+                        position: formData.get('position'),
+                        birthday: formData.get('birthday'),
+                        hometown: formData.get('hometown'),
+                        city: formData.get('city'),
+                        district: formData.get('district'),
+                        hobby: formData.get('hobby'),
+                        github: formData.get('github'),
+                        douyin: formData.get('douyin'),
+                        xiaohongshu: formData.get('xiaohongshu'),
+                        industry: formData.get('industry'),
+                        company: formData.get('company'),
+                        custom_intro: formData.get('custom_intro')
+                    });
+                    localStorage.setItem('currentUser', JSON.stringify(window.currentUser));
+                    closeEditProfileModal();
+                    updateProfileUI();
+                    alert('资料更新成功！');
+                } else {
+                    document.getElementById('editError').textContent = data.message || '更新失败';
+                }
+            })
+            .catch(err => {
+                document.getElementById('editError').textContent = '更新失败，请重试';
+            });
+        }
+
+        window.addEventListener('userLoginSuccess', function() {
+            updateProfileUI();
+        });
+
+        async function loadDeletedItems(page = 1) {
+            const listEl = document.getElementById('deletedItemsList');
+            const paginationEl = document.getElementById('deletedPagination');
+            if (!listEl) return;
+
+            try {
+                const res = await fetch(`/api/get_deleted?page=${page}`, { credentials: 'same-origin' });
+                const data = await res.json();
+
+                if (!data.success || !data.items || data.items.length === 0) {
+                    listEl.innerHTML = '<p style="color: var(--text-light); text-align: center; padding: 1rem;">暂无已删除内容</p>';
+                    if (paginationEl) paginationEl.style.display = 'none';
+                    return;
+                }
+
+                // 存储所有项目用于预览
+                allDeletedItems = data.items;
+
+                listEl.innerHTML = data.items.map(item => {
+                    const typeIcon = item.type === 'photo' ? '📷' : item.type === 'video' ? '🎬' : item.type === 'message' ? '💬' : item.type === 'comment' ? '💭' : item.type === 'voice_shout' ? '🎤' : '📝';
+                    const typeName = item.type === 'photo' ? '照片' : item.type === 'video' ? '视频' : item.type === 'message' ? '留言' : item.type === 'comment' ? '评论' : item.type === 'voice_shout' ? '喊话' : '其他';
+                    const deletedByText = item.deleted_by && item.deleted_by !== item.owner ? `<span style="color: #e74c3c; font-size: 0.75rem;">(被${item.deleted_by}删除)</span>` : '';
+                    return `
+                        <div class="deleted-item" style="padding: 0.8rem; border-bottom: 1px solid var(--bg-dark); display: flex; justify-content: space-between; align-items: center;">
+                            <div style="flex: 1;">
+                                <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.3rem;">
+                                    <span>${typeIcon}</span>
+                                    <span style="font-weight: 500;">${typeName}</span>
+                                    <span style="color: var(--text-light); font-size: 0.85rem;">by ${item.owner}</span>
+                                    ${deletedByText}
+                                </div>
+                                <div style="color: var(--text); font-size: 0.9rem;">${item.content ? item.content.substring(0, 50) + (item.content.length > 50 ? '...' : '') : '(无内容)'}</div>
+                                <div style="color: var(--text-light); font-size: 0.8rem; margin-top: 0.3rem;">删除于 ${item.deleted_time}</div>
+                            </div>
+                            <div style="display: flex; gap: 0.5rem;">
+                                <button onclick="previewDeletedItem(${item.id})" style="background: var(--bg-dark); color: var(--text); border: none; padding: 0.5rem 1rem; border-radius: 20px; cursor: pointer; font-size: 0.85rem;">查看</button>
+                                ${item.type !== 'voice_shout' ? `<button onclick="restoreDeletedItem(${item.id})" style="background: var(--secondary); color: white; border: none; padding: 0.5rem 1rem; border-radius: 20px; cursor: pointer; font-size: 0.85rem;">恢复</button>` : ''}
+                                <button onclick="permanentDeleteItem(${item.id})" style="background: #999; color: white; border: none; padding: 0.5rem 1rem; border-radius: 20px; cursor: pointer; font-size: 0.85rem;">彻底删除</button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                // 渲染分页
+                if (paginationEl) {
+                    if (data.total_pages > 1) {
+                        paginationEl.style.display = 'flex';
+                        let paginationHtml = '';
+                        for (let i = 1; i <= data.total_pages; i++) {
+                            paginationHtml += `<button onclick="loadDeletedItems(${i})" style="min-width: 36px; height: 36px; border: 1px solid ${i === data.page ? 'var(--secondary)' : 'var(--bg-dark)'}; background: ${i === data.page ? 'var(--secondary)' : 'white'}; color: ${i === data.page ? 'white' : 'var(--text)'}; border-radius: 8px; cursor: pointer; margin: 0 2px;">${i}</button>`;
+                        }
+                        paginationEl.innerHTML = paginationHtml;
+                    } else {
+                        paginationEl.style.display = 'none';
+                    }
+                }
+            } catch (e) {
+                listEl.innerHTML = '<p style="color: var(--text-light); text-align: center; padding: 1rem;">加载失败</p>';
+            }
+        }
+
+        async function restoreDeletedItem(id) {
+            if (!confirm('确定要恢复这条内容吗？')) return;
+
+            try {
+                const res = await fetch('/api/restore_deleted', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'same-origin',
+                    body: JSON.stringify({ id: id })
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    alert('恢复成功');
+                    loadDeletedItems();
+                } else {
+                    alert(data.message || '恢复失败');
+                }
+            } catch (e) {
+                alert('恢复失败，请稍后重试');
+            }
+        }
+
+        let allDeletedItems = [];
+        function closeDeletedPreviewModal() {
+            document.getElementById('deletedPreviewModal').classList.remove('active');
+        }
+
+        function previewDeletedItem(id) {
+            const item = allDeletedItems.find(i => i.id === id);
+            if (!item) return;
+
+            const contentEl = document.getElementById('deletedPreviewContent');
+            let html = '';
+
+            if (item.type === 'photo') {
+                html = `<div style="margin-bottom: 1rem;"><img src="/static/photos/${item.content}" style="max-width: 100%; max-height: 50vh; border-radius: 8px;" onerror="this.src='/static/imgs/placeholder.png'"></div>`;
+            } else if (item.type === 'video') {
+                html = `<div style="margin-bottom: 1rem;"><p style="color: var(--text-light);">视频标题: ${item.content}</p><a href="${item.extra}" target="_blank" style="color: var(--secondary);">点击查看视频</a></div>`;
+            } else if (item.type === 'message' || item.type === 'comment') {
+                html = `<div style="margin-bottom: 1rem; padding: 1rem; background: var(--bg-dark); border-radius: 8px; text-align: left;"><p style="white-space: pre-wrap; word-break: break-all;">${item.content || '(无内容)'}</p></div>`;
+            } else if (item.type === 'voice_shout') {
+                html = `<div style="margin-bottom: 1rem;"><p style="color: var(--text-light);">喊话语音</p><audio src="${item.extra}" controls style="width: 100%;"></audio></div>`;
+            } else {
+                html = `<div style="margin-bottom: 1rem;"><p>${item.content || '(无内容)'}</p></div>`;
+            }
+
+            html += `<div style="text-align: left; color: var(--text-light); font-size: 0.9rem;">
+                <p>类型: ${item.type === 'photo' ? '照片' : item.type === 'video' ? '视频' : item.type === 'message' ? '留言' : item.type === 'comment' ? '评论' : item.type === 'voice_shout' ? '喊话' : '其他'}</p>
+                <p>原发布者: ${item.owner}</p>
+                ${item.deleted_by ? `<p>删除者: ${item.deleted_by}</p>` : ''}
+                <p>原时间: ${item.time || '未知'}</p>
+                <p>删除时间: ${item.deleted_time}</p>
+            </div>`;
+
+            contentEl.innerHTML = html;
+            document.getElementById('deletedPreviewModal').classList.add('active');
+        }
+
+        async function permanentDeleteItem(id) {
+            if (!confirm('彻底删除后无法恢复，确定要彻底删除吗？')) return;
+
+            try {
+                const res = await fetch('/api/permanent_delete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'same-origin',
+                    body: JSON.stringify({ id: id })
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    alert('彻底删除成功');
+                    loadDeletedItems();
+                } else {
+                    alert(data.message || '删除失败');
+                }
+            } catch (e) {
+                alert('删除失败，请稍后重试');
+            }
+        }
+
+        // 加载动态管理列表
+        let activityPage = 1;
+        let activityTotalPages = 1;
+
+        async function loadActivityManagement(page = 1) {
+            if (window.currentUser && window.currentUser.name === '穆玉升') {
+                document.getElementById('activityManagementCard').style.display = 'block';
+                activityPage = page;
+
+                try {
+                    const res = await fetch(`/api/get_activities?page=${page}`, { credentials: 'same-origin' });
+                    const data = await res.json();
+
+                    const listEl = document.getElementById('activityManagementList');
+
+                    if (!data.activities || data.activities.length === 0) {
+                        listEl.innerHTML = '<p style="color: var(--text-light); text-align: center; padding: 1rem;">暂无动态</p>';
+                        document.getElementById('activityPagination')?.remove();
+                        return;
+                    }
+
+                    activityTotalPages = data.total_pages;
+
+                    let html = data.activities.map(activity => {
+                        const typeIcon = activity.type === 'message' ? '💬' :
+                                        activity.type === 'photo' ? '📷' :
+                                        activity.type === 'video' ? '🎬' :
+                                        activity.type === 'voice' ? '🎤' :
+                                        activity.type === 'profile_update' ? '👤' : '📝';
+                        return `
+                            <div style="padding: 1rem; border-bottom: 1px solid var(--bg-dark); display: flex; justify-content: space-between; align-items: flex-start; background: var(--card-bg); border-radius: 12px; margin-bottom: 0.5rem; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+                                <div style="flex: 1;">
+                                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                                        <span style="font-size: 1.2rem;">${typeIcon}</span>
+                                        <span style="font-weight: 600; font-size: 1rem;">${activity.actor}</span>
+                                        <span style="color: var(--text-light); font-size: 0.85rem;">${activity.time}</span>
+                                    </div>
+                                    <div style="color: var(--text); font-size: 0.95rem; line-height: 1.5;">${activity.content || '(无内容)'}</div>
+                                </div>
+                                <button onclick="deleteActivity('${activity.time}', '${activity.actor}', '${(activity.content || '').replace(/'/g, "\\'")}', ${page})" style="background: #e74c3c; color: white; border: none; padding: 0.6rem 1.2rem; border-radius: 20px; cursor: pointer; font-size: 0.9rem; margin-left: 1rem; flex-shrink: 0;">删除</button>
+                            </div>
+                        `;
+                    }).join('');
+
+                    // 分页控件
+                    if (activityTotalPages > 1) {
+                        let pageHtml = '<div id="activityPagination" style="display: flex; justify-content: center; gap: 0.5rem; margin-top: 1rem; flex-wrap: wrap;">';
+                        for (let i = 1; i <= activityTotalPages; i++) {
+                            pageHtml += `<button onclick="loadActivityManagement(${i})" style="min-width: 36px; height: 36px; border: 1px solid ${i === page ? 'var(--secondary)' : 'var(--bg-dark)'}; background: ${i === page ? 'var(--secondary)' : 'white'}; color: ${i === page ? 'white' : 'var(--text)'}; border-radius: 8px; cursor: pointer; margin: 0 2px;">${i}</button>`;
+                        }
+                        pageHtml += '</div>';
+                        html += pageHtml;
+                    }
+
+                    listEl.innerHTML = html;
+                } catch (e) {
+                    document.getElementById('activityManagementList').innerHTML = '<p style="color: var(--text-light); text-align: center; padding: 1rem;">加载失败</p>';
+                }
+            } else {
+                document.getElementById('activityManagementCard').style.display = 'none';
+            }
+        }
+
+        // 删除动态
+        async function deleteActivity(time, actor, content, page = 1) {
+            if (!confirm('确定要删除这条动态吗？')) return;
+
+            try {
+                const res = await fetch('/api/delete_activity', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'same-origin',
+                    body: JSON.stringify({ time: time, actor: actor, content: content })
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    alert('删除成功');
+                    loadActivityManagement(activityPage);
+                } else {
+                    alert(data.message || '删除失败');
+                }
+            } catch (e) {
+                alert('删除失败，请稍后重试');
+            }
+        }
+
+        let loginLogsPage = 1;
+        let loginLogsTotalPages = 1;
+
+        // 加载登录日志
+        async function loadLoginLogs(page = 1) {
+            if (window.currentUser && window.currentUser.name === '穆玉升') {
+                document.getElementById('loginLogsCard').style.display = 'block';
+                loginLogsPage = page;
+
+                try {
+                    const res = await fetch(`/api/get_login_logs?page=${page}`, { credentials: 'same-origin' });
+                    const data = await res.json();
+
+                    const listEl = document.getElementById('loginLogsList');
+
+                    if (!data.logs || data.logs.length === 0) {
+                        listEl.innerHTML = '<p style="color: var(--text-light); text-align: center; padding: 1rem;">暂无登录记录</p>';
+                        document.getElementById('loginLogsPagination')?.remove();
+                        return;
+                    }
+
+                    loginLogsTotalPages = data.total_pages;
+
+                    let html = '<div style="margin-bottom: 1rem; padding: 0.8rem; background: rgba(231,76,60,0.1); border-radius: 10px;">';
+                    html += '<div style="font-size: 0.9rem; color: var(--text-light); margin-bottom: 0.3rem;">最近一周统计</div>';
+                    html += `<div style="font-size: 1.1rem; font-weight: 600;">登录次数: <span style="color: var(--secondary);">${data.weekly_count || 0}</span> | 登录人数: <span style="color: var(--secondary);">${data.weekly_users || 0}</span></div>`;
+                    html += '</div>';
+
+                    html += data.logs.map(log => `
+                        <div style="padding: 0.8rem; border-bottom: 1px solid var(--bg-dark); display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <div style="font-weight: 500;">${log.username}</div>
+                                <div style="color: var(--text-light); font-size: 0.8rem; margin-top: 0.2rem;">${log.login_time}</div>
+                                ${log.ip_address ? `<div style="color: var(--text-light); font-size: 0.75rem;">IP: ${log.ip_address}</div>` : ''}
+                            </div>
+                        </div>
+                    `).join('');
+
+                    // 分页控件
+                    if (loginLogsTotalPages > 1) {
+                        let pageHtml = '<div id="loginLogsPagination" style="display: flex; justify-content: center; gap: 0.5rem; margin-top: 1rem; flex-wrap: wrap;">';
+                        for (let i = 1; i <= loginLogsTotalPages; i++) {
+                            pageHtml += `<button onclick="loadLoginLogs(${i})" style="min-width: 36px; height: 36px; border: 1px solid ${i === page ? 'var(--secondary)' : 'var(--bg-dark)'}; background: ${i === page ? 'var(--secondary)' : 'white'}; color: ${i === page ? 'white' : 'var(--text)'}; border-radius: 8px; cursor: pointer; margin: 0 2px;">${i}</button>`;
+                        }
+                        pageHtml += '</div>';
+                        html += pageHtml;
+                    }
+
+                    listEl.innerHTML = html;
+                } catch (e) {
+                    document.getElementById('loginLogsList').innerHTML = '<p style="color: var(--text-light); text-align: center; padding: 1rem;">加载失败</p>';
+                }
+            } else {
+                document.getElementById('loginLogsCard').style.display = 'none';
+            }
+        }
+
+        window.addEventListener('userLoginSuccess', function() {
+            loadDeletedItems();
+            loadActivityManagement();
+            loadLoginLogs();
+        });
+
+        // 页面加载时也检查
+        if (window.currentUser) {
+            loadActivityManagement();
+            loadLoginLogs();
+        }
+    </script>
+</body>
+</html>

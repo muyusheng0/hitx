@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>留言板 - 吉大自动化八班</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='80' font-size='80'>📖</text></svg>">
+</head>
+<body>
+    <!-- 顶部标题栏 -->
+    <header class="top-header">
+        <h1 class="header-title">吉大<span>自动化</span>八班</h1>
+        <div id="userStatus" class="user-status"></div>
+        <div class="notification-container" id="notificationContainer" style="display: none;">
+            <button class="notification-bell" id="notificationBell" onclick="toggleNotificationDropdown()">
+                <span class="bell-icon">🔔</span>
+                <span class="notification-badge" id="notificationBadge" style="display: none;">0</span>
+            </button>
+            <div class="notification-dropdown" id="notificationDropdown">
+                <div class="notification-header">
+                    <span>消息通知</span>
+                    <button class="notification-mark-read" onclick="markAllNotificationsRead()">全部已读</button>
+                </div>
+                <div class="notification-list" id="notificationList">
+                    <div class="notification-empty">暂无通知</div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- 主内容 -->
+    <main class="main-content">
+        <div class="container">
+            <div class="page-header">
+                <h1 class="page-title">💬 留言板</h1>
+                <p class="page-subtitle">留下你的足迹，分享你的故事</p>
+            </div>
+
+            <!-- 留言输入 -->
+            <div class="message-input-box" id="messageInputBox">
+                <!-- 未登录提示 -->
+                <div class="message-login-prompt" id="messageLoginPrompt" style="text-align: center; padding: 2rem;">
+                    <p style="color: var(--text-light); margin-bottom: 1rem;">登录后即可发表留言</p>
+                    <button class="submit-btn" onclick="showVerifyModal()">
+                        <span>🔑</span> 登录
+                    </button>
+                </div>
+                <!-- 留言表单（登录后显示） -->
+                <form id="messageForm" onsubmit="submitMessage(event)" style="display: none;">
+                    <div class="input-group">
+                        <label>留言内容</label>
+                        <textarea id="msgContent" placeholder="想说点什么..." maxlength="500" required></textarea>
+                        <div class="char-count" id="charCount">0/500</div>
+                    </div>
+                    <div class="input-group">
+                        <label>上传照片（选填）</label>
+                        <input type="file" id="msgImage" accept="image/*" onchange="previewMessageImage(this)">
+                        <img id="msgImagePreview" style="max-width: 200px; max-height: 200px; display: none; margin-top: 10px; border-radius: 8px;">
+                        <div id="msgImageUploadProgress" class="upload-progress" style="display: none; margin-top: 10px;">
+                            <div class="upload-progress-bar" style="width: 0%;"></div>
+                            <span class="upload-progress-text">0%</span>
+                        </div>
+                    </div>
+                    <button type="submit" class="submit-btn">
+                        <span>📤</span> 发送留言
+                    </button>
+                </form>
+                <!-- 语音留言 -->
+                <div class="voice-message-box" id="voiceMessageBox" style="display: none;">
+                    <div class="voice-record-area">
+                        <button type="button" class="voice-record-btn" id="voiceRecordBtn" onclick="toggleVoiceRecording()">
+                            <span id="voiceRecordIcon">🎤</span>
+                            <span id="voiceRecordText">按住说话</span>
+                        </button>
+                        <div id="voicePreviewArea" style="display: none; margin-top: 10px;">
+                            <audio id="voicePreviewAudio" controls style="width: 100%;"></audio>
+                            <button type="button" class="submit-btn" onclick="submitVoiceMessage()" style="margin-top: 10px;">
+                                <span>📤</span> 发送语音留言
+                            </button>
+                            <button type="button" class="cancel-btn" onclick="cancelVoiceRecording()" style="margin-left: 10px;">
+                                取消
+                            </button>
+                        </div>
+                    </div>
+                    <div id="voiceRecordingStatus" style="text-align: center; margin-top: 10px; color: var(--secondary); display: none;"></div>
+                </div>
+                <div style="text-align: center; margin-top: 10px;" id="voiceToggleArea" style="display: none;">
+                    <button type="button" class="toggle-voice-btn" onclick="showVoiceMessageBox()" style="background: none; border: none; color: var(--secondary); cursor: pointer; font-size: 0.9rem;">
+                        🎤 切换到语音留言
+                    </button>
+                </div>
+            </div>
+
+            <!-- 留言列表 -->
+            <div class="message-board">
+                <h2 class="section-title">全部留言</h2>
+                <div class="message-list" id="messageList">
+                    {% for msg in messages %}
+                    <div class="message-item slide-in" id="msg-{{ msg.id }}" data-nickname="{{ msg.nickname }}" data-msg-id="{{ msg.id }}">
+                        <div class="message-header">
+                            <div class="message-nickname">{{ msg.nickname }}</div>
+                            <div class="message-time">{{ msg.time }}</div>
+                        </div>
+                        {% if msg.voice %}
+                        <div class="voice-message-player">
+                            <button class="voice-play-btn" onclick="toggleVoicePlay(this, '{{ msg.voice }}')">
+                                <span class="voice-play-icon">▶️</span>
+                            </button>
+                            <div class="voice-wave">
+                                <span></span><span></span><span></span><span></span><span></span>
+                            </div>
+                            <span class="voice-duration">8秒</span>
+                        </div>
+                        {% else %}
+                        <div class="message-content">{{ msg.content }}</div>
+                        {% endif %}
+                        {% if msg.image %}
+                        <img src="{{ msg.image }}" style="max-width: 200px; max-height: 200px; margin-top: 10px; border-radius: 8px; display: block; cursor: pointer;" onclick="showLightbox(this.src)">
+                        {% endif %}
+                        <div class="message-actions">
+                            <button class="like-btn" onclick="toggleLike({{ msg.id }})" data-liked="false">
+                                <span class="like-icon">🤍</span>
+                                <span class="like-count">0</span>
+                            </button>
+                            <button class="comment-toggle-btn" onclick="toggleComments({{ msg.id }})">
+                                <span>💬</span>
+                                <span class="comment-count">0</span>
+                            </button>
+                            <button class="delete-msg-btn" onclick="deleteMessage({{ msg.id }})" style="display: none;">🗑️ 删除</button>
+                        </div>
+                        <!-- 评论区域 -->
+                        <div class="comments-section" id="comments-{{ msg.id }}" style="display: block;">
+                            <div class="comments-list" id="comments-list-{{ msg.id }}"></div>
+                            <div class="comment-input-area" id="comment-input-{{ msg.id }}">
+                                <input type="text" class="comment-input" placeholder="写下你的评论..." onkeypress="handleCommentKeypress(event, {{ msg.id }})">
+                                <button class="comment-submit-btn" onclick="submitComment({{ msg.id }})">发送</button>
+                            </div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="empty-message">还没有留言，快来写下第一句吧~</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- 底部标签栏（微信小程序风格） -->
+    <nav class="bottom-tab-bar">
+        <a href="/" class="tab-item">
+            <span class="tab-icon">🏠</span>
+            <span class="tab-label">首页</span>
+        </a>
+        <a href="/txl" class="tab-item">
+            <span class="tab-icon">👥</span>
+            <span class="tab-label">通讯录</span>
+        </a>
+        <a href="/lyb" class="tab-item active">
+            <span class="tab-icon">💬</span>
+            <span class="tab-label">留言板</span>
+        </a>
+        <a href="/media" class="tab-item">
+            <span class="tab-icon">📷</span>
+            <span class="tab-label">媒体</span>
+        </a>
+        <a href="/about" class="tab-item">
+            <span class="tab-icon">👤</span>
+            <span class="tab-label">我的</span>
+        </a>
+    </nav>
+
+    <!-- 验证模态框 -->
+    <div class="modal-overlay" id="verifyModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">身份验证</h3>
+                <button class="modal-close" onclick="closeVerifyModal()">✕</button>
+            </div>
+            <form class="verify-form" onsubmit="submitVerify(event)">
+                <div class="input-group">
+                    <label>姓名</label>
+                    <input type="text" id="verifyName" placeholder="请输入你的姓名" required>
+                </div>
+                <div class="input-group">
+                    <label>学号</label>
+                    <input type="text" id="verifyStudentId" placeholder="请输入你的学号" required>
+                </div>
+                <div class="input-group">
+                    <label>验证码</label>
+                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                        <span id="captchaQuestion" style="font-size: 1.2rem; font-weight: bold; color: var(--secondary); min-width: 60px;">加载中...</span>
+                        <input type="text" id="verifyCaptcha" placeholder="请输入答案" required style="flex: 1;">
+                        <button type="button" onclick="refreshCaptcha()" style="background: none; border: none; cursor: pointer; font-size: 1.2rem;" title="刷新验证码">🔄</button>
+                    </div>
+                </div>
+                <div class="verify-error" id="verifyError"></div>
+                <button type="submit" class="verify-btn">验证身份</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="/static/js/main.js"></script>
+    <script>
+        // 页面加载时初始化点赞状态
+        document.querySelectorAll('.message-item[data-msg-id]').forEach(item => {
+            const msgId = item.dataset.msgId;
+            loadLikeStatus(msgId);
+            loadCommentCount(msgId);
+        });
+
+        function loadLikeStatus(msgId) {
+            fetch(`/api/get_message_likes/${msgId}`)
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        const btn = document.querySelector(`#msg-${msgId} .like-btn`);
+                        if (btn) {
+                            btn.querySelector('.like-count').textContent = data.count;
+                            btn.dataset.liked = data.has_liked;
+                            if (data.has_liked) {
+                                btn.classList.add('liked');
+                                btn.querySelector('.like-icon').textContent = '❤️';
+                            }
+                        }
+                    }
+                });
+        }
+
+        function loadCommentCount(msgId) {
+            fetch(`/api/get_comments/${msgId}`)
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        const btn = document.querySelector(`#msg-${msgId} .comment-toggle-btn`);
+                        if (btn) {
+                            btn.querySelector('.comment-count').textContent = data.comments.length;
+                        }
+                    }
+                });
+        }
+
+        function toggleLike(msgId) {
+            if (!window.currentUser) {
+                showVerifyModal();
+                return;
+            }
+            const btn = document.querySelector(`#msg-${msgId} .like-btn`);
+            const isLiked = btn.dataset.liked === 'true';
+            const url = isLiked ? '/api/unlike_message' : '/api/like_message';
+            fetch(url, {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({message_id: msgId})
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    btn.querySelector('.like-count').textContent = data.count;
+                    btn.dataset.liked = data.liked;
+                    if (data.liked) {
+                        btn.classList.add('liked');
+                        btn.querySelector('.like-icon').textContent = '❤️';
+                    } else {
+                        btn.classList.remove('liked');
+                        btn.querySelector('.like-icon').textContent = '🤍';
+                    }
+                }
+            });
+        }
+
+        function toggleComments(msgId) {
+            if (!window.currentUser) {
+                showVerifyModal();
+                return;
+            }
+            const section = document.getElementById(`comments-${msgId}`);
+            if (section.style.display === 'none') {
+                section.style.display = 'block';
+                loadComments(msgId);
+            } else {
+                section.style.display = 'none';
+            }
+        }
+
+        function loadComments(msgId) {
+            fetch(`/api/get_comments/${msgId}`)
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        const list = document.getElementById(`comments-list-${msgId}`);
+                        const currentUser = window.currentUser ? window.currentUser.name : '';
+                        const isAdmin = currentUser === '穆玉升';
+                        list.innerHTML = data.comments.map(c => {
+                            const canDelete = isAdmin || c.nickname === currentUser;
+                            return `
+                                <div class="comment-item">
+                                    <span class="comment-nickname">${escapeHtml(c.nickname)}:</span>
+                                    <span class="comment-content">${escapeHtml(c.content)}</span>
+                                    <div class="comment-time">${c.time}</div>
+                                    ${canDelete ? `<button onclick="deleteComment(${c.id}, ${msgId})" style="background:none;border:none;color:#e74c3c;cursor:pointer;font-size:0.75rem;margin-left:0.5rem;">删除</button>` : ''}
+                                </div>
+                            `;
+                        }).join('');
+                    }
+                });
+        }
+
+        function deleteComment(commentId, msgId) {
+            if (!confirm('确定要删除该评论吗？')) return;
+            fetch('/api/delete_comment', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'same-origin',
+                body: JSON.stringify({ id: commentId, message_id: msgId })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    loadComments(msgId);
+                    // 更新评论数
+                    const countEl = document.querySelector(`#msg-${msgId} .comment-count`);
+                    if (countEl) {
+                        countEl.textContent = parseInt(countEl.textContent) - 1;
+                    }
+                } else {
+                    alert(data.message || '删除失败');
+                }
+            })
+            .catch(() => {
+                alert('删除失败，请稍后重试');
+            });
+        }
+
+        function handleCommentKeypress(e, msgId) {
+            if (e.key === 'Enter') {
+                submitComment(msgId);
+            }
+        }
+
+        function submitComment(msgId) {
+            if (!window.currentUser) {
+                showVerifyModal();
+                return;
+            }
+            const input = document.querySelector(`#comment-input-${msgId} .comment-input`);
+            const content = input.value.trim();
+            if (!content) return;
+            fetch('/api/add_comment', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({message_id: msgId, content: content})
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    input.value = '';
+                    loadComments(msgId);
+                    // 更新评论数
+                    const btn = document.querySelector(`#msg-${msgId} .comment-toggle-btn .comment-count`);
+                    const count = parseInt(btn.textContent) + 1;
+                    btn.textContent = count;
+                }
+            });
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // 语音留言播放
+        let currentVoiceAudio = null;
+        function toggleVoicePlay(btn, voiceUrl) {
+            if (currentVoiceAudio && currentVoiceAudio.src.includes(voiceUrl)) {
+                currentVoiceAudio.pause();
+                currentVoiceAudio = null;
+                btn.classList.remove('playing');
+                btn.querySelector('.voice-play-icon').textContent = '▶️';
+            } else {
+                if (currentVoiceAudio) {
+                    currentVoiceAudio.pause();
+                    document.querySelectorAll('.voice-play-btn').forEach(b => {
+                        b.classList.remove('playing');
+                        b.querySelector('.voice-play-icon').textContent = '▶️';
+                    });
+                }
+                currentVoiceAudio = new Audio(voiceUrl);
+                currentVoiceAudio.play();
+                btn.classList.add('playing');
+                btn.querySelector('.voice-play-icon').textContent = '⏸️';
+                currentVoiceAudio.onended = () => {
+                    btn.classList.remove('playing');
+                    btn.querySelector('.voice-play-icon').textContent = '▶️';
+                    currentVoiceAudio = null;
+                };
+            }
+        }
+
+        // 语音留言相关变量
+        let voiceMediaRecorder = null;
+        let voiceChunks = [];
+        let voiceStream = null;
+        let voiceRecordingTimer = null;
+        let voiceRecordingDuration = 8;
+        let isVoiceRecording = false;
+        let recordedVoiceBlob = null;
+
+        function showVoiceMessageBox() {
+            document.getElementById('messageForm').style.display = 'none';
+            document.getElementById('voiceMessageBox').style.display = 'block';
+            document.getElementById('voiceToggleArea').style.display = 'none';
+        }
+
+        function showTextMessageBox() {
+            document.getElementById('messageForm').style.display = 'block';
+            document.getElementById('voiceMessageBox').style.display = 'none';
+            document.getElementById('voiceToggleArea').style.display = 'block';
+        }
+
+        function toggleVoiceRecording() {
+            if (isVoiceRecording) {
+                stopVoiceRecording();
+            } else {
+                startVoiceRecording();
+            }
+        }
+
+        async function startVoiceRecording() {
+            try {
+                voiceStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                let mimeType = 'audio/wav';
+                if (MediaRecorder.isTypeSupported) {
+                    if (MediaRecorder.isTypeSupported('audio/mp4')) {
+                        mimeType = 'audio/mp4';
+                    } else if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+                        mimeType = 'audio/webm;codecs=opus';
+                    }
+                }
+                voiceMediaRecorder = new MediaRecorder(voiceStream, { mimeType });
+                if (voiceMediaRecorder.mimeType) {
+                    mimeType = voiceMediaRecorder.mimeType;
+                }
+                voiceChunks = [];
+
+                voiceMediaRecorder.ondataavailable = e => {
+                    voiceChunks.push(e.data);
+                };
+
+                voiceMediaRecorder.onstop = () => {
+                    const ext = mimeType.includes('mp4') ? 'mp4' : (mimeType.includes('webm') ? 'webm' : 'wav');
+                    recordedVoiceBlob = new Blob(voiceChunks, { type: mimeType });
+                    const audioUrl = URL.createObjectURL(recordedVoiceBlob);
+                    document.getElementById('voicePreviewAudio').src = audioUrl;
+                    document.getElementById('voicePreviewArea').style.display = 'block';
+                    document.getElementById('voiceRecordBtn').style.display = 'none';
+                    voiceStream.getTracks().forEach(track => track.stop());
+                };
+
+                voiceMediaRecorder.start();
+                isVoiceRecording = true;
+                document.getElementById('voiceRecordIcon').textContent = '⏹️';
+                document.getElementById('voiceRecordText').textContent = '松开停止';
+                document.getElementById('voiceRecordingStatus').style.display = 'block';
+                document.getElementById('voiceRecordingStatus').textContent = `录音中... (${voiceRecordingDuration}秒)`;
+
+                let remaining = voiceRecordingDuration;
+                voiceRecordingTimer = setInterval(() => {
+                    remaining--;
+                    if (remaining > 0) {
+                        document.getElementById('voiceRecordingStatus').textContent = `录音中... (${remaining}秒)`;
+                    }
+                    if (remaining <= 0) {
+                        stopVoiceRecording();
+                    }
+                }, 1000);
+
+            } catch (err) {
+                alert('无法访问麦克风，请检查权限设置');
+                console.error(err);
+            }
+        }
+
+        function stopVoiceRecording() {
+            if (voiceMediaRecorder && voiceMediaRecorder.state === 'recording') {
+                voiceMediaRecorder.stop();
+                isVoiceRecording = false;
+                clearInterval(voiceRecordingTimer);
+                document.getElementById('voiceRecordIcon').textContent = '🎤';
+                document.getElementById('voiceRecordText').textContent = '按住说话';
+                document.getElementById('voiceRecordingStatus').textContent = '录音完成';
+            }
+        }
+
+        function cancelVoiceRecording() {
+            stopVoiceRecording();
+            recordedVoiceBlob = null;
+            document.getElementById('voicePreviewArea').style.display = 'none';
+            document.getElementById('voiceRecordBtn').style.display = 'inline-block';
+            document.getElementById('voiceRecordingStatus').style.display = 'none';
+        }
+
+        function submitVoiceMessage() {
+            if (!recordedVoiceBlob) {
+                alert('请先录音');
+                return;
+            }
+
+            const formData = new FormData();
+            const ext = voiceMediaRecorder && voiceMediaRecorder.mimeType && voiceMediaRecorder.mimeType.includes('mp4') ? 'mp4' : 'wav';
+            formData.append('file', recordedVoiceBlob, `voice.${ext}`);
+
+            fetch('/api/add_voice_message', {
+                method: 'POST',
+                credentials: 'same-origin',
+                body: formData
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert(data.message || '发送失败');
+                }
+            })
+            .catch(() => {
+                alert('发送失败，请稍后重试');
+            });
+        }
+
+        // 按住说话按钮
+        const voiceRecordBtn = document.getElementById('voiceRecordBtn');
+        if (voiceRecordBtn) {
+            voiceRecordBtn.addEventListener('mousedown', () => {
+                if (!isVoiceRecording) startVoiceRecording();
+            });
+            voiceRecordBtn.addEventListener('mouseup', () => {
+                if (isVoiceRecording) stopVoiceRecording();
+            });
+            voiceRecordBtn.addEventListener('mouseleave', () => {
+                if (isVoiceRecording) stopVoiceRecording();
+            });
+            voiceRecordBtn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                if (!isVoiceRecording) startVoiceRecording();
+            });
+            voiceRecordBtn.addEventListener('touchend', () => {
+                if (isVoiceRecording) stopVoiceRecording();
+            });
+        }
+    </script>
+
+    <!-- 返回顶部按钮 -->
+    <button id="backToTopBtn" class="back-to-top" onclick="scrollToTop()">↑</button>
+    <!-- 页面底部提示 -->
+    <div id="pageEndMessage" class="page-end-message">已加载全部内容</div>
+
+    <!-- 灯箱 -->
+    <div class="lightbox" id="lightbox" onclick="closeLightbox()">
+        <button class="lightbox-close" onclick="closeLightbox()">✕</button>
+        <img id="lightboxImg" src="" alt="">
+    </div>
+</body>
+</html>

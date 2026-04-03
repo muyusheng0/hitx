@@ -1,0 +1,46 @@
+# Database
+*.db
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Environment
+.env
+.env.local
+
+# Archives (backup files)
+_archive/
+
+# Large media files
+static/imgs/*.jpg
+static/imgs/*.jpeg
+static/imgs/*.png
+static/imgs/*.gif
+static/voice/
+static/videos/
+static/music/
+
+# Upload directories (keep structure)
+static/photos/
+static/imgs/messages/
+static/imgs/thumbs/
+uploads/
+
+# Claude settings
+.claude/
