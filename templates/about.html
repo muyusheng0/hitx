@@ -12,22 +12,6 @@
     <header class="top-header">
         <h1 class="header-title">个人中心</h1>
         <div id="userStatus" class="user-status"></div>
-        <!-- 通知铃铛 -->
-        <div class="notification-container" id="notificationContainer" style="display: none;">
-            <button class="notification-bell" id="notificationBell" onclick="toggleNotificationDropdown()">
-                <span class="bell-icon">🔔</span>
-                <span class="notification-badge" id="notificationBadge" style="display: none;">0</span>
-            </button>
-            <div class="notification-dropdown" id="notificationDropdown">
-                <div class="notification-header">
-                    <span>消息通知</span>
-                    <button class="notification-mark-read" onclick="markAllNotificationsRead()">全部已读</button>
-                </div>
-                <div class="notification-list" id="notificationList">
-                    <div class="notification-empty">暂无通知</div>
-                </div>
-            </div>
-        </div>
     </header>
 
     <!-- 主内容 -->
@@ -117,6 +101,18 @@
                     </div>
                 </div>
 
+                <!-- 消息通知 -->
+                <div class="profile-detail-card" id="notificationCard" style="margin-top: 1rem;">
+                    <h3 class="profile-detail-title">🔔 消息通知</h3>
+                    <div class="notification-list-about" id="notificationListAbout">
+                        <p style="color: var(--text-light); text-align: center; padding: 1rem;">加载中...</p>
+                    </div>
+                    <div id="notificationPagination" style="display: none; justify-content: center; gap: 0.5rem; margin-top: 0.8rem;"></div>
+                    <div id="notificationActions" style="display: none; justify-content: center; margin-top: 0.8rem;">
+                        <button class="notification-mark-read" onclick="markAllNotificationsRead()">全部已读</button>
+                    </div>
+                </div>
+
                 <!-- 兴趣爱好 -->
                 <div class="profile-detail-card" id="hobbyCard" style="display: none;">
                     <h3 class="profile-detail-title">兴趣爱好</h3>
@@ -137,15 +133,59 @@
 
                 <!-- 管理员设置模块（仅超级管理员） -->
                 <div class="profile-detail-card" id="adminManagementCard" style="margin-top: 1.5rem; display: none;">
-                    <h3 class="profile-detail-title">👑 管理员设置</h3>
+                    <h3 class="profile-detail-title">👑 管理员设置 <span style="font-size: 0.75rem; color: var(--secondary);">(超级管理员功能)</span></h3>
                     <div id="adminManagementContent">
                         <p style="color: var(--text-light); text-align: center; padding: 1rem;">加载中...</p>
                     </div>
                 </div>
 
-                <!-- 管理员密码设置模块 -->
+                <!-- 新闻爬取设置模块（仅超级管理员） -->
+                <div class="profile-detail-card" id="newsScheduleCard" style="margin-top: 1.5rem; display: none;">
+                    <h3 class="profile-detail-title">📰 新闻爬取设置 <span style="font-size: 0.75rem; color: var(--secondary);">(管理员功能)</span></h3>
+                    <div id="newsScheduleContent" style="padding: 0.5rem 0;">
+                        <!-- 关键词设置 -->
+                        <div style="margin-bottom: 1.2rem;">
+                            <p style="color: var(--text-light); margin-bottom: 0.5rem;">爬取关键词（用逗号分隔）：</p>
+                            <input type="text" id="newsKeywordsInput" placeholder="例如：吉林大学,南岭校区,自动化" style="width: 100%; padding: 0.6rem; border: 1px solid var(--border); border-radius: 8px; box-sizing: border-box; font-size: 0.9rem;">
+                            <p style="color: var(--text-light); font-size: 0.75rem; margin-top: 0.3rem;">修改关键词后将自动触发一次爬虫任务</p>
+                        </div>
+                        <button onclick="saveNewsKeywords()" style="background: var(--secondary); color: white; border: none; padding: 0.6rem 1.5rem; border-radius: 8px; cursor: pointer; margin-bottom: 1rem;">保存关键词</button>
+                        <div id="newsKeywordsStatus" style="font-size: 0.9rem; color: var(--text-light); margin-bottom: 1rem;"></div>
+
+                        <div style="border-top: 1px solid var(--border); padding-top: 1rem; margin-top: 0.5rem;">
+                            <p style="color: var(--text-light); margin-bottom: 0.5rem;">设置每日自动爬取时间：</p>
+                            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem;">
+                                <select id="newsCrawlHour" style="padding: 0.5rem; border: 1px solid var(--border); border-radius: 8px; width: 70px;">
+                                    {% for h in range(0, 24) %}
+                                    <option value="{{ h }}">{{ '%02d'|format(h) }}</option>
+                                    {% endfor %}
+                                </select>
+                                <span>:</span>
+                                <select id="newsCrawlMinute" style="padding: 0.5rem; border: 1px solid var(--border); border-radius: 8px; width: 70px;">
+                                    {% for m in range(0, 60, 5) %}
+                                    <option value="{{ m }}">{{ '%02d'|format(m) }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <button onclick="saveNewsSchedule()" style="background: var(--secondary); color: white; border: none; padding: 0.6rem 1.5rem; border-radius: 8px; cursor: pointer;">保存时间</button>
+                            <div id="newsScheduleStatus" style="font-size: 0.9rem; color: var(--text-light); margin-top: 0.5rem;"></div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border);">
+                        <button onclick="crawlNewsNow()" style="background: var(--accent); color: white; border: none; padding: 0.6rem 1.5rem; border-radius: 8px; cursor: pointer;">立即爬取新闻</button>
+                        <span id="crawlNewsStatus" style="font-size: 0.9rem; color: var(--text-light); margin-left: 0.5rem;"></span>
+                    </div>
+                    <!-- 上次爬取日志 -->
+                    <div id="lastCrawlLog" style="margin-top: 1rem; padding: 0.8rem; background: var(--bg-dark); border-radius: 8px; display: none;">
+                        <div style="font-size: 0.85rem; color: var(--text-light); margin-bottom: 0.3rem;">上次执行</div>
+                        <div id="lastCrawlTime" style="font-weight: 500;"></div>
+                        <div id="lastCrawlResult" style="font-size: 0.9rem; margin-top: 0.3rem;"></div>
+                    </div>
+                </div>
+
+                <!-- 密码设置模块 -->
                 <div class="profile-detail-card" id="loginPasswordCard" style="margin-top: 1.5rem; display: none;">
-                    <h3 class="profile-detail-title">🔑 管理员密码</h3>
+                    <h3 class="profile-detail-title">🔑 登录密码</h3>
                     <div id="loginPasswordContent">
                         <p style="color: var(--text-light); text-align: center; padding: 1rem;">加载中...</p>
                     </div>
@@ -153,7 +193,7 @@
 
                 <!-- 动态管理模块（仅管理员） -->
                 <div class="profile-detail-card" id="activityManagementCard" style="margin-top: 1.5rem; display: none;">
-                    <h3 class="profile-detail-title">📰 最新动态管理</h3>
+                    <h3 class="profile-detail-title">📰 最新动态管理 <span style="font-size: 0.75rem; color: var(--secondary);">(管理员功能)</span></h3>
                     <div id="activityManagementList">
                         <p style="color: var(--text-light); text-align: center; padding: 1rem;">加载中...</p>
                     </div>
@@ -161,7 +201,7 @@
 
                 <!-- 登录日志模块（仅管理员） -->
                 <div class="profile-detail-card" id="loginLogsCard" style="margin-top: 1.5rem; display: none;">
-                    <h3 class="profile-detail-title">🔐 登录日志</h3>
+                    <h3 class="profile-detail-title">🔐 登录日志 <span style="font-size: 0.75rem; color: var(--secondary);">(管理员功能)</span></h3>
                     <div id="loginLogsList">
                         <p style="color: var(--text-light); text-align: center; padding: 1rem;">加载中...</p>
                     </div>
@@ -220,11 +260,11 @@
             <form class="verify-form" onsubmit="submitVerify(event)">
                 <div class="input-group">
                     <label>姓名</label>
-                    <input type="text" id="verifyName" placeholder="请输入你的姓名" required>
+                    <input type="text" id="verifyName" onblur="checkPasswordRequired()" placeholder="请输入你的姓名" required>
                 </div>
                 <div class="input-group">
                     <label>学号</label>
-                    <input type="text" id="verifyStudentId" placeholder="请输入你的学号" required>
+                    <input type="text" id="verifyStudentId" onblur="checkPasswordRequired()" placeholder="请输入你的学号" required>
                 </div>
                 <div class="input-group">
                     <label>验证码</label>
@@ -233,6 +273,10 @@
                         <input type="text" id="verifyCaptcha" placeholder="请输入答案" required style="flex: 1;">
                         <button type="button" onclick="refreshCaptcha()" style="background: none; border: none; cursor: pointer; font-size: 1.2rem;" title="刷新验证码">🔄</button>
                     </div>
+                </div>
+                <div class="input-group" id="loginPasswordGroup" style="display: none;">
+                    <label>登录密码</label>
+                    <input type="password" id="verifyLoginPassword" placeholder="请输入登录密码">
                 </div>
                 <div class="verify-error" id="verifyError"></div>
                 <button type="submit" class="verify-btn">验证身份</button>
@@ -374,18 +418,6 @@
 
                 <div class="edit-error" id="editError" style="color: var(--secondary); text-align: center; margin: 0.5rem 0;"></div>
 
-                <!-- 密码设置（仅管理员可见） -->
-                <div id="editPasswordSection" style="display: none; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border);">
-                    <h4 style="margin-bottom: 0.5rem;">🔑 设置登录密码</h4>
-                    <p style="font-size: 0.85rem; color: var(--text-light); margin-bottom: 0.5rem;">设置密码后，可用于删除他人内容时的身份验证</p>
-                    <div class="input-group">
-                        <input type="password" id="editNewPassword" placeholder="请输入新密码（不填则不修改）">
-                    </div>
-                    <div class="input-group">
-                        <input type="password" id="editConfirmPassword" placeholder="请确认新密码">
-                    </div>
-                </div>
-
                 <button type="submit" class="verify-btn">保存修改</button>
             </form>
         </div>
@@ -454,6 +486,8 @@
             // 加载已删除内容
             if (window.currentUser) {
                 loadDeletedItems();
+                loadNotifications();
+                loadNotificationCount();
             }
         });
 
@@ -555,6 +589,14 @@
             document.getElementById('loginPasswordCard').style.display = 'block';
             loadLoginPasswordStatus();
 
+            // 管理员显示新闻爬取设置（可查看日志和时间）
+            if (user.is_admin || user.is_super_admin) {
+                document.getElementById('newsScheduleCard').style.display = 'block';
+                loadNewsScheduleStatus();
+            } else {
+                document.getElementById('newsScheduleCard').style.display = 'none';
+            }
+
             // 超级管理员显示管理员设置
             if (user.is_super_admin) {
                 document.getElementById('adminManagementCard').style.display = 'block';
@@ -564,8 +606,164 @@
             }
         }
 
+        // 加载新闻爬取时间设置
+        async function loadNewsScheduleStatus() {
+            try {
+                const res = await fetch('/api/admin/news/schedule', { credentials: 'same-origin' });
+                const data = await res.json();
+                if (data.hour !== undefined) {
+                    document.getElementById('newsCrawlHour').value = data.hour;
+                    document.getElementById('newsCrawlMinute').value = data.minute;
+                }
+                if (data.next_run) {
+                    document.getElementById('newsScheduleStatus').textContent = '下次爬取: ' + data.next_run;
+                }
+
+                // 显示上次爬取日志
+                if (data.last_crawl) {
+                    const logEl = document.getElementById('lastCrawlLog');
+                    const timeEl = document.getElementById('lastCrawlTime');
+                    const resultEl = document.getElementById('lastCrawlResult');
+
+                    logEl.style.display = 'block';
+                    timeEl.textContent = data.last_crawl.executed_at;
+
+                    if (data.last_crawl.status === 'success') {
+                        resultEl.innerHTML = `<span style="color: #4CAF50;">✓ 成功</span> - 获取到 ${data.last_crawl.news_count} 条新闻${data.last_crawl.image_count > 0 ? `，下载 ${data.last_crawl.image_count} 张图片` : ''}`;
+                    } else {
+                        resultEl.innerHTML = `<span style="color: #e74c3c;">✗ 失败</span> - ${data.last_crawl.message || '未知错误'}`;
+                    }
+                }
+            } catch (e) {
+                console.error('加载新闻爬取设置失败:', e);
+            }
+
+            // 加载关键词
+            loadNewsKeywords();
+        }
+
+        // 加载新闻爬取关键词
+        async function loadNewsKeywords() {
+            try {
+                const res = await fetch('/api/admin/news/keywords', { credentials: 'same-origin' });
+                const data = await res.json();
+                if (data.success && data.keywords) {
+                    document.getElementById('newsKeywordsInput').value = data.keywords.join(', ');
+                }
+            } catch (e) {
+                console.error('加载关键词失败:', e);
+            }
+        }
+
+        // 保存新闻爬取关键词（会自动触发爬虫）
+        async function saveNewsKeywords() {
+            const keywordsInput = document.getElementById('newsKeywordsInput').value;
+            const statusEl = document.getElementById('newsKeywordsStatus');
+
+            if (!keywordsInput.trim()) {
+                statusEl.textContent = '关键词不能为空';
+                statusEl.style.color = '#e74c3c';
+                return;
+            }
+
+            statusEl.textContent = '保存关键词并触发爬虫...';
+            statusEl.style.color = 'var(--secondary)';
+
+            try {
+                const res = await fetch('/api/admin/news/keywords', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'same-origin',
+                    body: JSON.stringify({ keywords: keywordsInput })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    statusEl.textContent = '✓ ' + data.message;
+                    statusEl.style.color = '#4CAF50';
+
+                    // 显示爬取结果
+                    if (data.crawl_result) {
+                        const crawlStatusEl = document.getElementById('crawlNewsStatus');
+                        if (data.crawl_result.includes('成功')) {
+                            crawlStatusEl.textContent = data.crawl_result;
+                            crawlStatusEl.style.color = '#4CAF50';
+                        } else {
+                            crawlStatusEl.textContent = data.crawl_result;
+                            crawlStatusEl.style.color = '#e74c3c';
+                        }
+                    }
+
+                    // 刷新日志显示
+                    setTimeout(() => loadNewsScheduleStatus(), 1000);
+                } else {
+                    statusEl.textContent = data.message || '保存失败';
+                    statusEl.style.color = '#e74c3c';
+                }
+            } catch (e) {
+                statusEl.textContent = '保存失败';
+                statusEl.style.color = '#e74c3c';
+            }
+        }
+
+        // 保存新闻爬取时间
+        async function saveNewsSchedule() {
+            const hour = document.getElementById('newsCrawlHour').value;
+            const minute = document.getElementById('newsCrawlMinute').value;
+            const statusEl = document.getElementById('newsScheduleStatus');
+
+            try {
+                const res = await fetch('/api/admin/news/schedule', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'same-origin',
+                    body: JSON.stringify({ hour: parseInt(hour), minute: parseInt(minute) })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    statusEl.textContent = '保存成功！';
+                    statusEl.style.color = '#4CAF50';
+                    if (data.next_run) {
+                        statusEl.textContent = '保存成功！下次爬取: ' + data.next_run;
+                    }
+                } else {
+                    statusEl.textContent = data.message || '保存失败';
+                    statusEl.style.color = '#e74c3c';
+                }
+            } catch (e) {
+                statusEl.textContent = '保存失败';
+                statusEl.style.color = '#e74c3c';
+            }
+        }
+
+        // 立即爬取新闻
+        async function crawlNewsNow() {
+            const statusEl = document.getElementById('crawlNewsStatus');
+            statusEl.textContent = '爬取中...';
+            statusEl.style.color = 'var(--secondary)';
+
+            try {
+                const res = await fetch('/api/admin/news/crawl', {
+                    method: 'POST',
+                    credentials: 'same-origin'
+                });
+                const data = await res.json();
+                if (data.success) {
+                    statusEl.textContent = '爬取成功！';
+                    statusEl.style.color = '#4CAF50';
+                    // 刷新日志显示
+                    setTimeout(() => loadNewsScheduleStatus(), 500);
+                } else {
+                    statusEl.textContent = data.message || '爬取失败';
+                    statusEl.style.color = '#e74c3c';
+                }
+            } catch (e) {
+                statusEl.textContent = '爬取失败';
+                statusEl.style.color = '#e74c3c';
+            }
+        }
+
         // 加载管理员设置（超级管理员）
-        async function loadAdminManagement() {
+        async function loadAdminManagement(page = 1) {
             try {
                 const res = await fetch('/api/txl/list');
                 const data = await res.json();
@@ -578,8 +776,18 @@
                 const checkData = await checkRes.json();
                 const currentStudent = checkData.student;
 
-                let html = '<p style="margin-bottom: 1rem; color: var(--text-light);">设置用户的管理员权限：</p>';
-                data.students.forEach(student => {
+                // 计算管理员数量
+                const adminCount = data.students.filter(s => s.is_admin || s.name === '穆玉升').length;
+
+                // 分页：每页5人
+                const perPage = 5;
+                const start = (page - 1) * perPage;
+                const end = start + perPage;
+                const totalPages = Math.ceil(data.students.length / perPage);
+
+                let html = `<p style="margin-bottom: 1rem; color: var(--text-light);">设置用户的管理员权限（当前管理员: ${adminCount}人）：</p>`;
+                html += '<div style="max-height: 300px; overflow-y: auto;">';
+                data.students.slice(start, end).forEach(student => {
                     if (student.name === currentStudent.name) return; // 跳过自己
                     const isAdmin = student.is_admin || student.name === '穆玉升';
                     html += `
@@ -592,6 +800,17 @@
                         </div>
                     `;
                 });
+                html += '</div>';
+
+                // 分页控件
+                if (totalPages > 1) {
+                    html += '<div style="display: flex; justify-content: center; gap: 0.5rem; margin-top: 1rem; flex-wrap: wrap;">';
+                    for (let i = 1; i <= totalPages; i++) {
+                        html += `<button onclick="loadAdminManagement(${i})" style="min-width: 36px; height: 36px; border: 1px solid ${i === page ? 'var(--secondary)' : 'var(--bg-dark)'}; background: ${i === page ? 'var(--secondary)' : 'white'}; color: ${i === page ? 'white' : 'var(--text)'}; border-radius: 8px; cursor: pointer; margin: 0 2px;">${i}</button>`;
+                    }
+                    html += '</div>';
+                }
+
                 contentEl.innerHTML = html;
             } catch (e) {
                 document.getElementById('adminManagementContent').innerHTML = '<p style="color: var(--text-light); text-align: center;">加载失败</p>';
@@ -786,9 +1005,6 @@
 
             initProvinceSelect();
 
-            // 所有用户显示密码设置区块
-            document.getElementById('editPasswordSection').style.display = 'block';
-
             document.getElementById('editPhone').value = user.phone || '';
             document.getElementById('editEmail').value = user.email || '';
             document.getElementById('editIndustry').value = user.industry || '';
@@ -913,11 +1129,6 @@
 
         function closeEditProfileModal() {
             document.getElementById('editProfileModal').classList.remove('active');
-            // 清除密码输入框
-            const newPwd = document.getElementById('editNewPassword');
-            const confirmPwd = document.getElementById('editConfirmPassword');
-            if (newPwd) newPwd.value = '';
-            if (confirmPwd) confirmPwd.value = '';
             document.getElementById('editError').textContent = '';
         }
 
@@ -1000,42 +1211,14 @@
             const formData = new FormData(form);
             formData.append('student_id', window.currentUser.student_id);
 
-            // 处理密码设置
-            const newPwd = document.getElementById('editNewPassword')?.value;
-            const confirmPwd = document.getElementById('editConfirmPassword')?.value;
-            if (newPwd && newPwd !== confirmPwd) {
-                document.getElementById('editError').textContent = '两次密码不一致';
-                return;
-            }
-
             fetch('/update_profile', {
                 method: 'POST',
                 credentials: 'same-origin',
                 body: formData
             })
             .then(res => res.json())
-            .then(async data => {
+            .then(data => {
                 if (data.success) {
-                    // 如果填写了新密码，则更新密码
-                    if (newPwd) {
-                        try {
-                            const pwdRes = await fetch('/api/user/set_password', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                credentials: 'same-origin',
-                                body: JSON.stringify({ password: newPwd })
-                            });
-                            const pwdData = await pwdRes.json();
-                            if (!pwdData.success) {
-                                document.getElementById('editError').textContent = '密码设置失败';
-                                return;
-                            }
-                        } catch (e) {
-                            document.getElementById('editError').textContent = '密码设置失败';
-                            return;
-                        }
-                    }
-
                     Object.assign(window.currentUser, {
                         phone: formData.get('phone'),
                         email: formData.get('email'),
@@ -1218,7 +1401,7 @@
         let activityTotalPages = 1;
 
         async function loadActivityManagement(page = 1) {
-            if (window.currentUser && window.currentUser.name === '穆玉升') {
+            if (window.currentUser && window.currentUser.is_admin) {
                 document.getElementById('activityManagementCard').style.display = 'block';
                 activityPage = page;
 
@@ -1244,15 +1427,15 @@
                                         activity.type === 'profile_update' ? '👤' : '📝';
                         return `
                             <div style="padding: 1rem; border-bottom: 1px solid var(--bg-dark); display: flex; justify-content: space-between; align-items: flex-start; background: var(--card-bg); border-radius: 12px; margin-bottom: 0.5rem; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
-                                <div style="flex: 1;">
-                                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                                <div style="flex: 1; min-width: 0;">
+                                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; flex-wrap: wrap;">
                                         <span style="font-size: 1.2rem;">${typeIcon}</span>
                                         <span style="font-weight: 600; font-size: 1rem;">${activity.actor}</span>
                                         <span style="color: var(--text-light); font-size: 0.85rem;">${activity.time}</span>
                                     </div>
-                                    <div style="color: var(--text); font-size: 0.95rem; line-height: 1.5;">${activity.content || '(无内容)'}</div>
+                                    <div style="color: var(--text); font-size: 0.95rem; line-height: 1.5; word-wrap: break-word; overflow-wrap: break-word; max-width: 100%;">${activity.content || '(无内容)'}</div>
                                 </div>
-                                <button onclick="deleteActivity('${activity.time}', '${activity.actor}', '${(activity.content || '').replace(/'/g, "\\'")}', ${page})" style="background: #e74c3c; color: white; border: none; padding: 0.6rem 1.2rem; border-radius: 20px; cursor: pointer; font-size: 0.9rem; margin-left: 1rem; flex-shrink: 0;">删除</button>
+                                <button onclick="deleteActivity('${activity.time}', '${activity.actor}', '${(activity.original_content || '').replace(/'/g, "\\'")}', '${(activity.content || '').replace(/'/g, "\\'")}', ${page})" style="background: #e74c3c; color: white; border: none; padding: 0.6rem 1.2rem; border-radius: 20px; cursor: pointer; font-size: 0.9rem; margin-left: 0.5rem; flex-shrink: 0;">删除</button>
                             </div>
                         `;
                     }).join('');
@@ -1277,7 +1460,7 @@
         }
 
         // 删除动态
-        async function deleteActivity(time, actor, content, page = 1) {
+        async function deleteActivity(time, actor, originalContent, content, page = 1) {
             if (!confirm('确定要删除这条动态吗？')) return;
 
             try {
@@ -1285,7 +1468,7 @@
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     credentials: 'same-origin',
-                    body: JSON.stringify({ time: time, actor: actor, content: content })
+                    body: JSON.stringify({ time: time, actor: actor, original_content: originalContent, content: content })
                 });
                 const data = await res.json();
 
@@ -1305,7 +1488,7 @@
 
         // 加载登录日志
         async function loadLoginLogs(page = 1) {
-            if (window.currentUser && window.currentUser.name === '穆玉升') {
+            if (window.currentUser && window.currentUser.is_admin) {
                 document.getElementById('loginLogsCard').style.display = 'block';
                 loginLogsPage = page;
 
@@ -1333,7 +1516,7 @@
                             <div>
                                 <div style="font-weight: 500;">${log.username}</div>
                                 <div style="color: var(--text-light); font-size: 0.8rem; margin-top: 0.2rem;">${log.login_time}</div>
-                                ${log.ip_address ? `<div style="color: var(--text-light); font-size: 0.75rem;">IP: ${log.ip_address}</div>` : ''}
+                                ${log.ip_address ? `<div style="color: var(--text-light); font-size: 0.75rem;">IP: ${log.ip_address} ${log.ip_location ? `(${log.ip_location})` : ''}</div>` : ''}
                             </div>
                         </div>
                     `).join('');

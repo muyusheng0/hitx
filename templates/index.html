@@ -12,21 +12,6 @@
     <header class="top-header">
         <h1 class="header-title">吉大<span>自动化</span>八班</h1>
         <div id="userStatus" class="user-status"></div>
-        <div class="notification-container" id="notificationContainer" style="display: none;">
-            <button class="notification-bell" id="notificationBell" onclick="toggleNotificationDropdown()">
-                <span class="bell-icon">🔔</span>
-                <span class="notification-badge" id="notificationBadge" style="display: none;">0</span>
-            </button>
-            <div class="notification-dropdown" id="notificationDropdown">
-                <div class="notification-header">
-                    <span>消息通知</span>
-                    <button class="notification-mark-read" onclick="markAllNotificationsRead()">全部已读</button>
-                </div>
-                <div class="notification-list" id="notificationList">
-                    <div class="notification-empty">暂无通知</div>
-                </div>
-            </div>
-        </div>
     </header>
 
     <!-- 主内容 -->
@@ -36,6 +21,7 @@
             {% if activities %}
             <section class="latest-activities">
                 <h2 class="section-title">📅 最新动态<span id="unreadBadge" class="unread-badge" style="display:none;">0</span></h2>
+                <p class="section-hint">👇 点击卡片查看详情</p>
                 <div class="activity-carousel">
                     <div class="carousel-viewport" id="activityCarousel">
                         {% for act in activities %}
@@ -82,6 +68,7 @@
             <!-- 最新留言 -->
             <section class="recent-messages">
                 <h2 class="section-title" onclick="window.location.href='/lyb'" style="cursor:pointer;">📝 最新留言</h2>
+                <p class="section-hint">👇 点击查看更多留言</p>
                 <div class="message-list">
                     {% for msg in recent_messages %}
                     <div class="message-item" onclick="window.location.href='/lyb#msg-{{ msg.id }}'" style="cursor:pointer;">
@@ -101,6 +88,7 @@
             <!-- 时光轴 -->
             <section class="timeline-section">
                 <h2 class="section-title">我们的时光</h2>
+                <p class="section-hint">👆 可在媒体相册中上传照片</p>
                 <div class="timeline">
                     <div class="timeline-item">
                         <div class="timeline-year">2015年 秋</div>
@@ -244,6 +232,7 @@
         <a href="/about" class="tab-item">
             <span class="tab-icon">👤</span>
             <span class="tab-label">我的</span>
+            <span class="tab-badge" id="tabNotificationBadge" style="display: none;">0</span>
         </a>
     </nav>
 
@@ -257,11 +246,11 @@
             <form class="verify-form" onsubmit="submitVerify(event)">
                 <div class="input-group">
                     <label>姓名</label>
-                    <input type="text" id="verifyName" placeholder="请输入你的姓名" required>
+                    <input type="text" id="verifyName" placeholder="请输入你的姓名" required onblur="checkPasswordRequired()">
                 </div>
                 <div class="input-group">
                     <label>学号</label>
-                    <input type="text" id="verifyStudentId" placeholder="请输入你的学号" required>
+                    <input type="text" id="verifyStudentId" onblur="checkPasswordRequired()" placeholder="请输入你的学号" required>
                 </div>
                 <div class="input-group">
                     <label>验证码</label>
@@ -270,6 +259,15 @@
                         <input type="text" id="verifyCaptcha" placeholder="请输入答案" required style="flex: 1;">
                         <button type="button" onclick="refreshCaptcha()" style="background: none; border: none; cursor: pointer; font-size: 1.2rem;" title="刷新验证码">🔄</button>
                     </div>
+                </div>
+                <div class="input-group" id="loginPasswordGroup" style="display: none;">
+                    <label>登录密码</label>
+                    <input type="password" id="verifyLoginPassword" placeholder="请输入登录密码">
+                </div>
+                <div class="remember-login">
+                    <label>
+                        <input type="checkbox" id="rememberLogin">7天内免登录
+                    </label>
                 </div>
                 <div class="verify-error" id="verifyError"></div>
                 <button type="submit" class="verify-btn">验证身份</button>
@@ -284,7 +282,28 @@
             setTimeout(hideHomeDeletedPhotos, 100);
             // 加载未读活动数量
             loadUnreadActivityCount();
+            // 自动填充记住的登录信息
+            autoFillRememberedLogin();
         });
+
+        function autoFillRememberedLogin() {
+            const saved = localStorage.getItem('rememberedLogin');
+            if (saved) {
+                try {
+                    const data = JSON.parse(saved);
+                    const nameInput = document.getElementById('verifyName');
+                    const studentIdInput = document.getElementById('verifyStudentId');
+                    const rememberCheckbox = document.getElementById('rememberLogin');
+                    if (nameInput) nameInput.value = data.name || '';
+                    if (studentIdInput) studentIdInput.value = data.studentId || '';
+                    if (rememberCheckbox) rememberCheckbox.checked = true;
+                    // 自动检查是否需要显示密码
+                    if (data.name && data.studentId) {
+                        setTimeout(() => checkPasswordRequired(), 100);
+                    }
+                } catch (e) {}
+            }
+        }
 
         function loadUnreadActivityCount() {
             fetch('/api/get_unread_activity_count', { credentials: 'same-origin' })

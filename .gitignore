@@ -1,5 +1,5 @@
-# Database
-*.db
+# Database - allow .db files to be tracked
+# *.db
 
 # Python
 __pycache__/
@@ -40,6 +40,7 @@ static/music/
 static/photos/
 static/imgs/messages/
 static/imgs/thumbs/
+static/imgs/news/
 uploads/
 
 # Claude settings

@@ -1286,6 +1286,15 @@ def delete_activity(time, actor, content):
     conn.commit()
 
 
+def delete_activities_by_actor(actor):
+    """删除指定用户的所有活动记录"""
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('DELETE FROM activities WHERE actor = ?', (actor,))
+    conn.commit()
+    return cursor.rowcount
+
+
 def write_login_log(username, ip_address='', user_agent=''):
     """写入登录日志"""
     conn = get_db()
@@ -1307,6 +1316,15 @@ def read_login_logs(limit=100):
     for row in rows:
         logs.append(dict(row))
     return logs
+
+
+def delete_login_logs(username):
+    """删除指定用户的登录日志"""
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('DELETE FROM login_logs WHERE username = ?', (username,))
+    conn.commit()
+    return cursor.rowcount
 
 
 # ==================== 喊话数据操作 ====================
@@ -1506,14 +1524,14 @@ def get_unread_activity_count(nickname, activities):
 
 # ==================== 通知系统 ====================
 
-def create_notification(recipient, sender, notif_type, ref_id=0, content=''):
+def create_notification(recipient, sender, notif_type, ref_id=0, content='', target_name='', media_type=''):
     """创建通知"""
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute('''
-        INSERT INTO notifications (recipient, sender, type, ref_id, content, is_read, created_time)
-        VALUES (?, ?, ?, ?, ?, 0, ?)
-    ''', (recipient, sender, notif_type, ref_id, content, datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+        INSERT INTO notifications (recipient, sender, type, ref_id, content, is_read, created_time, target_name, media_type)
+        VALUES (?, ?, ?, ?, ?, 0, ?, ?, ?)
+    ''', (recipient, sender, notif_type, ref_id, content, datetime.now().strftime('%Y-%m-%d %H:%M:%S'), target_name, media_type))
     conn.commit()
     return cursor.lastrowid
 
@@ -1523,7 +1541,7 @@ def get_notifications(recipient, limit=20):
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute('''
-        SELECT id, recipient, sender, type, ref_id, content, is_read, created_time
+        SELECT id, recipient, sender, type, ref_id, content, is_read, created_time, target_name, media_type
         FROM notifications
         WHERE recipient = ?
         ORDER BY created_time DESC
@@ -1539,7 +1557,9 @@ def get_notifications(recipient, limit=20):
             'ref_id': row[4],
             'content': row[5],
             'is_read': bool(row[6]),
-            'created_time': row[7]
+            'created_time': row[7],
+            'target_name': row[8] if len(row) > 8 else '',
+            'media_type': row[9] if len(row) > 9 else ''
         })
     return notifications
 
@@ -1569,3 +1589,106 @@ def mark_all_notifications_read(recipient):
     cursor.execute('UPDATE notifications SET is_read = 1 WHERE recipient = ?', (recipient,))
     conn.commit()
     return True
+
+
+# ==================== 新闻模块 ====================
+
+def get_news(limit=5):
+    """获取最新新闻"""
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT id, title, content, source_url, image_url, published_time, created_time
+        FROM news
+        WHERE is_deleted = 0
+        ORDER BY id DESC
+        LIMIT ?
+    ''', (limit,))
+    news = []
+    for row in cursor.fetchall():
+        news.append({
+            'id': row[0],
+            'title': row[1],
+            'content': row[2],
+            'source_url': row[3],
+            'image_url': row[4],
+            'published_time': row[5],
+            'created_time': row[6]
+        })
+    return news
+
+
+def save_news(title, content, source_url, image_url, published_time):
+    """保存新闻"""
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('''
+        INSERT INTO news (title, content, source_url, image_url, published_time, created_time)
+        VALUES (?, ?, ?, ?, ?, ?)
+    ''', (title, content, source_url, image_url, published_time, datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+    conn.commit()
+    return cursor.lastrowid
+
+
+def clear_news():
+    """清空所有新闻"""
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('UPDATE news SET is_deleted = 1')
+    conn.commit()
+
+
+def get_config(key, default=''):
+    """获取配置"""
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('SELECT value FROM config WHERE key = ?', (key,))
+    row = cursor.fetchone()
+    return row[0] if row else default
+
+
+def set_config(key, value):
+    """设置配置"""
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('''
+        INSERT OR REPLACE INTO config (key, value) VALUES (?, ?)
+    ''', (key, value))
+    conn.commit()
+
+
+def set_news_crawl_log(executed_at, status, news_count, message='', image_count=0):
+    """保存新闻爬取日志"""
+    import json
+    log = json.dumps({
+        'executed_at': executed_at,
+        'status': status,
+        'news_count': news_count,
+        'image_count': image_count,
+        'message': message
+    }, ensure_ascii=False)
+    set_config('last_news_crawl_log', log)
+
+
+def get_news_crawl_log():
+    """获取上次新闻爬取日志"""
+    import json
+    log_str = get_config('last_news_crawl_log', '')
+    if log_str:
+        try:
+            return json.loads(log_str)
+        except:
+            return None
+    return None
+
+
+def get_news_keywords():
+    """获取新闻爬取关键词"""
+    keywords = get_config('news_keywords', '吉林大学,南岭校区,自动化')
+    return [k.strip() for k in keywords.split(',') if k.strip()]
+
+
+def set_news_keywords(keywords_list):
+    """设置新闻爬取关键词"""
+    keywords_str = ','.join([k.strip() for k in keywords_list if k.strip()])
+    set_config('news_keywords', keywords_str)

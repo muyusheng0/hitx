@@ -12,21 +12,6 @@
     <header class="top-header">
         <h1 class="header-title">媒体中心</h1>
         <div id="userStatus" class="user-status"></div>
-        <div class="notification-container" id="notificationContainer" style="display: none;">
-            <button class="notification-bell" id="notificationBell" onclick="toggleNotificationDropdown()">
-                <span class="bell-icon">🔔</span>
-                <span class="notification-badge" id="notificationBadge" style="display: none;">0</span>
-            </button>
-            <div class="notification-dropdown" id="notificationDropdown">
-                <div class="notification-header">
-                    <span>消息通知</span>
-                    <button class="notification-mark-read" onclick="markAllNotificationsRead()">全部已读</button>
-                </div>
-                <div class="notification-list" id="notificationList">
-                    <div class="notification-empty">暂无通知</div>
-                </div>
-            </div>
-        </div>
     </header>
 
     <!-- 主内容 -->
@@ -36,6 +21,7 @@
             <div class="media-tabs">
                 <button class="media-tab active" onclick="switchMediaTab('photos')">📷 相册</button>
                 <button class="media-tab" onclick="switchMediaTab('videos')">🎬 视频</button>
+                <button class="media-tab" onclick="switchMediaTab('news')">📰 新闻</button>
             </div>
 
             <!-- 相册区域 -->
@@ -63,7 +49,7 @@
                             <span class="like-icon">🤍</span>
                             <span class="like-count">0</span>
                         </button>
-                        {% if session.get('verified_student') and session['verified_student']['name'] == img.owner %}
+                        {% if session.get('verified_student') and (session['verified_student']['name'] == img.owner or is_admin_user) %}
                         <button class="delete-photo-btn" onclick="event.stopPropagation(); deletePhoto('{{ img.id | default('') }}', '{{ img.name | default('') }}', {{ 'true' if img.id else 'false' }})">🗑️</button>
                         {% endif %}
                     </div>
@@ -114,6 +100,48 @@
                     <div class="empty-message" style="grid-column: 1/-1; text-align: center; padding: 3rem;">
                         <p style="font-size: 3rem; margin-bottom: 1rem;">🎬</p>
                         <p>还没有视频，快来分享第一个吧~</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- 新闻区域 -->
+            <div id="newsSection" style="display: none;">
+                <div class="news-list">
+                    {% if news %}
+                    {% for item in news %}
+                    <div class="news-card">
+                        <div class="news-card-glow"></div>
+                        {% if item.image_url %}
+                        <div class="news-image">
+                            <img src="{{ item.image_url }}" alt="{{ item.title }}">
+                            <div class="news-image-overlay"></div>
+                        </div>
+                        {% endif %}
+                        <div class="news-content">
+                            <div class="news-tag">
+                                <span class="news-tag-icon">📡</span>
+                                <span>校园动态</span>
+                            </div>
+                            <h4 class="news-title">{{ item.title }}</h4>
+                            <p class="news-desc">{{ item.content }}</p>
+                            <div class="news-meta">
+                                <div class="news-time">
+                                    <span class="news-time-icon">🕐</span>
+                                    <span>{{ item.published_time }}</span>
+                                </div>
+                                <div class="news-source">
+                                    <span class="news-source-icon">🔗</span>
+                                    <span>{{ item.source_url }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    {% else %}
+                    <div class="empty-message" style="grid-column: 1/-1; text-align: center; padding: 3rem;">
+                        <p style="font-size: 3rem; margin-bottom: 1rem;">📰</p>
+                        <p>暂无新闻资讯</p>
                     </div>
                     {% endif %}
                 </div>
@@ -169,11 +197,11 @@
             <form class="verify-form" onsubmit="submitVerify(event)">
                 <div class="input-group">
                     <label>姓名</label>
-                    <input type="text" id="verifyName" placeholder="请输入你的姓名" required>
+                    <input type="text" id="verifyName" onblur="checkPasswordRequired()" placeholder="请输入你的姓名" required>
                 </div>
                 <div class="input-group">
                     <label>学号</label>
-                    <input type="text" id="verifyStudentId" placeholder="请输入你的学号" required>
+                    <input type="text" id="verifyStudentId" onblur="checkPasswordRequired()" placeholder="请输入你的学号" required>
                 </div>
                 <div class="input-group">
                     <label>验证码</label>
@@ -182,6 +210,10 @@
                         <input type="text" id="verifyCaptcha" placeholder="请输入答案" required style="flex: 1;">
                         <button type="button" onclick="refreshCaptcha()" style="background: none; border: none; cursor: pointer; font-size: 1.2rem;" title="刷新验证码">🔄</button>
                     </div>
+                </div>
+                <div class="input-group" id="loginPasswordGroup" style="display: none;">
+                    <label>登录密码</label>
+                    <input type="password" id="verifyLoginPassword" placeholder="请输入登录密码">
                 </div>
                 <div class="verify-error" id="verifyError"></div>
                 <button type="submit" class="verify-btn">验证身份</button>
@@ -224,9 +256,13 @@
                              onmouseout="this.style.borderColor='var(--bg-dark)'; this.style.background='transparent'">
                             <div style="font-size: 2.5rem; margin-bottom: 1rem;">📷</div>
                             <p>点击选择图片</p>
-                            <p style="font-size: 0.85rem; color: var(--text-light); margin-top: 0.5rem;">支持 JPG、PNG、GIF，最大 5MB</p>
+                            <p style="font-size: 0.85rem; color: var(--text-light); margin-top: 0.5rem;">支持 JPG、PNG、GIF，最大 20MB</p>
                         </div>
                     </label>
+                </div>
+                <div id="uploadProgress" class="upload-progress" style="display: none; margin-top: 1rem;">
+                    <div class="upload-progress-bar" style="width: 0%;"></div>
+                    <div class="upload-progress-text" style="text-align: center; margin-top: 0.5rem;">0%</div>
                 </div>
             </div>
         </div>
@@ -246,7 +282,16 @@
                 </div>
                 <div class="input-group">
                     <label>视频链接</label>
-                    <input type="url" id="videoUrl" placeholder="粘贴B站、抖音等视频链接" required>
+                    <input type="url" id="videoUrl" placeholder="粘贴B站、抖音等视频链接">
+                </div>
+                <div style="text-align: center; margin: 1rem 0; color: var(--text-light);">或</div>
+                <div class="input-group">
+                    <label>上传视频文件</label>
+                    <input type="file" id="videoFile" accept="video/*" style="font-size: 0.9rem;">
+                </div>
+                <div class="upload-progress" id="videoUploadProgress" style="display: none;">
+                    <div class="upload-progress-bar" id="videoProgressFill" style="width: 0%;"></div>
+                    <span class="upload-progress-text" id="videoProgressText">0%</span>
                 </div>
                 <div class="verify-error" id="addVideoError"></div>
                 <button type="submit" class="verify-btn">添加视频</button>
@@ -260,6 +305,7 @@
         function switchMediaTab(tab) {
             const photosSection = document.getElementById('photosSection');
             const videosSection = document.getElementById('videosSection');
+            const newsSection = document.getElementById('newsSection');
             const tabs = document.querySelectorAll('.media-tab');
 
             tabs.forEach(t => t.classList.remove('active'));
@@ -267,20 +313,52 @@
             if (tab === 'photos') {
                 photosSection.style.display = 'block';
                 videosSection.style.display = 'none';
+                newsSection.style.display = 'none';
                 tabs[0].classList.add('active');
-            } else {
+            } else if (tab === 'videos') {
                 photosSection.style.display = 'none';
                 videosSection.style.display = 'block';
+                newsSection.style.display = 'none';
                 tabs[1].classList.add('active');
+            } else if (tab === 'news') {
+                photosSection.style.display = 'none';
+                videosSection.style.display = 'none';
+                newsSection.style.display = 'block';
+                tabs[2].classList.add('active');
             }
         }
 
-        // 页面加载时检查hash，如果指向图片则切换到照片标签
-        // 必须在DOMContentLoaded之前执行，所以放在前面
+        // 页面加载时检查hash和参数
         (function() {
             const hash = window.location.hash;
             if (hash && hash.startsWith('#img-')) {
                 switchMediaTab('photos');
+            }
+            // 检查highlight参数，跳转到对应图片或视频
+            const params = new URLSearchParams(window.location.search);
+            const highlight = params.get('highlight');
+            if (highlight) {
+                // 先检查是否是视频
+                const videoCard = document.querySelector(`.video-card[data-media-id="${highlight}"]`);
+                if (videoCard) {
+                    switchMediaTab('videos');
+                    setTimeout(() => {
+                        videoCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        videoCard.classList.add('highlight');
+                        setTimeout(() => videoCard.classList.remove('highlight'), 2000);
+                    }, 100);
+                    return;
+                }
+                // 检查是否是照片
+                const photoCard = document.querySelector(`.gallery-item[data-media-id="${highlight}"], .gallery-item[data-img-name="${highlight}"]`);
+                if (photoCard) {
+                    switchMediaTab('photos');
+                    setTimeout(() => {
+                        photoCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        photoCard.classList.add('highlight');
+                        setTimeout(() => photoCard.classList.remove('highlight'), 2000);
+                    }, 100);
+                }
             }
         })();
 
@@ -299,8 +377,8 @@
 
             const owner = item.dataset.owner;
 
-            // 检查是否是本人
-            if (window.currentUser && owner !== window.currentUser.name && owner !== '穆玉升') {
+            // 检查是否是本人或管理员
+            if (window.currentUser && owner !== window.currentUser.name && !window.currentUser.is_admin) {
                 alert('只能删除自己上传的照片');
                 return;
             }
@@ -444,6 +522,69 @@
             event.preventDefault();
             const title = document.getElementById('videoTitle').value;
             const url = document.getElementById('videoUrl').value;
+            const fileInput = document.getElementById('videoFile');
+            const file = fileInput?.files[0];
+
+            // 如果有文件上传
+            if (file) {
+                const formData = new FormData();
+                formData.append('title', title);
+                formData.append('file', file);
+
+                // 显示进度条
+                const progressDiv = document.getElementById('videoUploadProgress');
+                const progressFill = document.getElementById('videoProgressFill');
+                const progressText = document.getElementById('videoProgressText');
+                progressDiv.style.display = 'block';
+                progressFill.style.width = '0%';
+                progressText.textContent = '0%';
+
+                const xhr = new XMLHttpRequest();
+                xhr.open('POST', '/api/upload_video', true);
+
+                xhr.upload.onprogress = function(e) {
+                    if (e.lengthComputable) {
+                        const percent = Math.round((e.loaded / e.total) * 100);
+                        progressFill.style.width = percent + '%';
+                        progressText.textContent = percent + '%';
+                    }
+                };
+
+                xhr.onload = function() {
+                    if (xhr.status === 200) {
+                        try {
+                            const data = JSON.parse(xhr.responseText);
+                            if (data.success) {
+                                closeAddVideoModal();
+                                location.reload();
+                            } else {
+                                progressDiv.style.display = 'none';
+                                document.getElementById('addVideoError').textContent = data.message || '上传失败';
+                            }
+                        } catch(e) {
+                            progressDiv.style.display = 'none';
+                            document.getElementById('addVideoError').textContent = '上传失败：' + xhr.responseText;
+                        }
+                    } else {
+                        progressDiv.style.display = 'none';
+                        document.getElementById('addVideoError').textContent = '上传失败：HTTP ' + xhr.status;
+                    }
+                };
+
+                xhr.onerror = function() {
+                    progressDiv.style.display = 'none';
+                    document.getElementById('addVideoError').textContent = '网络错误，请检查网络连接';
+                };
+
+                xhr.send(formData);
+                return;
+            }
+
+            // 如果没有文件，则使用URL
+            if (!url) {
+                document.getElementById('addVideoError').textContent = '请输入视频链接或上传视频文件';
+                return;
+            }
 
             fetch('/add_video', {
                 method: 'POST',

@@ -5,7 +5,8 @@
 // ==================== 全局状态 ====================
 const state = {
     verified: false,
-    currentStudent: null
+    currentStudent: null,
+    pendingUploadFile: null  // 待上传的文件
 };
 
 // ==================== 用户状态 ====================
@@ -14,11 +15,11 @@ function updateUserStatusUI(verified, student) {
     if (!userStatus) return;
 
     if (verified && student) {
+        const adminBadge = student.is_admin ? '<span style="background: var(--secondary); color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; margin-left: 4px;">管理员</span>' : '';
         userStatus.innerHTML = `
-            <div class="user-logged">
+            <div class="user-logged" onclick="window.location.href='/about'" style="cursor: pointer;">
                 <span>欢迎，</span>
-                <span class="user-name">${escapeHtml(student.name)}</span>
-                <button class="user-logout" onclick="logout()">退出</button>
+                <span class="user-name">${escapeHtml(student.name)}</span>${adminBadge}
             </div>
         `;
     } else {
@@ -203,6 +204,13 @@ function showVerifyModal() {
 function closeVerifyModal() {
     const overlay = document.getElementById('verifyModal');
     if (overlay) overlay.classList.remove('active');
+    // 清除密码输入
+    const passwordInput = document.getElementById('verifyLoginPassword');
+    if (passwordInput) passwordInput.value = '';
+    const passwordGroup = document.getElementById('loginPasswordGroup');
+    if (passwordGroup) passwordGroup.style.display = 'none';
+    const errorEl = document.getElementById('verifyError');
+    if (errorEl) errorEl.textContent = '';
 }
 
 async function refreshCaptcha() {
@@ -218,13 +226,46 @@ async function refreshCaptcha() {
     }
 }
 
+async function checkPasswordRequired() {
+    const name = document.getElementById('verifyName')?.value.trim();
+    const passwordGroup = document.getElementById('loginPasswordGroup');
+
+    if (!name || !passwordGroup) return;
+
+    // 先获取学号
+    const studentId = document.getElementById('verifyStudentId')?.value.trim();
+    if (!studentId) {
+        // 学号还没填，先不显示密码框
+        return;
+    }
+
+    try {
+        const res = await fetch('/api/check_user_login_password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify({ name, student_id: studentId })
+        });
+        const data = await res.json();
+        if (data.has_password) {
+            passwordGroup.style.display = 'block';
+        } else {
+            passwordGroup.style.display = 'none';
+        }
+    } catch (e) {
+        console.error('检查密码状态失败:', e);
+    }
+}
+
 async function submitVerify(e) {
     e.preventDefault();
 
     const name = document.getElementById('verifyName').value.trim();
     const studentId = document.getElementById('verifyStudentId').value.trim();
     const captcha = document.getElementById('verifyCaptcha').value.trim();
+    const loginPassword = document.getElementById('verifyLoginPassword').value.trim();
     const errorEl = document.getElementById('verifyError');
+    const passwordGroup = document.getElementById('loginPasswordGroup');
 
     if (!name || !studentId) {
         errorEl.textContent = '请填写姓名和学号';
@@ -236,32 +277,65 @@ async function submitVerify(e) {
         return;
     }
 
+    // 如果密码框可见但没有输入，且不是密码错误的情况
+    if (passwordGroup && passwordGroup.style.display !== 'none' && !loginPassword) {
+        errorEl.textContent = '请输入登录密码';
+        return;
+    }
+
     try {
         const res = await fetch('/api/verify', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'same-origin',
-            body: JSON.stringify({ name, student_id: studentId, captcha })
+            body: JSON.stringify({ name, student_id: studentId, captcha, login_password: loginPassword })
         });
 
         const data = await res.json();
 
         if (data.success) {
-            state.verified = true;
-            state.currentStudent = { name, id: studentId };
-            window.currentUser = { name, student_id: studentId };
-            closeVerifyModal();
-            showEditButton();
-            updateUserStatusUI(true, state.currentStudent);
-            updateVerifyUI(true);
-            updateMessageInputUI(true);
-            // 触发登录成功事件
-            window.dispatchEvent(new CustomEvent('userLoginSuccess', { detail: window.currentUser }));
-            if (typeof loadStudentData === 'function') {
-                loadStudentData();
+            // 保存登录信息
+            const rememberCheckbox = document.getElementById('rememberLogin');
+            if (rememberCheckbox && rememberCheckbox.checked) {
+                localStorage.setItem('rememberedLogin', JSON.stringify({ name, studentId }));
+            } else {
+                localStorage.removeItem('rememberedLogin');
             }
-            // 刷新页面以更新所有组件状态
-            setTimeout(() => location.reload(), 100);
+
+            // 获取完整用户信息（包括is_admin）
+            fetch('/api/check_verify', { credentials: 'same-origin' })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.verified) {
+                        state.verified = true;
+                        state.currentStudent = data.student;
+                        window.currentUser = { name: data.student.name, student_id: data.student.id, is_admin: data.student.is_admin, is_super_admin: data.student.is_super_admin };
+                        closeVerifyModal();
+                        // 清除密码
+                        if (document.getElementById('verifyLoginPassword')) {
+                            document.getElementById('verifyLoginPassword').value = '';
+                        }
+                        if (passwordGroup) {
+                            passwordGroup.style.display = 'none';
+                        }
+                        showEditButton();
+                        updateUserStatusUI(true, data.student);
+                        updateVerifyUI(true);
+                        updateMessageInputUI(true);
+                        // 触发登录成功事件
+                        window.dispatchEvent(new CustomEvent('userLoginSuccess', { detail: window.currentUser }));
+                        if (typeof loadStudentData === 'function') {
+                            loadStudentData();
+                        }
+                        // 刷新页面以更新所有组件状态
+                        setTimeout(() => location.reload(), 100);
+                    }
+                });
+        } else if (data.prompt === '请输入登录密码') {
+            // 需要显示密码输入框
+            errorEl.textContent = '';
+            passwordGroup.style.display = 'block';
+            document.getElementById('verifyLoginPassword').focus();
         } else {
             errorEl.textContent = data.message;
         }
@@ -277,6 +351,7 @@ function logout() {
         state.currentStudent = null;
         window.currentUser = null;
         localStorage.removeItem('currentUser');
+        localStorage.removeItem('rememberedLogin');
         hideEditButton();
         updateUserStatusUI(false);
         updateVerifyUI(false);
@@ -804,6 +879,8 @@ function showUploadModal() {
 function closeUploadModal() {
     const modal = document.getElementById('uploadModal');
     if (modal) modal.classList.remove('active');
+    // 清除待上传的文件
+    state.pendingUploadFile = null;
 }
 
 function handleImageUpload(file) {
@@ -811,11 +888,19 @@ function handleImageUpload(file) {
 
     const yearSelect = document.getElementById('photoYear');
     const year = yearSelect ? yearSelect.value : '';
+
     if (!year) {
-        alert('请选择照片年份');
+        // 年份未选择，保存文件等待用户选择年份
+        state.pendingUploadFile = file;
+        alert('请选择照片年份，选择后将自动上传');
         return;
     }
 
+    // 年份已选择，直接上传
+    doUpload(file, year);
+}
+
+function doUpload(file, year) {
     const progressEl = document.getElementById('uploadProgress');
     if (!progressEl) return;
 
@@ -833,6 +918,7 @@ function handleImageUpload(file) {
         },
         (data) => {
             if (data.success) {
+                state.pendingUploadFile = null;
                 showUploadProgress(progressEl, 100);
                 setTimeout(() => {
                     alert('上传成功！');
@@ -848,6 +934,18 @@ function handleImageUpload(file) {
         }
     );
 }
+
+// 监听年份选择变化，自动上传待上传的文件
+document.addEventListener('DOMContentLoaded', () => {
+    const yearSelect = document.getElementById('photoYear');
+    if (yearSelect) {
+        yearSelect.addEventListener('change', function() {
+            if (state.pendingUploadFile && this.value) {
+                doUpload(state.pendingUploadFile, this.value);
+            }
+        });
+    }
+});
 
 // ==================== 视频 ====================
 function showVideoModal(url, title) {
@@ -1416,21 +1514,17 @@ function scrollToActivityPage(page) {
 function loadNotificationCount() {
     if (!window.currentUser) return;
 
-    const container = document.getElementById('notificationContainer');
-    if (!container) return;
-
-    container.style.display = 'block';
-
     fetch('/api/notifications/count', { credentials: 'same-origin' })
         .then(r => r.json())
         .then(data => {
-            const badge = document.getElementById('notificationBadge');
-            if (badge) {
+            // 更新"我的"标签页的角标
+            const tabBadge = document.getElementById('tabNotificationBadge');
+            if (tabBadge) {
                 if (data.count > 0) {
-                    badge.textContent = data.count > 99 ? '99+' : data.count;
-                    badge.style.display = 'flex';
+                    tabBadge.textContent = data.count > 99 ? '99+' : data.count;
+                    tabBadge.style.display = 'flex';
                 } else {
-                    badge.style.display = 'none';
+                    tabBadge.style.display = 'none';
                 }
             }
         });
@@ -1443,27 +1537,86 @@ function loadNotifications() {
         .then(r => r.json())
         .then(data => {
             const list = document.getElementById('notificationList');
-            if (!list) return;
+            if (list) {
+                renderNotificationList(list, data.notifications, 1);
+            }
 
-            if (data.notifications && data.notifications.length > 0) {
-                list.innerHTML = data.notifications.map(n => {
-                    const icon = getNotificationIcon(n.type);
-                    const time = formatNotificationTime(n.created_time);
-                    const unreadClass = n.is_read ? '' : 'unread';
-                    return `
-                        <div class="notification-item ${unreadClass}" data-notif-id="${n.id}" onclick="handleNotificationClick(${n.id}, '${n.type}', ${n.ref_id})">
-                            <div class="notification-item-icon notification-type-${n.type}">${icon}</div>
-                            <div class="notification-item-content">
-                                <div class="notification-item-text">${escapeHtml(n.content)}</div>
-                                <div class="notification-item-time">${time}</div>
-                            </div>
-                        </div>
-                    `;
-                }).join('');
-            } else {
-                list.innerHTML = '<div class="notification-empty">暂无通知</div>';
+            // 更新"我的"页面的通知列表
+            const aboutList = document.getElementById('notificationListAbout');
+            if (aboutList) {
+                renderNotificationList(aboutList, data.notifications, 1);
             }
         });
+}
+
+const NOTIFICATION_PAGE_SIZE = 3;
+let notificationCurrentPage = 1;
+let notificationAllUnread = [];
+
+function renderNotificationList(listElement, notifications, page) {
+    if (!listElement) return;
+
+    // 只显示未读通知
+    notificationAllUnread = (notifications || []).filter(n => !n.is_read);
+
+    if (notificationAllUnread.length > 0) {
+        // 分页计算
+        const start = (page - 1) * NOTIFICATION_PAGE_SIZE;
+        const end = start + NOTIFICATION_PAGE_SIZE;
+        const pageNotifications = notificationAllUnread.slice(start, end);
+        const totalPages = Math.ceil(notificationAllUnread.length / NOTIFICATION_PAGE_SIZE);
+
+        listElement.innerHTML = pageNotifications.map(n => {
+            const icon = getNotificationIcon(n.type);
+            const time = formatNotificationTime(n.created_time);
+            return `
+                <div class="notification-item unread" data-notif-id="${n.id}" onclick="handleNotificationClick(${n.id}, '${n.type}', ${n.ref_id}, '${n.target_name || ''}', '${n.media_type || ''}')">
+                    <div class="notification-item-icon notification-type-${n.type}">${icon}</div>
+                    <div class="notification-item-content">
+                        <div class="notification-item-text">${escapeHtml(n.content)}</div>
+                        <div class="notification-item-time">${time}</div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        // 渲染分页控件
+        const pagination = document.getElementById('notificationPagination');
+        if (pagination) {
+            if (totalPages > 1) {
+                pagination.style.display = 'flex';
+                let paginationHtml = '';
+                if (page > 1) {
+                    paginationHtml += `<button onclick="goToNotificationPage(${page - 1})" style="background: var(--bg-dark); border: none; padding: 0.4rem 0.8rem; border-radius: 4px; cursor: pointer;">上一页</button>`;
+                }
+                paginationHtml += `<span style="padding: 0.4rem 0.8rem; color: var(--text-light); font-size: 0.85rem;">${page}/${totalPages}</span>`;
+                if (page < totalPages) {
+                    paginationHtml += `<button onclick="goToNotificationPage(${page + 1})" style="background: var(--bg-dark); border: none; padding: 0.4rem 0.8rem; border-radius: 4px; cursor: pointer;">下一页</button>`;
+                }
+                pagination.innerHTML = paginationHtml;
+            } else {
+                pagination.style.display = 'none';
+            }
+        }
+
+        // 显示"全部已读"按钮
+        const actions = document.getElementById('notificationActions');
+        if (actions) actions.style.display = 'flex';
+    } else {
+        listElement.innerHTML = '<div class="notification-empty">暂无未读通知</div>';
+        const pagination = document.getElementById('notificationPagination');
+        if (pagination) pagination.style.display = 'none';
+        const actions = document.getElementById('notificationActions');
+        if (actions) actions.style.display = 'none';
+    }
+}
+
+function goToNotificationPage(page) {
+    notificationCurrentPage = page;
+    const aboutList = document.getElementById('notificationListAbout');
+    if (aboutList) {
+        renderNotificationList(aboutList, notificationAllUnread, page);
+    }
 }
 
 function getNotificationIcon(type) {
@@ -1502,17 +1655,29 @@ function toggleNotificationDropdown() {
     }
 }
 
-function handleNotificationClick(notifId, type, refId) {
+function handleNotificationClick(notifId, type, refId, targetName, mediaType) {
     // 标记为已读
     markNotificationRead(notifId);
 
     // 根据类型跳转到对应页面
-    if (type === 'comment' || type === 'like') {
+    if (type === 'comment') {
         // 跳转到留言板
         window.location.href = '/lyb#msg-' + refId;
+    } else if (type === 'like') {
+        if (mediaType === 'photo' || mediaType === 'video') {
+            // 跳转到媒体相册对应标签页
+            window.location.href = '/media?highlight=' + encodeURIComponent(refId);
+        } else {
+            // 跳转到留言板
+            window.location.href = '/lyb#msg-' + refId;
+        }
     } else if (type === 'voice_shout') {
-        // 跳转到通讯录
-        window.location.href = '/txl';
+        // 跳转到通讯录自己的卡片，并传递锚点参数
+        if (targetName) {
+            window.location.href = '/txl?highlight=' + encodeURIComponent(targetName) + '#student-' + encodeURIComponent(targetName);
+        } else {
+            window.location.href = '/txl';
+        }
     }
 
     // 关闭下拉
@@ -1549,10 +1714,8 @@ function markAllNotificationsRead() {
     .then(data => {
         if (data.success) {
             loadNotificationCount();
-            // 更新UI
-            document.querySelectorAll('.notification-item.unread').forEach(item => {
-                item.classList.remove('unread');
-            });
+            // 重新加载通知列表
+            loadNotifications();
         }
     });
 }
