@@ -41,6 +41,7 @@ jobs:
         env:
           APPID: ${{ secrets.WX_MINIPROGRAM_APPID }}
         run: |
+          mkdir -p ./qrcode
           npx miniprogram-ci preview \
             --pp ./ \
             --pkp ./private.key \
