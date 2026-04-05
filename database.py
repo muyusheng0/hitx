@@ -1692,3 +1692,77 @@ def set_news_keywords(keywords_list):
     """设置新闻爬取关键词"""
     keywords_str = ','.join([k.strip() for k in keywords_list if k.strip()])
     set_config('news_keywords', keywords_str)
+
+
+# ==================== 微信绑定 ====================
+
+def create_wx_bindings_table():
+    """创建微信绑定表"""
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS wx_bindings (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            openid TEXT UNIQUE NOT NULL,
+            student_id TEXT NOT NULL,
+            name TEXT NOT NULL,
+            bind_time TEXT NOT NULL
+        )
+    ''')
+    conn.commit()
+
+
+def add_wx_openid_column():
+    """为students表添加wx_openid字段"""
+    conn = get_db()
+    cursor = conn.cursor()
+    try:
+        cursor.execute('ALTER TABLE students ADD COLUMN wx_openid TEXT')
+        conn.commit()
+    except sqlite3.OperationalError:
+        pass  # 列可能已存在
+
+
+def bind_wx_openid(openid, student_id, name):
+    """绑定微信openid到学生账号"""
+    if not openid or not student_id or not name:
+        return False
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('''
+        INSERT OR REPLACE INTO wx_bindings (openid, student_id, name, bind_time)
+        VALUES (?, ?, ?, ?)
+    ''', (openid, student_id, name, datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+
+    cursor.execute('UPDATE students SET wx_openid = ? WHERE id = ? AND name = ?',
+                   (openid, student_id, name))
+    conn.commit()
+    return True
+
+
+def get_binding_by_openid(openid):
+    """根据openid获取绑定信息"""
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM wx_bindings WHERE openid = ?', (openid,))
+    row = cursor.fetchone()
+    return dict(row) if row else None
+
+
+def get_binding_by_student(student_id, name):
+    """根据学号和姓名获取绑定信息"""
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM wx_bindings WHERE student_id = ? AND name = ?',
+                   (student_id, name))
+    row = cursor.fetchone()
+    return dict(row) if row else None
+
+
+def get_student_by_openid(openid):
+    """根据openid获取学生信息"""
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM students WHERE wx_openid = ?', (openid,))
+    row = cursor.fetchone()
+    return dict(row) if row else None

@@ -14,8 +14,10 @@ import database
 from PIL import Image
 from apscheduler.schedulers.background import BackgroundScheduler
 import news_crawler
+from wx_api import wx_bp
 
 app = Flask(__name__)
+app.register_blueprint(wx_bp)
 app.secret_key = 'jlu_tongxin_8_class_2024_secret_key'
 app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # 100MB max for video uploads
 app.config['UPLOAD_FOLDER'] = 'static/imgs/avatars'
@@ -255,6 +257,8 @@ DELETED_FILE = os.path.join(DATA_DIR, 'deleted.csv')
 # 初始化数据库
 database.init_db()
 database.migrate_from_csv()
+database.create_wx_bindings_table()
+database.add_wx_openid_column()
 
 
 # 文件上传错误处理
