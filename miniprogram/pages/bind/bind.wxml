@@ -1,0 +1,12 @@
+<view class="container">
+  <view class="header">
+    <text class="title">吉大自动化八班</text>
+    <text class="subtitle">同学录小程序</text>
+  </view>
+
+  <view class="form">
+    <input class="input" placeholder="请输入姓名" bindinput="onNameInput" value="{{name}}" />
+    <input class="input" placeholder="请输入学号" bindinput="onStudentIdInput" value="{{studentId}}" type="number" />
+    <button class="btn" bindtap="onBind" loading="{{loading}}">绑定并登录</button>
+  </view>
+</view>

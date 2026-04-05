@@ -1,0 +1,5 @@
+node_modules/
+private.key
+qrcode/
+*.log
+.DS_Store
