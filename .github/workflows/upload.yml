@@ -46,7 +46,8 @@ jobs:
             --pkp ./private.key \
             --appid $APPID \
             --qrcode-format image \
-            --qrcode-output-dir ./qrcode
+            --qrcode-output-dest ./qrcode/qrcode.png \
+            --upload-version ${{ github.run_number }}.0.0
 
       - name: Upload Miniprogram
         if: github.event.inputs.action == 'upload'
