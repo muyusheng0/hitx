@@ -1,0 +1,28 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/txl/txl",
+    "pages/txl-detail/txl-detail",
+    "pages/lyb/lyb",
+    "pages/gallery/gallery",
+    "pages/video/video",
+    "pages/profile/profile",
+    "pages/bind/bind"
+  ],
+  "window": {
+    "navigationBarTitleText": "吉大自动化八班",
+    "navigationBarBackgroundColor": "#2c3e50",
+    "navigationBarTextStyle": "white"
+  },
+  "tabBar": {
+    "color": "#666",
+    "selectedColor": "#e74c3c",
+    "backgroundColor": "#fff",
+    "list": [
+      { "pagePath": "pages/index/index", "text": "首页" },
+      { "pagePath": "pages/txl/txl", "text": "通讯录" },
+      { "pagePath": "pages/lyb/lyb", "text": "留言板" },
+      { "pagePath": "pages/profile/profile", "text": "我的" }
+    ]
+  }
+}

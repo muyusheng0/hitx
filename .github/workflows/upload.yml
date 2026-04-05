@@ -1,0 +1,69 @@
+name: WeChat Miniprogram Upload
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Action'
+        required: true
+        default: 'preview'
+        type: choice
+        options:
+          - preview
+          - upload
+
+jobs:
+  upload:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Download Private Key
+        env:
+          PRIVATE_KEY: ${{ secrets.WX_MINIPROGRAM_PRIVATE_KEY }}
+        run: |
+          echo "$PRIVATE_KEY" > ./private.key
+          chmod 600 ./private.key
+
+      - name: Preview Miniprogram
+        if: github.event.inputs.action == 'preview'
+        env:
+          APPID: ${{ secrets.WX_MINIPROGRAM_APPID }}
+        run: |
+          npx miniprogram-ci preview \
+            --pp ./ \
+            --pkp ./private.key \
+            --appid $APPID \
+            --qrcode-format image \
+            --qrcode-output-dir ./qrcode
+
+      - name: Upload Miniprogram
+        if: github.event.inputs.action == 'upload'
+        env:
+          APPID: ${{ secrets.WX_MINIPROGRAM_APPID }}
+        run: |
+          npx miniprogram-ci upload \
+            --pp ./ \
+            --pkp ./private.key \
+            --appid $APPID \
+            --version ${{ github.run_number }}.0.0 \
+            --desc "GitHub Actions 自动上传"
+
+      - name: Upload QRCode Artifact
+        if: github.event.inputs.action == 'preview'
+        uses: actions/upload-artifact@v4
+        with:
+          name: miniprogram-qrcode
+          path: ./qrcode
+          retention-days: 7

@@ -1,0 +1,13 @@
+{
+  "name": "miniprogram-jlu8",
+  "version": "1.0.0",
+  "description": "吉大自动化八班同学录小程序",
+  "scripts": {
+    "upload": "miniprogram-ci upload",
+    "preview": "miniprogram-ci preview"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "miniprogram-ci": "^1.10.0"
+  }
+}
