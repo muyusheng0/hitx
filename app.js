@@ -1,6 +1,6 @@
 App({
   globalData: {
-    apiBase: 'http://localhost:5000/api/wx',
+    apiBase: 'http://81.71.65.240:5000/api/wx',
     token: null,
     userInfo: null,
     isBind: false
