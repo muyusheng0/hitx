@@ -206,11 +206,15 @@ def get_messages():
     """获取留言列表"""
     messages = database.read_lyb()
     messages.reverse()  # 最新在前
+    students = database.read_txl()
+    student_avatar = {s['name']: s.get('avatar', '') for s in students}
     result = []
     for m in messages:
+        nickname = m['nickname']
         result.append({
             'id': m['id'],
-            'nickname': m['nickname'],
+            'nickname': nickname,
+            'avatar': student_avatar.get(nickname, ''),
             'content': m['content'],
             'time': m['time'],
             'image': m.get('image', ''),
