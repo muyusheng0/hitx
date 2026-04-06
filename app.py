@@ -22,6 +22,10 @@ app.secret_key = 'jlu_tongxin_8_class_2024_secret_key'
 app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # 100MB max for video uploads
 app.config['UPLOAD_FOLDER'] = 'static/imgs/avatars'
 app.config['ALLOWED_EXTENSIONS'] = {'png', 'jpg', 'jpeg', 'gif'}
+# Session 配置
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.config['SESSION_COOKIE_SECURE'] = True  # HTTPS only
+app.config['SESSION_COOKIE_HTTPONLY'] = True
 
 AVATAR_MAX_SIZE = 500 * 1024  # 500KB for avatars
 
