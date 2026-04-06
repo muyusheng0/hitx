@@ -1239,8 +1239,10 @@
         }
 
         window.addEventListener('userLoginSuccess', async function() {
+            console.log('userLoginSuccess事件触发');
             // 立即切换到已登录视图
             if (window.currentUser) {
+                console.log('调用showLoggedView');
                 showLoggedView(window.currentUser);
             }
             updateProfileUI();

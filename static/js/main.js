@@ -294,11 +294,14 @@ async function submitVerify(e) {
         const data = await res.json();
 
         if (data.success) {
+            console.log('登录API成功，开始处理...');
             // 获取完整用户信息（包括is_admin）
             fetch('/api/check_verify', { credentials: 'same-origin' })
                 .then(res => res.json())
                 .then(data => {
+                    console.log('check_verify返回:', data);
                     if (data.verified) {
+                        console.log('验证成功，设置用户状态...');
                         state.verified = true;
                         state.currentStudent = data.student;
                         window.currentUser = { name: data.student.name, student_id: data.student.id, is_admin: data.student.is_admin, is_super_admin: data.student.is_super_admin };
@@ -324,9 +327,13 @@ async function submitVerify(e) {
                         // 直接更新"我的"页面的 UI（不刷新页面）
                         const unloggedView = document.getElementById('unloggedView');
                         const loggedView = document.getElementById('loggedView');
-                        if (unloggedView) unloggedView.style.display = 'none';
+                        if (unloggedView) {
+                            unloggedView.style.display = 'none';
+                            console.log('隐藏unloggedView');
+                        }
                         if (loggedView) {
                             loggedView.style.display = 'block';
+                            console.log('显示loggedView');
                             // 更新用户信息显示
                             const nameEl = document.getElementById('profileName');
                             const idEl = document.getElementById('profileId');
@@ -335,6 +342,9 @@ async function submitVerify(e) {
                             if (idEl && data.student) idEl.textContent = '学号：' + (data.student.id || '未设置');
                             if (avatarEl && data.student) avatarEl.textContent = (data.student.name || '?')[0];
                         }
+                        console.log('登录成功完成');
+                    } else {
+                        console.log('验证失败: data.verified is false');
                     }
                 });
         } else if (data.prompt === '请输入登录密码') {
