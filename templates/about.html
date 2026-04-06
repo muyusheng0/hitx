@@ -415,39 +415,6 @@
     <script src="/static/js/province_data.js"></script>
     <script src="/static/js/main.js"></script>
     <script>
-        // 立即同步检查登录状态（在页面渲染前）
-        (async function() {
-            try {
-                const verifyRes = await fetch('/api/check_verify', { credentials: 'same-origin' });
-                const verifyData = await verifyRes.json();
-
-                const unloggedView = document.getElementById('unloggedView');
-                const loggedView = document.getElementById('loggedView');
-
-                if (verifyData.verified) {
-                    // 已登录，设置为已登录视图
-                    if (unloggedView) unloggedView.style.display = 'none';
-                    if (loggedView) {
-                        loggedView.style.display = 'block';
-                        // 更新用户信息
-                        if (verifyData.student) {
-                            const nameEl = document.getElementById('profileName');
-                            const idEl = document.getElementById('profileId');
-                            if (nameEl) nameEl.textContent = verifyData.student.name || '未设置';
-                            if (idEl) idEl.textContent = '学号：' + (verifyData.student.id || '未设置');
-                        }
-                    }
-                    window.currentUser = verifyData.student;
-                    window.currentUser.student_id = verifyData.student.id;
-                } else {
-                    // 未登录，显示未登录视图
-                    if (unloggedView) unloggedView.style.display = 'block';
-                    if (loggedView) loggedView.style.display = 'none';
-                }
-            } catch (e) {
-                console.error('检查登录状态失败:', e);
-            }
-        })();
         // 初始化省份下拉框
         function initProvinceSelect() {
             const select = document.getElementById('editProvince');
