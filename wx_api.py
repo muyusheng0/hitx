@@ -312,9 +312,10 @@ def update_profile():
     for s in students:
         if s['id'] == student_id:
             # 更新允许的字段
-            allowed_fields = ['phone', 'wechat', 'qq', 'email', 'work', 'position',
+            allowed_fields = ['phone', 'work', 'position',
                              'hobby', 'dream', 'company', 'industry', 'gender', 'birthday',
-                             'github', 'douyin', 'xiaohongshu', 'custom_intro', 'avatar']
+                             'github', 'douyin', 'xiaohongshu', 'custom_intro', 'avatar',
+                             'city', 'hometown', 'hometown_name', 'gps_coords']
             for field in allowed_fields:
                 if field in data:
                     s[field] = data[field]
@@ -323,6 +324,40 @@ def update_profile():
             return jsonify({'success': True})
 
     return jsonify({'success': False, 'error': 'Profile not found'})
+
+
+@wx_bp.route('/avatar', methods=['POST'])
+@token_required
+def upload_avatar():
+    """上传头像"""
+    if 'file' not in request.files:
+        return jsonify({'success': False, 'error': 'No file'})
+
+    file = request.files['file']
+    if not file.filename:
+        return jsonify({'success': False, 'error': 'No file selected'})
+
+    # 保存文件
+    import uuid
+    ext = file.filename.rsplit('.', 1)[1].lower() if '.' in file.filename else 'jpg'
+    filename = f"avatar_{uuid.uuid4().hex}.{ext}"
+    avatar_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'static/imgs/avatars')
+    os.makedirs(avatar_dir, exist_ok=True)
+    filepath = os.path.join(avatar_dir, filename)
+    file.save(filepath)
+
+    avatar_url = f'/static/imgs/avatars/{filename}'
+
+    # 更新用户头像
+    student_id = request.wx_user['student_id']
+    students = database.read_txl()
+    for s in students:
+        if s['id'] == student_id:
+            s['avatar'] = avatar_url
+            database.write_txl(students)
+            break
+
+    return jsonify({'success': True, 'url': avatar_url})
 
 
 # ==================== 评论API ====================
