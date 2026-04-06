@@ -2563,6 +2563,29 @@ def set_news_keywords():
     })
 
 
+def do_crawl_news():
+    """执行新闻爬取（供调度器调用）"""
+    from datetime import datetime
+    executed_at = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    with app.app_context():
+        try:
+            database.clear_news()
+            news_list = news_crawler.fetch_jlu_news()
+            for news in news_list:
+                database.save_news(
+                    title=news['title'],
+                    content=news['content'],
+                    source_url=news['source_url'],
+                    image_url=news['image_url'],
+                    published_time=news['published_time']
+                )
+            database.set_news_crawl_log(executed_at, 'success', len(news_list), '定时爬取成功')
+            print(f"[News Crawler] 成功爬取{len(news_list)}条新闻")
+        except Exception as e:
+            database.set_news_crawl_log(executed_at, 'failed', 0, f'定时爬取失败: {e}')
+            print(f"[News Crawler] 爬取失败: {e}")
+
+
 def update_news_scheduler():
     """更新新闻爬取调度器"""
     hour = int(database.get_config('news_crawl_hour', '1'))
@@ -2573,26 +2596,14 @@ def update_news_scheduler():
         app.news_scheduler.remove_job('crawl_news')
 
     # 添加新任务
-    def crawl_job():
-        from datetime import datetime
-        executed_at = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        with app.app_context():
-            try:
-                database.clear_news()
-                news_list = news_crawler.fetch_jlu_news()
-                for news in news_list:
-                    database.save_news(
-                        title=news['title'],
-                        content=news['content'],
-                        source_url=news['source_url'],
-                        image_url=news['image_url'],
-                        published_time=news['published_time']
-                    )
-                database.set_news_crawl_log(executed_at, 'success', len(news_list), '定时爬取成功')
-                print(f"[News Crawler] 成功爬取{len(news_list)}条新闻")
-            except Exception as e:
-                database.set_news_crawl_log(executed_at, 'failed', 0, f'定时爬取失败: {e}')
-                print(f"[News Crawler] 爬取失败: {e}")
+    app.news_scheduler.add_job(
+        func=do_crawl_news,
+        trigger='cron',
+        hour=hour,
+        minute=minute,
+        id='crawl_news',
+        replace_existing=True
+    )
 
 
 # 初始化调度器
@@ -2603,7 +2614,7 @@ def init_news_scheduler():
 
     scheduler = BackgroundScheduler()
     scheduler.add_job(
-        func=update_news_scheduler,
+        func=do_crawl_news,
         trigger='cron',
         hour=hour,
         minute=minute,

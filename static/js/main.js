@@ -322,13 +322,14 @@ async function submitVerify(e) {
                         updateUserStatusUI(true, data.student);
                         updateVerifyUI(true);
                         updateMessageInputUI(true);
-                        // 触发登录成功事件
+                        // 触发登录成功事件，让所有监听器更新UI
                         window.dispatchEvent(new CustomEvent('userLoginSuccess', { detail: window.currentUser }));
                         if (typeof loadStudentData === 'function') {
                             loadStudentData();
                         }
-                        // 刷新页面以更新所有组件状态
-                        setTimeout(() => location.reload(), 100);
+                        // 关闭登录弹窗（如果还没关闭）
+                        closeVerifyModal();
+                        // 不使用 location.reload()，直接让各页面的 userLoginSuccess 事件处理UI更新
                     }
                 });
         } else if (data.prompt === '请输入登录密码') {
@@ -1569,8 +1570,9 @@ function renderNotificationList(listElement, notifications, page) {
         listElement.innerHTML = pageNotifications.map(n => {
             const icon = getNotificationIcon(n.type);
             const time = formatNotificationTime(n.created_time);
+            const refId = typeof n.ref_id === 'string' ? `'${n.ref_id}'` : n.ref_id;
             return `
-                <div class="notification-item unread" data-notif-id="${n.id}" onclick="handleNotificationClick(${n.id}, '${n.type}', ${n.ref_id}, '${n.target_name || ''}', '${n.media_type || ''}')">
+                <div class="notification-item unread" data-notif-id="${n.id}" onclick="handleNotificationClick(${n.id}, '${n.type}', ${refId}, '${n.target_name || ''}', '${n.media_type || ''}')">
                     <div class="notification-item-icon notification-type-${n.type}">${icon}</div>
                     <div class="notification-item-content">
                         <div class="notification-item-text">${escapeHtml(n.content)}</div>

@@ -113,12 +113,6 @@
                     </div>
                 </div>
 
-                <!-- 兴趣爱好 -->
-                <div class="profile-detail-card" id="hobbyCard" style="display: none;">
-                    <h3 class="profile-detail-title">兴趣爱好</h3>
-                    <div class="profile-hobby-list" id="profileHobby">-</div>
-                </div>
-
                 <!-- 登出按钮 -->
                 <button class="profile-logout-btn" onclick="logout()">退出登录</button>
 
@@ -247,6 +241,7 @@
         <a href="/about" class="tab-item active">
             <span class="tab-icon">👤</span>
             <span class="tab-label">我的</span>
+            <span class="tab-badge" id="tabNotificationBadge" style="display: none;">0</span>
         </a>
     </nav>
 
@@ -390,12 +385,6 @@
                 <div class="input-group">
                     <label">🎂 生日</label>
                     <input type="date" name="birthday" id="editBirthday">
-                </div>
-
-                <div class="input-group">
-                    <label">🎮 兴趣爱好</label>
-                    <input type="text" name="hobby" id="editHobby" placeholder="多个兴趣用逗号分隔">
-                    <small style="color: var(--secondary); font-size: 0.75rem; font-weight: 500;">👁️ 通讯录可见</small>
                 </div>
 
                 <div class="input-group">
@@ -1249,8 +1238,24 @@
             });
         }
 
-        window.addEventListener('userLoginSuccess', function() {
+        window.addEventListener('userLoginSuccess', async function() {
+            // 立即切换到已登录视图
+            if (window.currentUser) {
+                showLoggedView(window.currentUser);
+            }
             updateProfileUI();
+            // 登录成功后如果有未读通知，滚动到通知区域并高亮
+            await loadNotificationCount();
+            const badge = document.getElementById('tabNotificationBadge');
+            if (badge && badge.style.display !== 'none') {
+                // 有未读通知，滚动到通知区域
+                const notificationCard = document.getElementById('notificationCard');
+                if (notificationCard) {
+                    notificationCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    // 添加高亮效果
+                    notificationCard.style.animation = 'highlightPulse 2s ease-out';
+                }
+            }
         });
 
         async function loadDeletedItems(page = 1) {
@@ -1274,20 +1279,20 @@
                 listEl.innerHTML = data.items.map(item => {
                     const typeIcon = item.type === 'photo' ? '📷' : item.type === 'video' ? '🎬' : item.type === 'message' ? '💬' : item.type === 'comment' ? '💭' : item.type === 'voice_shout' ? '🎤' : '📝';
                     const typeName = item.type === 'photo' ? '照片' : item.type === 'video' ? '视频' : item.type === 'message' ? '留言' : item.type === 'comment' ? '评论' : item.type === 'voice_shout' ? '喊话' : '其他';
-                    const deletedByText = item.deleted_by && item.deleted_by !== item.owner ? `<span style="color: #e74c3c; font-size: 0.75rem;">(被${item.deleted_by}删除)</span>` : '';
+                    const deletedByText = item.deleted_by && item.deleted_by !== item.owner ? `<span style="color: #e74c3c; font-size: 0.75rem; overflow-wrap: break-word;">(被${item.deleted_by}删除)</span>` : '';
                     return `
-                        <div class="deleted-item" style="padding: 0.8rem; border-bottom: 1px solid var(--bg-dark); display: flex; justify-content: space-between; align-items: center;">
-                            <div style="flex: 1;">
-                                <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.3rem;">
+                        <div class="deleted-item" style="padding: 0.8rem; border-bottom: 1px solid var(--bg-dark); display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem; overflow-wrap: break-word;">
+                            <div style="flex: 1; min-width: 0;">
+                                <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.3rem; flex-wrap: wrap;">
                                     <span>${typeIcon}</span>
-                                    <span style="font-weight: 500;">${typeName}</span>
-                                    <span style="color: var(--text-light); font-size: 0.85rem;">by ${item.owner}</span>
+                                    <span style="font-weight: 500; overflow-wrap: break-word;">${typeName}</span>
+                                    <span style="color: var(--text-light); font-size: 0.85rem; overflow-wrap: break-word;">by ${item.owner}</span>
                                     ${deletedByText}
                                 </div>
-                                <div style="color: var(--text); font-size: 0.9rem;">${item.content ? item.content.substring(0, 50) + (item.content.length > 50 ? '...' : '') : '(无内容)'}</div>
+                                <div style="color: var(--text); font-size: 0.9rem; overflow-wrap: break-word; word-break: break-all;">${item.content ? item.content.substring(0, 50) + (item.content.length > 50 ? '...' : '') : '(无内容)'}</div>
                                 <div style="color: var(--text-light); font-size: 0.8rem; margin-top: 0.3rem;">删除于 ${item.deleted_time}</div>
                             </div>
-                            <div style="display: flex; gap: 0.5rem;">
+                            <div style="display: flex; gap: 0.5rem; flex-shrink: 0;">
                                 <button onclick="previewDeletedItem(${item.id})" style="background: var(--bg-dark); color: var(--text); border: none; padding: 0.5rem 1rem; border-radius: 20px; cursor: pointer; font-size: 0.85rem;">查看</button>
                                 ${item.type !== 'voice_shout' ? `<button onclick="restoreDeletedItem(${item.id})" style="background: var(--secondary); color: white; border: none; padding: 0.5rem 1rem; border-radius: 20px; cursor: pointer; font-size: 0.85rem;">恢复</button>` : ''}
                                 <button onclick="permanentDeleteItem(${item.id})" style="background: #999; color: white; border: none; padding: 0.5rem 1rem; border-radius: 20px; cursor: pointer; font-size: 0.85rem;">彻底删除</button>
