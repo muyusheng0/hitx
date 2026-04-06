@@ -480,28 +480,6 @@
             }
         });
 
-        // 页面重新显示时也检查登录状态（如从其他页面返回）
-        document.addEventListener('visibilitychange', async function() {
-            if (document.visibilityState === 'visible') {
-                await checkLoginAndLoadProfile();
-            }
-        });
-
-        // 也监听 pageshow 事件（处理后退按钮等情况）
-        window.addEventListener('pageshow', async function(event) {
-            if (event.persisted) {
-                // 页面从缓存恢复
-                await checkLoginAndLoadProfile();
-            }
-        });
-
-        // 备用：定期检查登录状态（每3秒）
-        setInterval(async function() {
-            if (document.visibilityState === 'visible') {
-                await checkLoginAndLoadProfile();
-            }
-        }, 3000);
-
         // 检查登录状态并加载个人资料
         async function checkLoginAndLoadProfile() {
             try {
