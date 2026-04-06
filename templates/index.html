@@ -264,11 +264,6 @@
                     <label>登录密码</label>
                     <input type="password" id="verifyLoginPassword" placeholder="请输入登录密码">
                 </div>
-                <div class="remember-login">
-                    <label>
-                        <input type="checkbox" id="rememberLogin">7天内免登录
-                    </label>
-                </div>
                 <div class="verify-error" id="verifyError"></div>
                 <button type="submit" class="verify-btn">验证身份</button>
             </form>
@@ -282,28 +277,7 @@
             setTimeout(hideHomeDeletedPhotos, 100);
             // 加载未读活动数量
             loadUnreadActivityCount();
-            // 自动填充记住的登录信息
-            autoFillRememberedLogin();
         });
-
-        function autoFillRememberedLogin() {
-            const saved = localStorage.getItem('rememberedLogin');
-            if (saved) {
-                try {
-                    const data = JSON.parse(saved);
-                    const nameInput = document.getElementById('verifyName');
-                    const studentIdInput = document.getElementById('verifyStudentId');
-                    const rememberCheckbox = document.getElementById('rememberLogin');
-                    if (nameInput) nameInput.value = data.name || '';
-                    if (studentIdInput) studentIdInput.value = data.studentId || '';
-                    if (rememberCheckbox) rememberCheckbox.checked = true;
-                    // 自动检查是否需要显示密码
-                    if (data.name && data.studentId) {
-                        setTimeout(() => checkPasswordRequired(), 100);
-                    }
-                } catch (e) {}
-            }
-        }
 
         function loadUnreadActivityCount() {
             fetch('/api/get_unread_activity_count', { credentials: 'same-origin' })

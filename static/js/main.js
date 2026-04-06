@@ -294,14 +294,6 @@ async function submitVerify(e) {
         const data = await res.json();
 
         if (data.success) {
-            // 保存登录信息
-            const rememberCheckbox = document.getElementById('rememberLogin');
-            if (rememberCheckbox && rememberCheckbox.checked) {
-                localStorage.setItem('rememberedLogin', JSON.stringify({ name, studentId }));
-            } else {
-                localStorage.removeItem('rememberedLogin');
-            }
-
             // 获取完整用户信息（包括is_admin）
             fetch('/api/check_verify', { credentials: 'same-origin' })
                 .then(res => res.json())
