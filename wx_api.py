@@ -793,6 +793,105 @@ def get_activities():
     })
 
 
+@wx_bp.route('/nearest', methods=['GET'])
+@token_required
+def get_nearest_classmates():
+    """获取离我最近的同学"""
+    lat = request.args.get('lat', type=float)
+    lon = request.args.get('lon', type=float)
+
+    if lat is None or lon is None:
+        return jsonify({'success': False, 'error': 'Missing location'})
+
+    import math
+    def haversine(lat1, lon1, lat2, lon2):
+        R = 6371  # 地球半径，单位公里
+        dLat = math.radians(lat2 - lat1)
+        dLon = math.radians(lon2 - lon1)
+        a = math.sin(dLat/2) * math.sin(dLat/2) + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dLon/2) * math.sin(dLon/2)
+        c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
+        return R * c
+
+    students = database.read_txl()
+    nearest = []
+    for s in students:
+        gps = s.get('gps_coords', '')
+        if gps:
+            try:
+                parts = gps.split(',')
+                if len(parts) >= 2:
+                    s_lat = float(parts[0].strip())
+                    s_lon = float(parts[1].strip())
+                    dist = haversine(lat, lon, s_lat, s_lon)
+                    nearest.append({
+                        'id': s['id'],
+                        'name': s['name'],
+                        'distance': round(dist, 1),
+                        'city': s.get('city', ''),
+                        'hometown': s.get('hometown_name', '')
+                    })
+            except:
+                pass
+
+    nearest.sort(key=lambda x: x['distance'])
+    return jsonify({'success': True, 'nearest': nearest[:5]})
+
+
+# ==================== 喊话API ====================
+
+@wx_bp.route('/voice_shout/<to_name>', methods=['GET'])
+@token_required
+def get_voice_shouts(to_name):
+    """获取对某人的喊话列表"""
+    shouts = database.get_voice_shouts_by_target(to_name)
+    return jsonify({'success': True, 'shouts': shouts})
+
+
+@wx_bp.route('/voice_shout', methods=['POST'])
+@token_required
+def upload_voice_shout():
+    """上传喊话语音"""
+    if 'file' not in request.files:
+        return jsonify({'success': False, 'error': 'No file'})
+
+    file = request.files['file']
+    to_name = request.form.get('to_name', '')
+
+    if not file.filename or not to_name:
+        return jsonify({'success': False, 'error': 'Missing params'})
+
+    from werkzeug.utils import secure_filename
+    import uuid
+    ext = secure_filename(file.filename).rsplit('.', 1)[-1] if '.' in file.filename else 'wav'
+    if ext not in ['wav', 'mp3', 'webm', 'm4a', 'ogg']:
+        ext = 'wav'
+
+    filename = f"shout_{uuid.uuid4().hex}.{ext}"
+    shout_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'static/imgs/voice_shouts')
+    os.makedirs(shout_dir, exist_ok=True)
+    filepath = os.path.join(shout_dir, filename)
+    file.save(filepath)
+
+    audio_url = f'/static/imgs/voice_shouts/{filename}'
+    from_name = request.wx_user.get('name', '')
+
+    shout_id = database.add_voice_shout(from_name, to_name, audio_url)
+    if shout_id:
+        database.write_activity(from_name, 'voice_shout', f'对{to_name}喊了一段话')
+        return jsonify({'success': True, 'shout_id': shout_id, 'audio_url': audio_url})
+
+    return jsonify({'success': False, 'error': 'Failed to save'})
+
+
+@wx_bp.route('/voice_shout/<int:shout_id>', methods=['DELETE'])
+@token_required
+def delete_voice_shout(shout_id):
+    """删除喊话"""
+    name = request.wx_user.get('name', '')
+    success, msg = database.delete_voice_shout(shout_id, name)
+    return jsonify({'success': success, 'message': msg})
+
+
 # ==================== 班级时光API ====================
 
 # 班级时间线数据（静态）
