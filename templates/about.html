@@ -523,25 +523,37 @@
 
             if (!user) return;
 
-            document.getElementById('profileName').textContent = user.name || '未设置';
-            document.getElementById('profileId').textContent = '学号：' + (user.id || user.student_id || '未设置');
-            document.getElementById('profileAvatarInitial').textContent = (user.name || '?')[0];
+            const profileName = document.getElementById('profileName');
+            const profileId = document.getElementById('profileId');
+            const profileAvatarInitial = document.getElementById('profileAvatarInitial');
+            const profileAvatar = document.getElementById('profileAvatar');
+            const detailName = document.getElementById('detailName');
+            const detailGender = document.getElementById('detailGender');
+            const detailBirthday = document.getElementById('detailBirthday');
 
-            if (user.avatar) {
-                document.getElementById('profileAvatar').innerHTML = '<img src="' + user.avatar + '" alt="avatar">';
+            if (profileName) profileName.textContent = user.name || '未设置';
+            if (profileId) profileId.textContent = '学号：' + (user.id || user.student_id || '未设置');
+            if (profileAvatarInitial) profileAvatarInitial.textContent = (user.name || '?')[0];
+
+            if (user.avatar && profileAvatar) {
+                profileAvatar.innerHTML = '<img src="' + user.avatar + '" alt="avatar">';
             }
 
-            document.getElementById('detailName').textContent = user.name || '-';
-            document.getElementById('detailGender').textContent = user.gender || '-';
-            document.getElementById('detailBirthday').textContent = user.birthday || '-';
+            if (detailName) detailName.textContent = user.name || '-';
+            if (detailGender) detailGender.textContent = user.gender || '-';
+            if (detailBirthday) detailBirthday.textContent = user.birthday || '-';
             let location = user.hometown_name || user.hometown || '-';
             if (user.city) location += ' ' + user.city;
             if (user.district) location += ' ' + user.district;
-            document.getElementById('detailHometown').textContent = location;
-            document.getElementById('detailPhone').textContent = user.phone || '-';
-            document.getElementById('detailIndustry').textContent = user.industry || '-';
-            document.getElementById('detailCompany').textContent = user.company || '-';
-            document.getElementById('detailPosition').textContent = user.position || '-';
+            const setText = (id, val) => {
+                const el = document.getElementById(id);
+                if (el) el.textContent = val || '-';
+            };
+            setText('detailHometown', location);
+            setText('detailPhone', user.phone);
+            setText('detailIndustry', user.industry);
+            setText('detailCompany', user.company);
+            setText('detailPosition', user.position);
 
             const socialCard = document.getElementById('socialMediaCard');
             const github = user.github || user.weibo;
@@ -549,41 +561,56 @@
             const xiaohongshu = user.xiaohongshu;
 
             if (github || douyin || xiaohongshu) {
-                socialCard.style.display = 'block';
+                if (socialCard) socialCard.style.display = 'block';
                 if (github) {
-                    document.getElementById('detailGithubItem').style.display = 'flex';
-                    document.getElementById('detailGithub').textContent = github;
+                    const gi = document.getElementById('detailGithubItem');
+                    const ge = document.getElementById('detailGithub');
+                    if (gi) gi.style.display = 'flex';
+                    if (ge) ge.textContent = github;
                 }
                 if (douyin) {
-                    document.getElementById('detailDouyinItem').style.display = 'flex';
-                    document.getElementById('detailDouyin').textContent = douyin;
+                    const di = document.getElementById('detailDouyinItem');
+                    const de = document.getElementById('detailDouyin');
+                    if (di) di.style.display = 'flex';
+                    if (de) de.textContent = douyin;
                 }
                 if (xiaohongshu) {
-                    document.getElementById('detailXiaohongshuItem').style.display = 'flex';
-                    document.getElementById('detailXiaohongshu').textContent = xiaohongshu;
+                    const xi = document.getElementById('detailXiaohongshuItem');
+                    const xe = document.getElementById('detailXiaohongshu');
+                    if (xi) xi.style.display = 'flex';
+                    if (xe) xe.textContent = xiaohongshu;
                 }
             } else {
-                socialCard.style.display = 'none';
+                if (socialCard) socialCard.style.display = 'none';
             }
 
             const hobbyCard = document.getElementById('hobbyCard');
-            if (user.hobby) {
-                hobbyCard.style.display = 'block';
-                document.getElementById('profileHobby').textContent = user.hobby;
-            } else {
-                hobbyCard.style.display = 'none';
+            const hobbyEl = document.getElementById('profileHobby');
+            if (hobbyCard) {
+                if (user.hobby) {
+                    hobbyCard.style.display = 'block';
+                    if (hobbyEl) hobbyEl.textContent = user.hobby;
+                } else {
+                    hobbyCard.style.display = 'none';
+                }
             }
 
             // 密码设置（所有用户可见）
-            document.getElementById('loginPasswordCard').style.display = 'block';
-            loadLoginPasswordStatus();
+            const loginPasswordCard = document.getElementById('loginPasswordCard');
+            if (loginPasswordCard) {
+                loginPasswordCard.style.display = 'block';
+                loadLoginPasswordStatus();
+            }
 
             // 管理员显示新闻爬取设置（可查看日志和时间）
-            if (user.is_admin || user.is_super_admin) {
-                document.getElementById('newsScheduleCard').style.display = 'block';
-                loadNewsScheduleStatus();
-            } else {
-                document.getElementById('newsScheduleCard').style.display = 'none';
+            const newsScheduleCard = document.getElementById('newsScheduleCard');
+            if (newsScheduleCard) {
+                if (user.is_admin || user.is_super_admin) {
+                    newsScheduleCard.style.display = 'block';
+                    loadNewsScheduleStatus();
+                } else {
+                    newsScheduleCard.style.display = 'none';
+                }
             }
 
             // 超级管理员显示管理员设置
