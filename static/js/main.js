@@ -329,10 +329,20 @@ async function submitVerify(e) {
                         }
                         // 关闭登录弹窗
                         closeVerifyModal();
-                        // 强制从服务器刷新页面以显示已登录状态
-                        setTimeout(() => {
-                            window.location.reload(true);  // true = 强制从服务器刷新，忽略缓存
-                        }, 100);
+                        // 直接更新"我的"页面的 UI（不刷新页面）
+                        const unloggedView = document.getElementById('unloggedView');
+                        const loggedView = document.getElementById('loggedView');
+                        if (unloggedView) unloggedView.style.display = 'none';
+                        if (loggedView) {
+                            loggedView.style.display = 'block';
+                            // 更新用户信息显示
+                            const nameEl = document.getElementById('profileName');
+                            const idEl = document.getElementById('profileId');
+                            const avatarEl = document.getElementById('profileAvatarInitial');
+                            if (nameEl && data.student) nameEl.textContent = data.student.name || '未设置';
+                            if (idEl && data.student) idEl.textContent = '学号：' + (data.student.id || '未设置');
+                            if (avatarEl && data.student) avatarEl.textContent = (data.student.name || '?')[0];
+                        }
                     }
                 });
         } else if (data.prompt === '请输入登录密码') {
