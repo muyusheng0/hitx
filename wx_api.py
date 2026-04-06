@@ -223,6 +223,7 @@ def get_messages():
 @token_required
 def add_message():
     """发表留言"""
+    from datetime import datetime
     data = request.get_json()
     content = data.get('content', '').strip()
     image = data.get('image', '').strip()
@@ -239,7 +240,7 @@ def add_message():
         'id': database.get_next_lyb_id(),
         'nickname': nickname,
         'content': content,
-        'time': datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+        'time': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
         'image': image,
         'voice': ''
     }
@@ -1208,7 +1209,7 @@ def upload_voice_message():
         'id': database.get_next_lyb_id(),
         'nickname': nickname,
         'content': '',
-        'time': datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+        'time': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
         'image': '',
         'voice': f'/static/voice/lyb/{filename}'
     }
