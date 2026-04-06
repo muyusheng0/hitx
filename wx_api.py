@@ -225,6 +225,7 @@ def add_message():
     """发表留言"""
     data = request.get_json()
     content = data.get('content', '').strip()
+    image = data.get('image', '').strip()
 
     if not content:
         return jsonify({'success': False, 'error': 'Empty content'})
@@ -239,7 +240,7 @@ def add_message():
         'nickname': nickname,
         'content': content,
         'time': datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-        'image': '',
+        'image': image,
         'voice': ''
     }
 
@@ -330,7 +331,15 @@ def update_profile():
 @token_required
 def get_comments(message_id):
     """获取某留言的所有评论"""
-    comments = database.get_comments_by_message(message_id)
+    nickname = request.wx_user['name']
+    is_admin, _ = check_admin_status(nickname)
+
+    raw_comments = database.get_comments_by_message(message_id)
+    comments = []
+    for c in raw_comments:
+        c['can_delete'] = (c.get('nickname') == nickname or is_admin)
+        comments.append(c)
+
     return jsonify({'success': True, 'comments': comments})
 
 
@@ -980,5 +989,97 @@ def delete_video(video_id):
     deleted_items = database.read_deleted()
     deleted_items.append(deleted_item)
     database.write_deleted(deleted_items)
+
+    return jsonify({'success': True})
+
+
+# ==================== 留言管理API ====================
+
+@wx_bp.route('/messages/<int:message_id>', methods=['DELETE'])
+@token_required
+def delete_message(message_id):
+    """删除留言（仅所有者或管理员）"""
+    nickname = request.wx_user['name']
+    is_admin, _ = check_admin_status(nickname)
+
+    messages = database.read_lyb()
+    message = None
+    for m in messages:
+        if m.get('id') == message_id:
+            message = m
+            break
+
+    if not message:
+        return jsonify({'success': False, 'error': 'Message not found'})
+
+    # 检查权限：所有者或管理员可删除
+    if message.get('nickname') != nickname and not is_admin:
+        return jsonify({'success': False, 'error': 'Permission denied'})
+
+    database.delete_message(message_id)
+    return jsonify({'success': True})
+
+
+@wx_bp.route('/messages/image', methods=['POST'])
+@token_required
+def upload_message_image():
+    """上传留言图片"""
+    if 'file' not in request.files:
+        return jsonify({'success': False, 'error': 'No file'})
+
+    file = request.files['file']
+    if not file.filename:
+        return jsonify({'success': False, 'error': 'No file selected'})
+
+    # 保存文件
+    import uuid
+    ext = file.filename.rsplit('.', 1)[1].lower() if '.' in file.filename else 'jpg'
+    filename = f"{uuid.uuid4().hex}.{ext}"
+    upload_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'static/imgs/messages')
+    os.makedirs(upload_dir, exist_ok=True)
+    filepath = os.path.join(upload_dir, filename)
+    file.save(filepath)
+
+    return jsonify({
+        'success': True,
+        'url': f'/static/imgs/messages/{filename}'
+    })
+
+
+@wx_bp.route('/messages/voice', methods=['POST'])
+@token_required
+def upload_voice_message():
+    """上传语音留言"""
+    if 'file' not in request.files:
+        return jsonify({'success': False, 'error': 'No file'})
+
+    file = request.files['file']
+    if not file.filename:
+        return jsonify({'success': False, 'error': 'No file selected'})
+
+    # 保存文件
+    import uuid
+    ext = file.filename.rsplit('.', 1)[1].lower() if '.' in file.filename else 'wav'
+    filename = f"{uuid.uuid4().hex}.{ext}"
+    voice_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'static/voice/lyb')
+    os.makedirs(voice_dir, exist_ok=True)
+    filepath = os.path.join(voice_dir, filename)
+    file.save(filepath)
+
+    nickname = request.wx_user['name']
+
+    # 添加语音留言
+    message = {
+        'id': database.get_next_lyb_id(),
+        'nickname': nickname,
+        'content': '',
+        'time': datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+        'image': '',
+        'voice': f'/static/voice/lyb/{filename}'
+    }
+
+    messages = database.read_lyb()
+    messages.append(message)
+    database.write_lyb(messages)
 
     return jsonify({'success': True})

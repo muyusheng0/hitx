@@ -1349,6 +1349,25 @@ def delete_message_by_time_nickname(time, nickname):
     conn.commit()
 
 
+def delete_message(message_id):
+    """根据ID删除留言"""
+    conn = get_db()
+    cursor = conn.cursor()
+    # 先查询留言内容，用于记录到已删除列表
+    cursor.execute('SELECT id, nickname, content, image FROM messages WHERE id = ?', (message_id,))
+    row = cursor.fetchone()
+    if row:
+        # 记录到已删除列表
+        cursor.execute('''
+            INSERT INTO deleted (id, type, content, owner, time, deleted_time, extra)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        ''', (get_next_deleted_id(), 'message', row[2], row[1], '', datetime.now().strftime('%Y-%m-%d %H:%M:%S'), row[3] or ''))
+    # 删除留言
+    cursor.execute('DELETE FROM messages WHERE id = ?', (message_id,))
+    conn.commit()
+    return row is not None
+
+
 def delete_activities_by_actor(actor):
     """删除指定用户的所有活动记录"""
     conn = get_db()
