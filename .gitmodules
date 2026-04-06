@@ -1,0 +1,3 @@
+[submodule "miniprogram"]
+	path = miniprogram
+	url = git@github.com:muyusheng0/jlu8_wx.git
