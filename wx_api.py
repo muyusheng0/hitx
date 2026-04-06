@@ -898,3 +898,87 @@ def update_student_admin(student_id):
 
     database.update_student_admin(student_id, is_admin, is_super_admin_val)
     return jsonify({'success': True})
+
+
+# ==================== 媒体管理API ====================
+
+@wx_bp.route('/media/photo/<int:photo_id>', methods=['DELETE'])
+@token_required
+def delete_photo(photo_id):
+    """删除照片（仅所有者或管理员）"""
+    nickname = request.wx_user['name']
+    is_admin, _ = check_admin_status(nickname)
+
+    photos = database.read_photos()
+    photo = None
+    for p in photos:
+        if p.get('id') == photo_id:
+            photo = p
+            break
+
+    if not photo:
+        return jsonify({'success': False, 'error': 'Photo not found'})
+
+    # 检查权限：所有者或管理员可删除
+    if photo.get('owner') != nickname and not is_admin:
+        return jsonify({'success': False, 'error': 'Permission denied'})
+
+    database.delete_photo(photo_id)
+
+    # 记录到已删除列表
+    deleted_item = {
+        'id': database.get_next_deleted_id(),
+        'type': 'photo',
+        'content': photo.get('filename', ''),
+        'owner': photo.get('owner', ''),
+        'time': photo.get('time', ''),
+        'deleted_time': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+        'extra': photo.get('filename', ''),
+        'deleted_by': nickname
+    }
+    deleted_items = database.read_deleted()
+    deleted_items.append(deleted_item)
+    database.write_deleted(deleted_items)
+
+    return jsonify({'success': True})
+
+
+@wx_bp.route('/media/video/<int:video_id>', methods=['DELETE'])
+@token_required
+def delete_video(video_id):
+    """删除视频（仅所有者或管理员）"""
+    nickname = request.wx_user['name']
+    is_admin, _ = check_admin_status(nickname)
+
+    videos = database.read_videos()
+    video = None
+    for v in videos:
+        if v.get('id') == video_id:
+            video = v
+            break
+
+    if not video:
+        return jsonify({'success': False, 'error': 'Video not found'})
+
+    # 检查权限：所有者或管理员可删除
+    if video.get('owner') != nickname and not is_admin:
+        return jsonify({'success': False, 'error': 'Permission denied'})
+
+    database.delete_video(video_id)
+
+    # 记录到已删除列表
+    deleted_item = {
+        'id': database.get_next_deleted_id(),
+        'type': 'video',
+        'content': video.get('title', ''),
+        'owner': video.get('owner', ''),
+        'time': '',
+        'deleted_time': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+        'extra': video.get('url', ''),
+        'deleted_by': nickname
+    }
+    deleted_items = database.read_deleted()
+    deleted_items.append(deleted_item)
+    database.write_deleted(deleted_items)
+
+    return jsonify({'success': True})

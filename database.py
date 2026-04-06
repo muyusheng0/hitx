@@ -1224,6 +1224,24 @@ def get_next_photo_id():
     return (result or 0) + 1
 
 
+def delete_photo(photo_id):
+    """删除照片"""
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('DELETE FROM photos WHERE id = ?', (photo_id,))
+    conn.commit()
+    return cursor.rowcount > 0
+
+
+def delete_video(video_id):
+    """删除视频"""
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('DELETE FROM videos WHERE id = ?', (video_id,))
+    conn.commit()
+    return cursor.rowcount > 0
+
+
 # ==================== 已删除数据操作 ====================
 
 def read_deleted():
