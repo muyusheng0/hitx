@@ -1017,6 +1017,17 @@ def update_student_gps_coords(student_name, student_id, gps_coords):
     return True  # UPDATE succeeded even if rowcount is 0 (data unchanged)
 
 
+def update_student_admin(student_id, is_admin, is_super_admin):
+    """更新学生的管理员权限"""
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('''
+        UPDATE students SET is_admin = ?, super_admin = ? WHERE id = ?
+    ''', (1 if is_admin else 0, 1 if is_super_admin else 0, student_id))
+    conn.commit()
+    return True
+
+
 # ==================== 留言数据操作 ====================
 
 def read_lyb():

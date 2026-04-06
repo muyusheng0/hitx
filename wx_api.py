@@ -292,7 +292,11 @@ def get_profile():
     students = database.read_txl()
     for s in students:
         if s['id'] == student_id:
-            return jsonify({'success': True, 'profile': dict(s)})
+            profile = dict(s)
+            # 添加管理员权限信息
+            profile['is_admin'] = s.get('is_admin', False) or s.get('name') == '穆玉升'
+            profile['is_super_admin'] = s.get('super_admin', False) or s.get('name') == '穆玉升'
+            return jsonify({'success': True, 'profile': profile})
     return jsonify({'success': False, 'error': 'Profile not found'})
 
 
@@ -799,3 +803,98 @@ def get_timeline():
         'success': True,
         'timeline': CLASS_TIMELINE
     })
+
+
+def check_admin_status(name):
+    """检查用户的管理员权限"""
+    db = database.get_db()
+    cursor = db.execute("SELECT is_admin, super_admin FROM students WHERE name = ?", (name,))
+    row = cursor.fetchone()
+    if row:
+        return row['is_admin'] == 1 or row['super_admin'] == 1 or name == '穆玉升', row['super_admin'] == 1 or name == '穆玉升'
+    return False, False
+
+
+# ==================== 动态管理API ====================
+
+@wx_bp.route('/activities/<time>/<actor>', methods=['DELETE'])
+@token_required
+def delete_activity(time, actor):
+    """删除动态"""
+    nickname = request.wx_user['name']
+    is_admin, _ = check_admin_status(nickname)
+
+    if not is_admin:
+        return jsonify({'success': False, 'error': 'Permission denied'})
+
+    database.delete_activity(time, actor, None)
+    return jsonify({'success': True})
+
+
+# ==================== 登录日志API ====================
+
+@wx_bp.route('/admin/login-logs', methods=['GET'])
+@token_required
+def get_login_logs():
+    """获取登录日志（仅管理员）"""
+    nickname = request.wx_user['name']
+    is_admin, _ = check_admin_status(nickname)
+
+    if not is_admin:
+        return jsonify({'success': False, 'error': 'Permission denied'})
+
+    raw_logs = database.read_login_logs()
+    logs = []
+    for log in raw_logs:
+        logs.append({
+            'name': log.get('username', ''),
+            'ip': log.get('ip_address', ''),
+            'location': '',  # 暂时为空，后续可扩展IP归属地查询
+            'login_time': log.get('login_time', '')
+        })
+    return jsonify({
+        'success': True,
+        'logs': logs
+    })
+
+
+# ==================== 管理员设置API ====================
+
+@wx_bp.route('/admin/students', methods=['GET'])
+@token_required
+def get_all_students():
+    """获取所有学生列表及管理员状态（仅超管）"""
+    nickname = request.wx_user['name']
+    _, is_super_admin = check_admin_status(nickname)
+
+    if not is_super_admin:
+        return jsonify({'success': False, 'error': 'Permission denied'})
+
+    students = database.read_txl()
+    result = []
+    for s in students:
+        result.append({
+            'id': s['id'],
+            'name': s['name'],
+            'is_admin': s.get('is_admin', 0) == 1 or s.get('name') == '穆玉升',
+            'is_super_admin': s.get('super_admin', 0) == 1 or s.get('name') == '穆玉升'
+        })
+    return jsonify({'success': True, 'students': result})
+
+
+@wx_bp.route('/admin/students/<int:student_id>', methods=['PUT'])
+@token_required
+def update_student_admin(student_id):
+    """更新学生管理员权限（仅超管）"""
+    nickname = request.wx_user['name']
+    _, is_super_admin = check_admin_status(nickname)
+
+    if not is_super_admin:
+        return jsonify({'success': False, 'error': 'Permission denied'})
+
+    data = request.get_json()
+    is_admin = data.get('is_admin', False)
+    is_super_admin_val = data.get('is_super_admin', False)
+
+    database.update_student_admin(student_id, is_admin, is_super_admin_val)
+    return jsonify({'success': True})
