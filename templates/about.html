@@ -997,18 +997,24 @@
             let location = user.hometown_name || user.hometown || '-';
             if (user.city) location += ' ' + user.city;
             if (user.district) location += ' ' + user.district;
-            document.getElementById('detailHometown').textContent = location;
-            document.getElementById('detailPhone').textContent = user.phone || '-';
-            document.getElementById('detailIndustry').textContent = user.industry || '-';
-            document.getElementById('detailCompany').textContent = user.company || '-';
-            document.getElementById('detailPosition').textContent = user.position || '-';
+            const setText2 = (id, val) => {
+                const el = document.getElementById(id);
+                if (el) el.textContent = val || '-';
+            };
+            setText2('detailHometown', location);
+            setText2('detailPhone', user.phone);
+            setText2('detailIndustry', user.industry);
+            setText2('detailCompany', user.company);
+            setText2('detailPosition', user.position);
 
             const hobbyCard = document.getElementById('hobbyCard');
-            if (user.hobby) {
-                hobbyCard.style.display = 'block';
-                document.getElementById('profileHobby').textContent = user.hobby;
-            } else {
-                hobbyCard.style.display = 'none';
+            const hobbyEl = document.getElementById('profileHobby');
+            if (hobbyCard) {
+                if (user.hobby) {
+                    hobbyCard.style.display = 'block';
+                    if (hobbyEl) hobbyEl.textContent = user.hobby;
+                } else {
+                    hobbyCard.style.display = 'none';
             }
         }
 
