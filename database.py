@@ -1223,7 +1223,15 @@ def read_deleted():
     rows = cursor.fetchall()
     items = []
     for row in rows:
-        items.append(dict(row))
+        items.append({
+            'id': row[0],
+            'type': row[1],
+            'content': row[2],
+            'owner': row[3],
+            'time': row[4],
+            'deleted_time': row[5],
+            'extra': row[6]
+        })
     return items
 
 
@@ -1249,6 +1257,14 @@ def get_next_deleted_id():
     cursor.execute('SELECT MAX(id) FROM deleted')
     result = cursor.fetchone()[0]
     return (result or 0) + 1
+
+
+def delete_from_deleted(id):
+    """从已删除列表中移除项目"""
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('DELETE FROM deleted WHERE id = ?', (id,))
+    conn.commit()
 
 
 # ==================== 活动数据操作 ====================
@@ -1281,8 +1297,26 @@ def delete_activity(time, actor, content):
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute('''
-        DELETE FROM activities WHERE time = ? AND actor = ? AND content = ?
-    ''', (time, actor, content))
+        DELETE FROM activities WHERE time = ? AND actor = ?
+    ''', (time, actor))
+    conn.commit()
+
+
+def delete_message_by_time_nickname(time, nickname):
+    """根据时间和昵称删除留言，并记录到已删除列表"""
+    conn = get_db()
+    cursor = conn.cursor()
+    # 先查询留言内容，用于记录到已删除列表
+    cursor.execute('SELECT id, content, image FROM messages WHERE time = ? AND nickname = ?', (time, nickname))
+    row = cursor.fetchone()
+    if row:
+        # 记录到已删除列表
+        cursor.execute('''
+            INSERT INTO deleted (id, type, content, owner, time, deleted_time, extra)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        ''', (get_next_deleted_id(), 'message', row[1], nickname, time, datetime.now().strftime('%Y-%m-%d %H:%M:%S'), row[2] or ''))
+    # 删除留言
+    cursor.execute('DELETE FROM messages WHERE time = ? AND nickname = ?', (time, nickname))
     conn.commit()
 
 

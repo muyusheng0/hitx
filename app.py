@@ -24,7 +24,7 @@ app.config['UPLOAD_FOLDER'] = 'static/imgs/avatars'
 app.config['ALLOWED_EXTENSIONS'] = {'png', 'jpg', 'jpeg', 'gif'}
 # Session 配置
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
-app.config['SESSION_COOKIE_SECURE'] = True  # HTTPS only
+app.config['SESSION_COOKIE_SECURE'] = False  # HTTP only for local development
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 
 # 禁用页面缓存
@@ -2320,12 +2320,16 @@ def delete_activity():
     data = request.get_json()
     activity_time = data.get('time')
     activity_actor = data.get('actor')
+    activity_type = data.get('type', 'message')
     activity_content = data.get('original_content') or data.get('content')
 
     if not activity_time or not activity_actor:
         return jsonify({'success': False, 'message': '参数不完整'})
 
     try:
+        # 如果是留言动态，同时删除messages表中的记录
+        if activity_type == 'message':
+            database.delete_message_by_time_nickname(activity_time, activity_actor)
         database.delete_activity(activity_time, activity_actor, activity_content)
         return jsonify({'success': True, 'message': '删除成功'})
     except Exception as e:

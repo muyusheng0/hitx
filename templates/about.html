@@ -3,10 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <title>个人中心 - 吉大自动化八班</title>
-    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/style.css?v=20260407b">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='80' font-size='80'>📖</text></svg>">
 </head>
+<body>
+<script>
+if ('caches' in window) {
+    caches.keys().then(function(names) {
+        names.forEach(function(name) {
+            caches.delete(name);
+        });
+    });
+}
+</script>
 <body>
     <!-- 顶部标题栏 -->
     <header class="top-header">
@@ -40,6 +53,18 @@
                             <p class="profile-id" id="profileId">学号：未设置</p>
                         </div>
                         <button class="profile-edit-btn" onclick="showEditProfileModal()">编辑资料</button>
+                    </div>
+                </div>
+
+                <!-- 消息通知 -->
+                <div class="profile-detail-card" id="notificationCard" style="margin-top: 1rem;">
+                    <h3 class="profile-detail-title">🔔 消息通知</h3>
+                    <div class="notification-list-about" id="notificationListAbout">
+                        <p style="color: var(--text-light); text-align: center; padding: 1rem;">加载中...</p>
+                    </div>
+                    <div id="notificationPagination" style="display: none; justify-content: center; gap: 0.5rem; margin-top: 0.8rem;"></div>
+                    <div id="notificationActions" style="display: none; justify-content: center; margin-top: 0.8rem;">
+                        <button class="notification-mark-read" onclick="markAllNotificationsRead()">全部已读</button>
                     </div>
                 </div>
 
@@ -98,18 +123,6 @@
                             <span class="detail-label">小红书</span>
                             <span class="detail-value" id="detailXiaohongshu">-</span>
                         </div>
-                    </div>
-                </div>
-
-                <!-- 消息通知 -->
-                <div class="profile-detail-card" id="notificationCard" style="margin-top: 1rem;">
-                    <h3 class="profile-detail-title">🔔 消息通知</h3>
-                    <div class="notification-list-about" id="notificationListAbout">
-                        <p style="color: var(--text-light); text-align: center; padding: 1rem;">加载中...</p>
-                    </div>
-                    <div id="notificationPagination" style="display: none; justify-content: center; gap: 0.5rem; margin-top: 0.8rem;"></div>
-                    <div id="notificationActions" style="display: none; justify-content: center; margin-top: 0.8rem;">
-                        <button class="notification-mark-read" onclick="markAllNotificationsRead()">全部已读</button>
                     </div>
                 </div>
 
@@ -413,8 +426,11 @@
     </div>
 
     <script src="/static/js/province_data.js"></script>
-    <script src="/static/js/main.js"></script>
+    <script src="/static/js/main.js?v=20260407b"></script>
     <script>
+        // 版本号：20260407-001
+        console.log('[VERSION] about.html v20260407-006');
+
         // 初始化省份下拉框
         function initProvinceSelect() {
             const select = document.getElementById('editProvince');
@@ -471,6 +487,7 @@
 
         // 页面加载时检查登录状态并更新UI
         document.addEventListener('DOMContentLoaded', async function() {
+            console.log('[DEBUG] DOMContentLoaded 事件触发');
             await checkLoginAndLoadProfile();
             // 加载已删除内容
             if (window.currentUser) {
@@ -482,32 +499,40 @@
 
         // 检查登录状态并加载个人资料
         async function checkLoginAndLoadProfile() {
+            console.log('[DEBUG] checkLoginAndLoadProfile 开始执行');
             try {
                 const verifyRes = await fetch('/api/check_verify', { credentials: 'same-origin' });
                 const verifyData = await verifyRes.json();
+                console.log('[DEBUG] check_verify 返回:', verifyData);
 
                 if (!verifyData.verified) {
+                    console.log('[DEBUG] verifyData.verified 为 false，调用showUnloggedView');
                     showUnloggedView();
                     return;
                 }
 
                 const studentRes = await fetch('/api/get_student', { credentials: 'same-origin' });
                 const studentData = await studentRes.json();
+                console.log('[DEBUG] get_student 返回:', studentData);
 
                 if (studentData.success) {
                     window.currentUser = studentData.student;
                     window.currentUser.student_id = studentData.student.id;
+                    console.log('[DEBUG] 准备调用showLoggedView, currentUser:', window.currentUser);
                     showLoggedView(window.currentUser);
                 } else {
+                    console.log('[DEBUG] studentData.success 为 false，调用showUnloggedView');
                     showUnloggedView();
                 }
             } catch (e) {
-                console.error('检查登录状态失败:', e);
+                console.error('[DEBUG] 检查登录状态失败:', e);
                 showUnloggedView();
             }
         }
 
         function showUnloggedView() {
+            console.log('[DEBUG] showUnloggedView 被调用');
+            console.log('[DEBUG] Stack trace:', new Error().stack);
             window.currentUser = null;
             const unloggedView = document.getElementById('unloggedView');
             const loggedView = document.getElementById('loggedView');
@@ -516,44 +541,75 @@
         }
 
         function showLoggedView(user) {
+            console.log('[DEBUG] showLoggedView 被调用, user:', user);
             const unloggedView = document.getElementById('unloggedView');
             const loggedView = document.getElementById('loggedView');
             if (unloggedView) unloggedView.style.display = 'none';
             if (loggedView) loggedView.style.display = 'block';
 
-            if (!user) return;
-
-            const profileName = document.getElementById('profileName');
-            const profileId = document.getElementById('profileId');
-            const profileAvatarInitial = document.getElementById('profileAvatarInitial');
-            const profileAvatar = document.getElementById('profileAvatar');
-            const detailName = document.getElementById('detailName');
-            const detailGender = document.getElementById('detailGender');
-            const detailBirthday = document.getElementById('detailBirthday');
-
-            if (profileName) profileName.textContent = user.name || '未设置';
-            if (profileId) profileId.textContent = '学号：' + (user.id || user.student_id || '未设置');
-            if (profileAvatarInitial) profileAvatarInitial.textContent = (user.name || '?')[0];
-
-            if (user.avatar && profileAvatar) {
-                profileAvatar.innerHTML = '<img src="' + user.avatar + '" alt="avatar">';
+            if (!user) {
+                console.log('[DEBUG] showLoggedView: user is null, returning');
+                return;
             }
 
-            if (detailName) detailName.textContent = user.name || '-';
-            if (detailGender) detailGender.textContent = user.gender || '-';
-            if (detailBirthday) detailBirthday.textContent = user.birthday || '-';
-            let location = user.hometown_name || user.hometown || '-';
-            if (user.city) location += ' ' + user.city;
-            if (user.district) location += ' ' + user.district;
-            const setText = (id, val) => {
-                const el = document.getElementById(id);
-                if (el) el.textContent = val || '-';
-            };
-            setText('detailHometown', location);
-            setText('detailPhone', user.phone);
-            setText('detailIndustry', user.industry);
-            setText('detailCompany', user.company);
-            setText('detailPosition', user.position);
+            try {
+                console.log('[DEBUG] showLoggedView: 开始设置基本字段');
+                const profileName = document.getElementById('profileName');
+                const profileId = document.getElementById('profileId');
+                const profileAvatarInitial = document.getElementById('profileAvatarInitial');
+                const profileAvatar = document.getElementById('profileAvatar');
+
+                if (profileName) {
+                    profileName.textContent = user.name || '未设置';
+                    console.log('[DEBUG] showLoggedView: profileName设置为', profileName.textContent);
+                } else {
+                    console.log('[DEBUG] showLoggedView: profileName元素不存在');
+                }
+                if (profileId) profileId.textContent = '学号：' + (user.id || user.student_id || '未设置');
+                if (profileAvatarInitial) profileAvatarInitial.textContent = (user.name || '?')[0];
+
+                if (user.avatar && profileAvatar) {
+                    profileAvatar.innerHTML = '<img src="' + user.avatar + '" alt="avatar">';
+                }
+
+                const detailName = document.getElementById('detailName');
+                const detailGender = document.getElementById('detailGender');
+                const detailBirthday = document.getElementById('detailBirthday');
+                const detailHometown = document.getElementById('detailHometown');
+
+                console.log('[DEBUG] showLoggedView: detailName=', detailName, 'detailGender=', detailGender, 'detailBirthday=', detailBirthday);
+
+                if (detailName) detailName.textContent = user.name || '-';
+                if (detailGender) {
+                    detailGender.textContent = user.gender || '-';
+                    console.log('[DEBUG] showLoggedView: detailGender设置为', detailGender.textContent);
+                }
+                if (detailBirthday) {
+                    detailBirthday.textContent = user.birthday || '-';
+                    console.log('[DEBUG] showLoggedView: detailBirthday设置为', detailBirthday.textContent);
+                }
+
+                let hometownDisplay = user.hometown_name || user.hometown || '-';
+                if (user.city) hometownDisplay += ' ' + user.city;
+                if (user.district) hometownDisplay += ' ' + user.district;
+                if (detailHometown) {
+                    detailHometown.textContent = hometownDisplay;
+                    console.log('[DEBUG] showLoggedView: detailHometown设置为', detailHometown.textContent);
+                }
+
+                const setText = (id, val) => {
+                    const el = document.getElementById(id);
+                    if (el) el.textContent = val || '-';
+                };
+                setText('detailPhone', user.phone);
+                setText('detailIndustry', user.industry);
+                setText('detailCompany', user.company);
+                setText('detailPosition', user.position);
+
+                console.log('[DEBUG] showLoggedView: 基本字段设置完成');
+            } catch (e) {
+                console.error('[DEBUG] showLoggedView error:', e);
+            }
 
             const socialCard = document.getElementById('socialMediaCard');
             const github = user.github || user.weibo;
@@ -614,11 +670,14 @@
             }
 
             // 超级管理员显示管理员设置
-            if (user.is_super_admin) {
-                document.getElementById('adminManagementCard').style.display = 'block';
-                loadAdminManagement();
-            } else {
-                document.getElementById('adminManagementCard').style.display = 'none';
+            const adminManagementCard = document.getElementById('adminManagementCard');
+            if (adminManagementCard) {
+                if (user.is_super_admin) {
+                    adminManagementCard.style.display = 'block';
+                    loadAdminManagement();
+                } else {
+                    adminManagementCard.style.display = 'none';
+                }
             }
         }
 
@@ -628,12 +687,11 @@
                 const res = await fetch('/api/admin/news/schedule', { credentials: 'same-origin' });
                 const data = await res.json();
                 if (data.hour !== undefined) {
-                    document.getElementById('newsCrawlHour').value = data.hour;
-                    document.getElementById('newsCrawlMinute').value = data.minute;
+                    setValue('newsCrawlHour', data.hour);
+                    setValue('newsCrawlMinute', data.minute);
                 }
-                if (data.next_run) {
-                    document.getElementById('newsScheduleStatus').textContent = '下次爬取: ' + data.next_run;
-                }
+                const newsScheduleStatusEl = document.getElementById('newsScheduleStatus');
+                if (newsScheduleStatusEl) newsScheduleStatusEl.textContent = data.next_run ? '下次爬取: ' + data.next_run : '';
 
                 // 显示上次爬取日志
                 if (data.last_crawl) {
@@ -641,13 +699,15 @@
                     const timeEl = document.getElementById('lastCrawlTime');
                     const resultEl = document.getElementById('lastCrawlResult');
 
-                    logEl.style.display = 'block';
-                    timeEl.textContent = data.last_crawl.executed_at;
+                    if (logEl) logEl.style.display = 'block';
+                    if (timeEl) timeEl.textContent = data.last_crawl.executed_at || '';
 
-                    if (data.last_crawl.status === 'success') {
-                        resultEl.innerHTML = `<span style="color: #4CAF50;">✓ 成功</span> - 获取到 ${data.last_crawl.news_count} 条新闻${data.last_crawl.image_count > 0 ? `，下载 ${data.last_crawl.image_count} 张图片` : ''}`;
-                    } else {
-                        resultEl.innerHTML = `<span style="color: #e74c3c;">✗ 失败</span> - ${data.last_crawl.message || '未知错误'}`;
+                    if (resultEl) {
+                        if (data.last_crawl.status === 'success') {
+                            resultEl.innerHTML = `<span style="color: #4CAF50;">✓ 成功</span> - 获取到 ${data.last_crawl.news_count} 条新闻${data.last_crawl.image_count > 0 ? `，下载 ${data.last_crawl.image_count} 张图片` : ''}`;
+                        } else {
+                            resultEl.innerHTML = `<span style="color: #e74c3c;">✗ 失败</span> - ${data.last_crawl.message || '未知错误'}`;
+                        }
                     }
                 }
             } catch (e) {
@@ -860,6 +920,7 @@
                 const res = await fetch('/api/check_verify', { credentials: 'same-origin' });
                 const data = await res.json();
                 const contentEl = document.getElementById('loginPasswordContent');
+                if (!contentEl) return;
 
                 if (data.verified) {
                     if (data.student.login_password_set) {
@@ -983,17 +1044,26 @@
             const user = window.currentUser;
             if (!user) return;
 
-            document.getElementById('profileName').textContent = user.name || '未设置';
-            document.getElementById('profileId').textContent = '学号：' + (user.id || user.student_id || '未设置');
-            document.getElementById('profileDream').textContent = user.dream || '这个人很懒，什么都没写~';
+            const profileName = document.getElementById('profileName');
+            const profileId = document.getElementById('profileId');
+            const profileAvatar = document.getElementById('profileAvatar');
+            const profileAvatarInitial = document.getElementById('profileAvatarInitial');
+            const detailName = document.getElementById('detailName');
+            const detailBirthday = document.getElementById('detailBirthday');
+            const profileDreamEl = document.getElementById('profileDream');
 
-            if (user.avatar) {
-                document.getElementById('profileAvatar').innerHTML = '<img src="' + user.avatar + '" alt="avatar">';
+            if (profileName) profileName.textContent = user.name || '未设置';
+            if (profileId) profileId.textContent = '学号：' + (user.id || user.student_id || '未设置');
+            if (profileDreamEl) profileDreamEl.textContent = user.dream || '这个人很懒，什么都没写~';
+
+            if (user.avatar && profileAvatar) {
+                profileAvatar.innerHTML = '<img src="' + user.avatar + '" alt="avatar">';
             }
-            document.getElementById('profileAvatarInitial').textContent = (user.name || '?')[0];
+            if (profileAvatarInitial) profileAvatarInitial.textContent = (user.name || '?')[0];
 
-            document.getElementById('detailName').textContent = user.name || '-';
-            document.getElementById('detailBirthday').textContent = user.birthday || '-';
+            if (detailName) detailName.textContent = user.name || '-';
+            if (detailBirthday) detailBirthday.textContent = user.birthday || '-';
+
             let location = user.hometown_name || user.hometown || '-';
             if (user.city) location += ' ' + user.city;
             if (user.district) location += ' ' + user.district;
@@ -1015,7 +1085,13 @@
                     if (hobbyEl) hobbyEl.textContent = user.hobby;
                 } else {
                     hobbyCard.style.display = 'none';
+                }
             }
+        }
+
+        function setValue(id, val) {
+            const el = document.getElementById(id);
+            if (el) el.value = val || '';
         }
 
         function showEditProfileModal() {
@@ -1027,32 +1103,33 @@
 
             initProvinceSelect();
 
-            document.getElementById('editPhone').value = user.phone || '';
-            document.getElementById('editEmail').value = user.email || '';
-            document.getElementById('editIndustry').value = user.industry || '';
-            document.getElementById('editCompany').value = user.company || '';
-            document.getElementById('editPosition').value = user.position || '';
-            document.getElementById('editBirthday').value = user.birthday || '';
-            document.getElementById('editHobby').value = user.hobby || '';
-            document.getElementById('editCustomIntro').value = user.custom_intro || '';
-            document.getElementById('editGithub').value = user.github || '';
-            document.getElementById('editDouyin').value = user.douyin || '';
-            document.getElementById('editXiaohongshu').value = user.xiaohongshu || '';
-            document.getElementById('editGpsCoords').value = user.gps_coords || '';
-            document.getElementById('gpsStatus').textContent = user.gps_coords ? '✓ 已设置GPS' : '';
+            setValue('editPhone', user.phone);
+            setValue('editEmail', user.email);
+            setValue('editIndustry', user.industry);
+            setValue('editCompany', user.company);
+            setValue('editPosition', user.position);
+            setValue('editBirthday', user.birthday);
+            setValue('editHobby', user.hobby);
+            setValue('editCustomIntro', user.custom_intro);
+            setValue('editGithub', user.github);
+            setValue('editDouyin', user.douyin);
+            setValue('editXiaohongshu', user.xiaohongshu);
+            setValue('editGpsCoords', user.gps_coords);
+            const gpsStatusEl = document.getElementById('gpsStatus');
+            if (gpsStatusEl) gpsStatusEl.textContent = user.gps_coords ? '✓ 已设置GPS' : '';
 
             const provinceKey = user.hometown;
             if (provinceKey && window.PROVINCE_DATA[provinceKey]) {
-                document.getElementById('editProvince').value = provinceKey;
+                setValue('editProvince', provinceKey);
                 onProvinceChange();
                 setTimeout(() => {
                     if (user.city) {
                         const cityPinyin = window.CITY_TO_PINYIN[user.city] || user.city;
-                        document.getElementById('editCity').value = cityPinyin;
+                        setValue('editCity', cityPinyin);
                         onCityChange();
                         setTimeout(() => {
                             if (user.district) {
-                                document.getElementById('editDistrict').value = user.district;
+                                setValue('editDistrict', user.district);
                             }
                         }, 50);
                     }
@@ -1271,26 +1348,37 @@
             });
         }
 
-        window.addEventListener('userLoginSuccess', async function() {
-            console.log('userLoginSuccess事件触发');
-            // 立即切换到已登录视图
-            if (window.currentUser) {
-                console.log('调用showLoggedView');
-                showLoggedView(window.currentUser);
-            }
-            updateProfileUI();
-            // 登录成功后如果有未读通知，滚动到通知区域并高亮
-            await loadNotificationCount();
-            const badge = document.getElementById('tabNotificationBadge');
-            if (badge && badge.style.display !== 'none') {
-                // 有未读通知，滚动到通知区域
-                const notificationCard = document.getElementById('notificationCard');
-                if (notificationCard) {
-                    notificationCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    // 添加高亮效果
-                    notificationCard.style.animation = 'highlightPulse 2s ease-out';
+        window.addEventListener('userLoginSuccess', async function(e) {
+            console.log('[DEBUG] userLoginSuccess事件触发 at', new Date().toISOString(), 'detail:', e.detail);
+            try {
+                if (window.currentUser) {
+                    console.log('[DEBUG] 调用showLoggedView');
+                    showLoggedView(window.currentUser);
+                    console.log('[DEBUG] showLoggedView完成');
                 }
+            } catch (err) {
+                console.error('[DEBUG] showLoggedView error:', err);
             }
+            try {
+                updateProfileUI();
+                console.log('[DEBUG] updateProfileUI完成');
+            } catch (err) {
+                console.error('[DEBUG] updateProfileUI error:', err);
+            }
+            try {
+                console.log('[DEBUG] 调用loadNotifications');
+                loadNotifications();
+                console.log('[DEBUG] loadNotifications调用发出');
+            } catch (err) {
+                console.error('[DEBUG] loadNotifications error:', err);
+            }
+            try {
+                await loadNotificationCount();
+                console.log('[DEBUG] loadNotificationCount完成');
+            } catch (err) {
+                console.error('[DEBUG] loadNotificationCount error:', err);
+            }
+            console.log('[DEBUG] userLoginSuccess事件处理完成');
         });
 
         async function loadDeletedItems(page = 1) {
@@ -1316,18 +1404,20 @@
                     const typeName = item.type === 'photo' ? '照片' : item.type === 'video' ? '视频' : item.type === 'message' ? '留言' : item.type === 'comment' ? '评论' : item.type === 'voice_shout' ? '喊话' : '其他';
                     const deletedByText = item.deleted_by && item.deleted_by !== item.owner ? `<span style="color: #e74c3c; font-size: 0.75rem; overflow-wrap: break-word;">(被${item.deleted_by}删除)</span>` : '';
                     return `
-                        <div class="deleted-item" style="padding: 0.8rem; border-bottom: 1px solid var(--bg-dark); display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem; overflow-wrap: break-word;">
-                            <div style="flex: 1; min-width: 0;">
-                                <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.3rem; flex-wrap: wrap;">
-                                    <span>${typeIcon}</span>
-                                    <span style="font-weight: 500; overflow-wrap: break-word;">${typeName}</span>
-                                    <span style="color: var(--text-light); font-size: 0.85rem; overflow-wrap: break-word;">by ${item.owner}</span>
-                                    ${deletedByText}
+                        <div class="deleted-item" style="padding: 0.8rem; border-bottom: 1px solid var(--bg-dark); display: flex; flex-direction: column; gap: 0.5rem; overflow-wrap: break-word;">
+                            <div style="display: flex; align-items: flex-start; gap: 0.5rem; flex-wrap: wrap;">
+                                <span style="font-size: 1.2rem;">${typeIcon}</span>
+                                <div style="flex: 1; min-width: 0;">
+                                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.3rem; flex-wrap: wrap;">
+                                        <span style="font-weight: 500; overflow-wrap: break-word;">${typeName}</span>
+                                        <span style="color: var(--text-light); font-size: 0.85rem; overflow-wrap: break-word;">by ${item.owner}</span>
+                                        ${deletedByText}
+                                    </div>
+                                    <div style="color: var(--text); font-size: 0.9rem; overflow-wrap: break-word; word-break: break-all;">${item.content ? item.content.substring(0, 50) + (item.content.length > 50 ? '...' : '') : '(无内容)'}</div>
+                                    <div style="color: var(--text-light); font-size: 0.8rem; margin-top: 0.3rem;">删除于 ${item.deleted_time}</div>
                                 </div>
-                                <div style="color: var(--text); font-size: 0.9rem; overflow-wrap: break-word; word-break: break-all;">${item.content ? item.content.substring(0, 50) + (item.content.length > 50 ? '...' : '') : '(无内容)'}</div>
-                                <div style="color: var(--text-light); font-size: 0.8rem; margin-top: 0.3rem;">删除于 ${item.deleted_time}</div>
                             </div>
-                            <div style="display: flex; gap: 0.5rem; flex-shrink: 0;">
+                            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
                                 <button onclick="previewDeletedItem(${item.id})" style="background: var(--bg-dark); color: var(--text); border: none; padding: 0.5rem 1rem; border-radius: 20px; cursor: pointer; font-size: 0.85rem;">查看</button>
                                 ${item.type !== 'voice_shout' ? `<button onclick="restoreDeletedItem(${item.id})" style="background: var(--secondary); color: white; border: none; padding: 0.5rem 1rem; border-radius: 20px; cursor: pointer; font-size: 0.85rem;">恢复</button>` : ''}
                                 <button onclick="permanentDeleteItem(${item.id})" style="background: #999; color: white; border: none; padding: 0.5rem 1rem; border-radius: 20px; cursor: pointer; font-size: 0.85rem;">彻底删除</button>
@@ -1395,6 +1485,10 @@
                 html = `<div style="margin-bottom: 1rem;"><p style="color: var(--text-light);">视频标题: ${item.content}</p><a href="${item.extra}" target="_blank" style="color: var(--secondary);">点击查看视频</a></div>`;
             } else if (item.type === 'message' || item.type === 'comment') {
                 html = `<div style="margin-bottom: 1rem; padding: 1rem; background: var(--bg-dark); border-radius: 8px; text-align: left;"><p style="white-space: pre-wrap; word-break: break-all;">${item.content || '(无内容)'}</p></div>`;
+                // 如果有图片，显示图片预览
+                if (item.extra) {
+                    html += `<div style="margin-bottom: 1rem;"><img src="${item.extra}" style="max-width: 100%; max-height: 50vh; border-radius: 8px; cursor: pointer;" onclick="previewImage(this.src)" onerror="this.style.display='none'"></div>`;
+                }
             } else if (item.type === 'voice_shout') {
                 html = `<div style="margin-bottom: 1rem;"><p style="color: var(--text-light);">喊话语音</p><audio src="${item.extra}" controls style="width: 100%;"></audio></div>`;
             } else {
@@ -1411,6 +1505,15 @@
 
             contentEl.innerHTML = html;
             document.getElementById('deletedPreviewModal').classList.add('active');
+        }
+
+        // 图片预览函数
+        function previewImage(src) {
+            const modal = document.createElement('div');
+            modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); display: flex; align-items: center; justify-content: center; z-index: 10000; cursor: pointer;';
+            modal.innerHTML = `<img src="${src}" style="max-width: 95%; max-height: 95%; object-fit: contain;">`;
+            modal.onclick = function() { document.body.removeChild(modal); };
+            document.body.appendChild(modal);
         }
 
         async function permanentDeleteItem(id) {
@@ -1475,7 +1578,7 @@
                                     </div>
                                     <div style="color: var(--text); font-size: 0.95rem; line-height: 1.5; word-wrap: break-word; overflow-wrap: break-word; max-width: 100%;">${activity.content || '(无内容)'}</div>
                                 </div>
-                                <button onclick="deleteActivity('${activity.time}', '${activity.actor}', '${(activity.original_content || '').replace(/'/g, "\\'")}', '${(activity.content || '').replace(/'/g, "\\'")}', ${page})" style="background: #e74c3c; color: white; border: none; padding: 0.6rem 1.2rem; border-radius: 20px; cursor: pointer; font-size: 0.9rem; margin-left: 0.5rem; flex-shrink: 0;">删除</button>
+                                <button onclick="deleteActivity('${activity.time}', '${activity.actor}', '${activity.type}', '${(activity.original_content || '').replace(/'/g, "\\'").replace(/\n/g, '\\n').replace(/\r/g, '\\r')}', '${(activity.content || '').replace(/'/g, "\\'").replace(/\n/g, '\\n').replace(/\r/g, '\\r')}', ${page})" style="background: #e74c3c; color: white; border: none; padding: 0.6rem 1.2rem; border-radius: 20px; cursor: pointer; font-size: 0.9rem; margin-left: 0.5rem; flex-shrink: 0;">删除</button>
                             </div>
                         `;
                     }).join('');
@@ -1500,7 +1603,7 @@
         }
 
         // 删除动态
-        async function deleteActivity(time, actor, originalContent, content, page = 1) {
+        async function deleteActivity(time, actor, type, originalContent, content, page = 1) {
             if (!confirm('确定要删除这条动态吗？')) return;
 
             try {
@@ -1508,7 +1611,7 @@
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     credentials: 'same-origin',
-                    body: JSON.stringify({ time: time, actor: actor, original_content: originalContent, content: content })
+                    body: JSON.stringify({ time: time, actor: actor, type: type, original_content: originalContent, content: content })
                 });
                 const data = await res.json();
 
@@ -1584,6 +1687,7 @@
             loadDeletedItems();
             loadActivityManagement();
             loadLoginLogs();
+            loadNotifications();
         });
 
         // 页面加载时也检查

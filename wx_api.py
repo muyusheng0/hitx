@@ -308,7 +308,8 @@ def update_profile():
         if s['id'] == student_id:
             # 更新允许的字段
             allowed_fields = ['phone', 'wechat', 'qq', 'email', 'work', 'position',
-                             'hobby', 'dream', 'company', 'industry']
+                             'hobby', 'dream', 'company', 'industry', 'gender', 'birthday',
+                             'github', 'douyin', 'xiaohongshu', 'custom_intro', 'avatar']
             for field in allowed_fields:
                 if field in data:
                     s[field] = data[field]
@@ -483,3 +484,139 @@ def unlike_media(media_type, media_id):
     count = database.get_media_likes(media_type, media_id)
 
     return jsonify({'success': True, 'count': count})
+
+
+# ==================== 已删除内容API ====================
+
+@wx_bp.route('/deleted', methods=['GET'])
+@token_required
+def get_deleted():
+    """获取已删除内容列表"""
+    page = request.args.get('page', 1, type=int)
+    per_page = 10
+
+    items = database.read_deleted()
+    total = len(items)
+    total_pages = (total + per_page - 1) // per_page
+
+    start = (page - 1) * per_page
+    end = start + per_page
+    page_items = items[start:end]
+
+    return jsonify({
+        'success': True,
+        'items': page_items,
+        'page': page,
+        'total_pages': total_pages,
+        'total': total
+    })
+
+
+@wx_bp.route('/deleted/<int:item_id>/restore', methods=['POST'])
+@token_required
+def restore_deleted(item_id):
+    """恢复已删除内容"""
+    nickname = request.wx_user['name']
+
+    # 获取要恢复的内容
+    items = database.read_deleted()
+    item = None
+    for i in items:
+        if i['id'] == item_id:
+            item = i
+            break
+
+    if not item:
+        return jsonify({'success': False, 'error': 'Item not found'})
+
+    # 恢复逻辑
+    if item['type'] == 'message':
+        # 恢复留言
+        messages = database.read_lyb()
+        messages.append({
+            'id': database.get_next_lyb_id(),
+            'nickname': item['owner'],
+            'content': item['content'],
+            'time': item['time'],
+            'image': item.get('extra', ''),
+            'voice': ''
+        })
+        database.write_lyb(messages)
+    elif item['type'] == 'photo':
+        # 恢复照片记录
+        photos = database.read_photos()
+        photos.append({
+            'id': database.get_next_photo_id(),
+            'filename': item['content'],
+            'owner': item['owner'],
+            'time': item['time']
+        })
+        database.write_photos(photos)
+    elif item['type'] == 'video':
+        # 恢复视频记录
+        videos = database.read_videos()
+        videos.append({
+            'id': database.get_next_video_id(),
+            'title': item['content'],
+            'url': item.get('extra', ''),
+            'cover': '',
+            'owner': item['owner']
+        })
+        database.write_videos(videos)
+
+    # 从已删除列表中移除
+    database.delete_from_deleted(item_id)
+
+    return jsonify({'success': True})
+
+
+@wx_bp.route('/deleted/<int:item_id>/permanent', methods=['POST'])
+@token_required
+def permanent_delete(item_id):
+    """永久删除内容"""
+    nickname = request.wx_user['name']
+    is_admin = request.wx_user.get('is_admin', False)
+
+    if not is_admin:
+        return jsonify({'success': False, 'error': 'Permission denied'})
+
+    database.delete_from_deleted(item_id)
+    return jsonify({'success': True})
+
+
+# ==================== 消息通知API ====================
+
+@wx_bp.route('/notifications', methods=['GET'])
+@token_required
+def get_notifications():
+    """获取消息通知列表"""
+    nickname = request.wx_user['name']
+    notifications = database.get_notifications(nickname)
+
+    return jsonify({
+        'success': True,
+        'notifications': notifications
+    })
+
+
+@wx_bp.route('/notifications/count', methods=['GET'])
+@token_required
+def get_notification_count():
+    """获取未读通知数量"""
+    nickname = request.wx_user['name']
+    count = database.get_unread_notification_count(nickname)
+
+    return jsonify({
+        'success': True,
+        'count': count
+    })
+
+
+@wx_bp.route('/notifications/mark_read', methods=['POST'])
+@token_required
+def mark_notifications_read():
+    """标记通知已读"""
+    nickname = request.wx_user['name']
+    database.mark_all_notifications_read(nickname)
+
+    return jsonify({'success': True})

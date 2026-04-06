@@ -1,6 +1,9 @@
 /**
  * 吉大通信八班 同学录网站 - JavaScript
+ * 版本: 20260407-001
  */
+
+console.log('[VERSION] main.js v20260407-007');
 
 // ==================== 全局状态 ====================
 const state = {
@@ -304,7 +307,7 @@ async function submitVerify(e) {
                         console.log('验证成功，设置用户状态...');
                         state.verified = true;
                         state.currentStudent = data.student;
-                        window.currentUser = { name: data.student.name, student_id: data.student.id, is_admin: data.student.is_admin, is_super_admin: data.student.is_super_admin };
+                        window.currentUser = data.student;
                         closeVerifyModal();
                         // 清除密码
                         if (document.getElementById('verifyLoginPassword')) {
@@ -318,9 +321,17 @@ async function submitVerify(e) {
                         updateVerifyUI(true);
                         updateMessageInputUI(true);
                         // 触发登录成功事件
+                        console.log('[DEBUG-MAIN] 准备触发userLoginSuccess事件');
                         window.dispatchEvent(new CustomEvent('userLoginSuccess', { detail: window.currentUser }));
+                        console.log('[DEBUG-MAIN] userLoginSuccess事件已触发');
                         if (typeof loadStudentData === 'function') {
+                            console.log('[DEBUG-MAIN] 调用loadStudentData');
                             loadStudentData();
+                        }
+                        // 直接调用loadNotifications加载通知
+                        console.log('[DEBUG-MAIN] 调用loadNotifications');
+                        if (typeof loadNotifications === 'function') {
+                            loadNotifications();
                         }
                         // 关闭登录弹窗
                         closeVerifyModal();
@@ -683,6 +694,9 @@ async function loadStudentData() {
         if (data.success) {
             state.currentStudent = data.student;
 
+            // 更新全局用户对象，确保showLoggedView能获取完整数据
+            window.currentUser = data.student;
+
             const form = document.getElementById('editForm');
             if (form) {
                 const nameEl = document.getElementById('editStudentName');
@@ -714,6 +728,11 @@ async function loadStudentData() {
                 } else {
                     if (avatarInitial) avatarInitial.textContent = data.student.name ? data.student.name[0] : '?';
                 }
+            }
+
+            // 重新触发showLoggedView更新"我的"页面显示
+            if (typeof showLoggedView === 'function') {
+                showLoggedView(data.student);
             }
         }
     } catch (e) {
@@ -1527,42 +1546,71 @@ function scrollToActivityPage(page) {
 }
 
 // ==================== 通知系统 ====================
-function loadNotificationCount() {
-    if (!window.currentUser) return;
+async function loadNotificationCount() {
+    console.log('[DEBUG] loadNotificationCount 被调用');
+    if (!window.currentUser) {
+        console.log('[DEBUG] loadNotificationCount: window.currentUser为空');
+        return;
+    }
 
-    fetch('/api/notifications/count', { credentials: 'same-origin' })
-        .then(r => r.json())
-        .then(data => {
-            // 更新"我的"标签页的角标
-            const tabBadge = document.getElementById('tabNotificationBadge');
-            if (tabBadge) {
-                if (data.count > 0) {
-                    tabBadge.textContent = data.count > 99 ? '99+' : data.count;
-                    tabBadge.style.display = 'flex';
-                } else {
-                    tabBadge.style.display = 'none';
-                }
+    try {
+        const res = await fetch('/api/notifications/count', { credentials: 'same-origin' });
+        const data = await res.json();
+        console.log('[DEBUG] loadNotificationCount 返回:', data);
+        const tabBadge = document.getElementById('tabNotificationBadge');
+        if (tabBadge) {
+            if (data.count > 0) {
+                tabBadge.textContent = data.count > 99 ? '99+' : data.count;
+                tabBadge.style.display = 'flex';
+            } else {
+                tabBadge.style.display = 'none';
             }
-        });
+        }
+    } catch (err) {
+        console.error('[DEBUG] loadNotificationCount error:', err);
+    }
 }
 
-function loadNotifications() {
-    if (!window.currentUser) return;
-
-    fetch('/api/notifications', { credentials: 'same-origin' })
-        .then(r => r.json())
-        .then(data => {
-            const list = document.getElementById('notificationList');
-            if (list) {
-                renderNotificationList(list, data.notifications, 1);
-            }
-
-            // 更新"我的"页面的通知列表
+async function loadNotifications() {
+    console.log('[DEBUG] loadNotifications 被调用');
+    // 先检查登录状态
+    try {
+        const verifyRes = await fetch('/api/check_verify', { credentials: 'same-origin' });
+        const verifyData = await verifyRes.json();
+        if (!verifyData.verified) {
             const aboutList = document.getElementById('notificationListAbout');
             if (aboutList) {
-                renderNotificationList(aboutList, data.notifications, 1);
+                aboutList.innerHTML = '<p style="color: var(--text-light); text-align: center; padding: 1rem;">请先登录</p>';
             }
-        });
+            return;
+        }
+
+        const res = await fetch('/api/notifications', { credentials: 'same-origin' });
+        const data = await res.json();
+        try {
+            const list = document.getElementById('notificationList');
+            if (list) {
+                renderNotificationList(list, data.notifications || [], 1);
+            }
+
+            const aboutList = document.getElementById('notificationListAbout');
+            if (aboutList) {
+                renderNotificationList(aboutList, data.notifications || [], 1);
+            }
+        } catch (e) {
+            console.error('[DEBUG] renderNotificationList error:', e);
+            const aboutList = document.getElementById('notificationListAbout');
+            if (aboutList) {
+                aboutList.innerHTML = '<p style="color: var(--text-light); text-align: center; padding: 1rem;">通知加载失败</p>';
+            }
+        }
+    } catch (err) {
+        console.error('[DEBUG] loadNotifications error:', err);
+        const aboutList = document.getElementById('notificationListAbout');
+        if (aboutList) {
+            aboutList.innerHTML = '<p style="color: var(--text-light); text-align: center; padding: 1rem;">通知加载失败</p>';
+        }
+    }
 }
 
 const NOTIFICATION_PAGE_SIZE = 3;
