@@ -322,14 +322,17 @@ async function submitVerify(e) {
                         updateUserStatusUI(true, data.student);
                         updateVerifyUI(true);
                         updateMessageInputUI(true);
-                        // 触发登录成功事件，让所有监听器更新UI
+                        // 触发登录成功事件
                         window.dispatchEvent(new CustomEvent('userLoginSuccess', { detail: window.currentUser }));
                         if (typeof loadStudentData === 'function') {
                             loadStudentData();
                         }
-                        // 关闭登录弹窗（如果还没关闭）
+                        // 关闭登录弹窗
                         closeVerifyModal();
-                        // 不使用 location.reload()，直接让各页面的 userLoginSuccess 事件处理UI更新
+                        // 强制刷新页面以显示已登录状态
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 100);
                     }
                 });
         } else if (data.prompt === '请输入登录密码') {
