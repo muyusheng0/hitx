@@ -329,9 +329,9 @@ async function submitVerify(e) {
                         }
                         // 关闭登录弹窗
                         closeVerifyModal();
-                        // 强制刷新页面以显示已登录状态
+                        // 强制从服务器刷新页面以显示已登录状态
                         setTimeout(() => {
-                            window.location.reload();
+                            window.location.reload(true);  // true = 强制从服务器刷新，忽略缓存
                         }, 100);
                     }
                 });
