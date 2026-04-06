@@ -620,3 +620,182 @@ def mark_notifications_read():
     database.mark_all_notifications_read(nickname)
 
     return jsonify({'success': True})
+
+
+# ==================== 最新动态API ====================
+
+def get_wx_activities():
+    """获取最新动态（小程序用）"""
+    import re
+    activities = []
+
+    # 检查生日动态
+    today = datetime.now()
+    students = database.read_txl()
+    for student in students:
+        birthday_str = student.get('birthday', '')
+        if birthday_str and len(birthday_str) >= 10:
+            try:
+                birthday_month = int(birthday_str[5:7])
+                birthday_day = int(birthday_str[8:10])
+                this_year_birthday = datetime(today.year, birthday_month, birthday_day)
+                if this_year_birthday < today and (today - this_year_birthday).days > 5:
+                    this_year_birthday = datetime(today.year + 1, birthday_month, birthday_day)
+                days_until = (this_year_birthday - today).days
+                if 0 <= days_until <= 5:
+                    pronoun = '他' if student.get('gender', '') == '男' else '她'
+                    if days_until == 0:
+                        content = f'今天{student["name"]}生日！祝{pronoun}生日快乐！'
+                    else:
+                        content = f'{student["name"]} {birthday_month}月{birthday_day}日生日，还有{days_until}天'
+                    activities.append({
+                        'type': 'birthday',
+                        'actor': student['name'],
+                        'content': content,
+                        'time': this_year_birthday.strftime('%Y-%m-%d 00:00:00')
+                    })
+            except:
+                pass
+
+    # 留言动态
+    messages = database.read_lyb()
+    for msg in sorted(messages, key=lambda x: x['time'], reverse=True)[:10]:
+        has_voice = bool(msg.get('voice'))
+        has_image = bool(msg.get('image'))
+        if has_voice and has_image:
+            content = '发表了语音留言并附带图片'
+        elif has_voice:
+            content = '发表了语音留言'
+        elif has_image:
+            content = '发表了新留言，并附带图片'
+        else:
+            content = '发表了新留言'
+        activities.append({
+            'type': 'message',
+            'actor': msg['nickname'],
+            'content': content,
+            'time': msg['time'],
+            'msg_id': msg['id'],
+            'msg_content': msg['content'][:50] if msg['content'] else '',
+            'has_image': has_image,
+            'has_voice': has_voice
+        })
+
+    # 活动日志
+    activity_logs = database.read_activities()
+    for log in activity_logs[:20]:
+        activity = {
+            'type': log['type'],
+            'actor': log['actor'],
+            'content': log['content'],
+            'time': log['time']
+        }
+        if log['type'] == 'photo':
+            match = re.search(r'《(.+?)》', log['content'])
+            if match:
+                activity['img_name'] = match.group(1)
+                activity['img_url'] = f'/static/imgs/messages/{match.group(1)}'
+        if log['type'] == 'video':
+            match = re.search(r'《(.+?)》', log['content'])
+            if match:
+                activity['video_title'] = match.group(1)
+        activities.append(activity)
+
+    # 按时间排序
+    activities.sort(key=lambda x: x['time'], reverse=True)
+
+    # 合并同一人同类动态
+    deduplicated = []
+    for activity in activities:
+        if not deduplicated:
+            activity['count'] = 1
+            deduplicated.append(activity)
+        else:
+            last = deduplicated[-1]
+            if activity['actor'] == last['actor'] and activity['type'] == last['type']:
+                last['count'] = last.get('count', 1) + 1
+            else:
+                activity['count'] = 1
+                deduplicated.append(activity)
+
+    for act in deduplicated:
+        count = act.get('count', 1)
+        if count > 1:
+            if act['type'] == 'photo':
+                act['content'] = f'上传了{count}张照片'
+            elif act['type'] == 'message':
+                act['content'] = f'发表了{count}条留言'
+            elif act['type'] == 'video':
+                act['content'] = f'分享了{count}个视频'
+            elif act['type'] == 'voice_shout':
+                act['content'] = f'喊了{count}次话'
+
+    return deduplicated[:10]
+
+
+@wx_bp.route('/activities', methods=['GET'])
+@token_required
+def get_activities():
+    """获取最新动态"""
+    activities = get_wx_activities()
+    return jsonify({
+        'success': True,
+        'activities': activities
+    })
+
+
+# ==================== 班级时光API ====================
+
+# 班级时间线数据（静态）
+CLASS_TIMELINE = [
+    {
+        'year': '2015年 秋',
+        'event': '金秋九月，带着梦想与期待，我们相聚在吉大南岭校区，军训场上挥洒汗水',
+        'photos': []
+    },
+    {
+        'year': '2016年',
+        'event': '运动会上奋勇拼搏，元旦晚会上载歌载舞，班级凝聚力日益增强',
+        'photos': []
+    },
+    {
+        'year': '2017年',
+        'event': '课程难度增加，我们互帮互助，实验室里共同探索通信的奥秘',
+        'photos': []
+    },
+    {
+        'year': '2018年 冬',
+        'event': '考研复习的深夜，通宵自习室里的陪伴，梦想在心中发芽',
+        'photos': []
+    },
+    {
+        'year': '2019年 夏',
+        'event': '毕业季，不说再见，穿着学士服定格青春，愿此去前程似锦',
+        'photos': []
+    },
+    {
+        'year': '2020年',
+        'event': '疫情来袭，我们各自坚守，云端联络心系彼此',
+        'photos': []
+    },
+    {
+        'year': '2022年',
+        'event': '疫情缓解，线下重聚，畅谈人生规划，共谋发展',
+        'photos': []
+    },
+    {
+        'year': '2024年',
+        'event': '同学录网站上线，重建联系，记录青春，延续友情',
+        'photos': []
+    }
+]
+
+
+@wx_bp.route('/timeline', methods=['GET'])
+@token_required
+def get_timeline():
+    """获取班级时光时间线"""
+    return jsonify({
+        'success': True,
+        'timeline': CLASS_TIMELINE
+    })
