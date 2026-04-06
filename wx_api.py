@@ -674,6 +674,7 @@ def mark_notifications_read():
 
 def get_wx_activities():
     """获取最新动态（小程序用）"""
+    from datetime import datetime
     import re
     activities = []
 
