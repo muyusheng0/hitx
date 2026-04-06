@@ -18,8 +18,8 @@ JWT_SECRET = os.environ.get('JWT_SECRET', 'jlu_wx_miniprogram_2024_dev_key')
 JWT_EXPIRE_DAYS = 7
 
 # 微信API配置
-WX_APPID = os.environ.get('WX_APPID', '')
-WX_SECRET = os.environ.get('WX_SECRET', '')
+WX_APPID = 'wx747fe17f7c7b65e8'
+WX_SECRET = '8b9b397efa48f2ab2b3d3d0e4c7ef61a'
 
 
 def generate_token(openid, student_id, name):
