@@ -31,7 +31,7 @@ def generate_token(openid, student_id, name):
         'iat': datetime.datetime.utcnow(),
         'exp': datetime.datetime.utcnow() + datetime.timedelta(days=JWT_EXPIRE_DAYS)
     }
-    return jwt.encode(payload, JWT_SECRET, algorithm='HS256')
+    return jwt.encode(payload, JWT_SECRET, algorithm='HS256').decode('utf-8')
 
 
 def verify_token(token):
@@ -317,3 +317,169 @@ def update_profile():
             return jsonify({'success': True})
 
     return jsonify({'success': False, 'error': 'Profile not found'})
+
+
+# ==================== 评论API ====================
+
+@wx_bp.route('/comments/<int:message_id>', methods=['GET'])
+@token_required
+def get_comments(message_id):
+    """获取某留言的所有评论"""
+    comments = database.get_comments_by_message(message_id)
+    return jsonify({'success': True, 'comments': comments})
+
+
+@wx_bp.route('/comments', methods=['POST'])
+@token_required
+def add_comment():
+    """添加评论"""
+    data = request.get_json()
+    message_id = data.get('message_id')
+    content = data.get('content')
+
+    if not all([message_id, content]):
+        return jsonify({'success': False, 'error': 'Missing parameters'})
+
+    nickname = request.wx_user['name']
+    comment_id = database.add_comment(message_id, nickname, content)
+
+    return jsonify({
+        'success': True,
+        'comment': {
+            'id': comment_id,
+            'message_id': message_id,
+            'nickname': nickname,
+            'content': content
+        }
+    })
+
+
+@wx_bp.route('/comments/<int:comment_id>', methods=['DELETE'])
+@token_required
+def delete_comment(comment_id):
+    """删除评论"""
+    nickname = request.wx_user['name']
+    is_admin = request.wx_user.get('is_admin', False)
+
+    # 获取评论信息
+    comments = database.read_comments(None)
+    comment = None
+    for c in comments:
+        if c['id'] == comment_id:
+            comment = c
+            break
+
+    if not comment:
+        return jsonify({'success': False, 'error': 'Comment not found'})
+
+    # 权限检查：评论人或管理员可删除
+    if comment['nickname'] != nickname and not is_admin:
+        return jsonify({'success': False, 'error': 'Permission denied'})
+
+    database.delete_comment(comment_id)
+    return jsonify({'success': True})
+
+
+# ==================== 留言点赞API ====================
+
+@wx_bp.route('/messages/<int:message_id>/like', methods=['GET'])
+@token_required
+def get_message_like_status(message_id):
+    """获取留言点赞状态"""
+    nickname = request.wx_user['name']
+    count = database.get_message_likes(message_id)
+    liked = database.has_liked_message(message_id, nickname)
+
+    return jsonify({
+        'success': True,
+        'count': count,
+        'liked': liked
+    })
+
+
+@wx_bp.route('/messages/<int:message_id>/like', methods=['POST'])
+@token_required
+def like_message():
+    """点赞留言"""
+    data = request.get_json()
+    message_id = data.get('message_id')
+
+    if not message_id:
+        return jsonify({'success': False, 'error': 'Missing message_id'})
+
+    nickname = request.wx_user['name']
+    success = database.like_message(message_id, nickname)
+
+    if success:
+        count = database.get_message_likes(message_id)
+        return jsonify({'success': True, 'count': count})
+    else:
+        return jsonify({'success': False, 'error': 'Already liked'})
+
+
+@wx_bp.route('/messages/<int:message_id>/like', methods=['DELETE'])
+@token_required
+def unlike_message():
+    """取消点赞留言"""
+    data = request.get_json()
+    message_id = data.get('message_id')
+
+    if not message_id:
+        return jsonify({'success': False, 'error': 'Missing message_id'})
+
+    nickname = request.wx_user['name']
+    database.unlike_message(message_id, nickname)
+    count = database.get_message_likes(message_id)
+
+    return jsonify({'success': True, 'count': count})
+
+
+# ==================== 媒体点赞API ====================
+
+@wx_bp.route('/media/<media_type>/<int:media_id>/like', methods=['GET'])
+@token_required
+def get_media_like_status(media_type, media_id):
+    """获取媒体点赞状态"""
+    if media_type not in ['photo', 'video']:
+        return jsonify({'success': False, 'error': 'Invalid media type'})
+
+    nickname = request.wx_user['name']
+    count = database.get_media_likes(media_type, media_id)
+    liked = database.has_liked_media(media_type, media_id, nickname)
+
+    return jsonify({
+        'success': True,
+        'count': count,
+        'liked': liked
+    })
+
+
+@wx_bp.route('/media/<media_type>/<int:media_id>/like', methods=['POST'])
+@token_required
+def like_media(media_type, media_id):
+    """点赞媒体"""
+    if media_type not in ['photo', 'video']:
+        return jsonify({'success': False, 'error': 'Invalid media type'})
+
+    nickname = request.wx_user['name']
+    success = database.like_media(media_type, media_id, nickname)
+
+    if success:
+        count = database.get_media_likes(media_type, media_id)
+        return jsonify({'success': True, 'count': count})
+    else:
+        return jsonify({'success': False, 'error': 'Already liked'})
+
+
+@wx_bp.route('/media/<media_type>/<int:media_id>/like', methods=['DELETE'])
+@token_required
+def unlike_media(media_type, media_id):
+    """取消点赞媒体"""
+    if media_type not in ['photo', 'video']:
+        return jsonify({'success': False, 'error': 'Invalid media type'})
+
+    nickname = request.wx_user['name']
+    database.unlike_media(media_type, media_id, nickname)
+    count = database.get_media_likes(media_type, media_id)
+
+    return jsonify({'success': True, 'count': count})
