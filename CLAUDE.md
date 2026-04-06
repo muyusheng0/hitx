@@ -59,16 +59,42 @@ python3 app.py
 - 登录日志: 记录用户IP并获取归属地
 - 已删除内容恢复
 
+## 服务管理（重要）
+
+**应用通过systemd服务管理，禁止手动启动多个Flask进程，否则会导致端口冲突和异常行为。**
+
+```bash
+# 查看服务状态
+systemctl status jlu8
+
+# 启动应用
+sudo systemctl start jlu8
+
+# 停止应用
+sudo systemctl stop jlu8
+
+# 重启应用
+sudo systemctl restart jlu8
+
+# 查看日志
+sudo journalctl -u jlu8 -f
+```
+
+**启动脚本位置**: `/home/ubuntu/jlu8/start.sh`
+**Systemd服务文件**: `/etc/systemd/system/jlu8.service`
+
+**注意**: 如果手动运行了 `python3 app.py`，需要先 `pkill -f "python.*app.py"` 再用 systemctl 启动，避免端口冲突。
+
 ## 常用命令
 
 ```bash
-# 重启应用
-pkill -f "python.*app.py" && nohup python3 app.py > /tmp/jlu8.log 2>&1 &
+# 检查运行状态（优先使用systemctl）
+systemctl status jlu8
 
 # 查看应用日志
 tail -f /tmp/jlu8.log
 
-# 检查运行状态
+# 直接检查进程
 ps aux | grep "python.*app.py" | grep -v grep
 
 # 数据库操作
@@ -85,5 +111,20 @@ python3 -c "from app import app; from database import get_db; ..."
 
 - 数据库文件: `/home/ubuntu/jlu8/alumni.db` (硬编码路径)
 - 文件上传限制: 头像500KB，照片无限制，视频100MB
-- nginx配置在`/etc/nginx/sites-available/flask`
+- nginx配置:
+  - 网站: `/etc/nginx/sites-available/muyusheng.com` (www.muyusheng.com)
+  - API/小程序: `/etc/nginx/sites-available/flask` (jlu8.cn)
 - 新闻爬虫已移至`static/imgs/news/`目录（gitignore）
+
+## nginx配置说明
+
+- **muyusheng.com**: 网页主站，同时为微信小程序提供API（必须 HTTPS）
+- **flask**: 直接代理到 127.0.0.1:5000
+
+重启nginx后检查配置: `sudo nginx -t && sudo nginx -s reload`
+
+## 重要文件
+
+- `templates/about.html` - "个人中心"页面，包含大量内联JavaScript，修改后需重启Flask
+- `static/js/main.js` - 主要前端逻辑
+- `wx_api.py` - 微信小程序API，APPID和SECRET直接写入代码中
