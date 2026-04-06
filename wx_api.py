@@ -831,6 +831,7 @@ def get_nearest_classmates():
                     nearest.append({
                         'id': s['id'],
                         'name': s['name'],
+                        'avatar': s.get('avatar', ''),
                         'distance': round(dist, 1),
                         'city': s.get('city', ''),
                         'hometown': s.get('hometown_name', '')
