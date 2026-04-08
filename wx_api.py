@@ -949,9 +949,38 @@ CLASS_TIMELINE = [
 @token_required
 def get_timeline():
     """获取班级时光时间线"""
+    # 获取照片，按年份分组，每年最多3张
+    photos = database.get_all_photos()
+    photos_by_year = {}
+    for img in photos:
+        year = img.get('year', 2020)
+        if year not in photos_by_year:
+            photos_by_year[year] = []
+        if len(photos_by_year[year]) < 4:
+            base_url = request.host_url.rstrip('/')
+            photo_url = base_url + '/static/imgs/messages/' + img['filename']
+            photos_by_year[year].append({
+                'id': img['id'],
+                'url': photo_url,
+                'name': img['name'],
+                'title': img['title']
+            })
+
+    # 将照片填充到timeline中
+    timeline = []
+    for item in CLASS_TIMELINE:
+        # 从年份字符串中提取数字年份 比如 "2015年 秋" → 2015
+        year_num = int(item['year'].split('年')[0])
+        timeline_item = {
+            'year': item['year'],
+            'event': item['event'],
+            'photos': photos_by_year.get(year_num, [])
+        }
+        timeline.append(timeline_item)
+
     return jsonify({
         'success': True,
-        'timeline': CLASS_TIMELINE
+        'timeline': timeline
     })
 
 
