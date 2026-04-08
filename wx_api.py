@@ -1224,3 +1224,69 @@ def upload_voice_message():
     database.write_lyb(messages)
 
     return jsonify({'success': True})
+
+
+# ==================== 新闻爬取设置API ====================
+
+@wx_bp.route('/admin/news/config', methods=['GET'])
+@token_required
+def get_news_config():
+    """获取新闻爬取配置（仅管理员）"""
+    nickname = request.wx_user['name']
+    is_admin, _ = check_admin_status(nickname)
+
+    if not is_admin:
+        return jsonify({'success': False, 'error': 'Permission denied'})
+
+    config = database.get_config()
+    return jsonify({
+        'success': True,
+        'crawl_hour': config.get('crawl_hour', 8),
+        'crawl_minute': config.get('crawl_minute', 0),
+        'keywords': config.get('keywords', '吉林大学,南岭校区,自动化')
+    })
+
+
+@wx_bp.route('/admin/news/config', methods=['POST'])
+@token_required
+def update_news_config():
+    """更新新闻爬取配置（仅管理员）"""
+    nickname = request.wx_user['name']
+    is_admin, _ = check_admin_status(nickname)
+
+    if not is_admin:
+        return jsonify({'success': False, 'error': 'Permission denied'})
+
+    data = request.get_json()
+    crawl_hour = data.get('crawl_hour', 8)
+    crawl_minute = data.get('crawl_minute', 0)
+    keywords = data.get('keywords', '吉林大学,南岭校区,自动化')
+
+    database.set_config('crawl_hour', str(crawl_hour))
+    database.set_config('crawl_minute', str(crawl_minute))
+    database.set_config('keywords', keywords)
+
+    return jsonify({'success': True})
+
+
+@wx_bp.route('/admin/news/crawl', methods=['POST'])
+@token_required
+def trigger_news_crawl():
+    """手动触发新闻爬取（仅管理员）"""
+    nickname = request.wx_user['name']
+    is_admin, _ = check_admin_status(nickname)
+
+    if not is_admin:
+        return jsonify({'success': False, 'error': 'Permission denied'})
+
+    try:
+        import news_crawler
+        result = news_crawler.fetch_jlu_news()
+        return jsonify({
+            'success': True,
+            'added': result.get('added', 0),
+            'total': result.get('total', 0),
+            'message': f'爬取完成，新增{result.get("added", 0)}条新闻'
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
