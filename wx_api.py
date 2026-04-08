@@ -548,7 +548,17 @@ def get_deleted():
     page = request.args.get('page', 1, type=int)
     per_page = 10
 
+    nickname = request.wx_user['name']
+    is_admin = database.is_admin(nickname)
+
     items = database.read_deleted()
+    # 管理员可以看到所有删除记录，其他人只能看到自己的
+    if not is_admin:
+        items = [item for item in items if item.get('owner') == nickname]
+
+    # 按删除时间倒序
+    items.sort(key=lambda x: x.get('deleted_time', ''), reverse=True)
+
     total = len(items)
     total_pages = (total + per_page - 1) // per_page
 
