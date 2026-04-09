@@ -117,6 +117,7 @@ def _fetch_jlu_homepage():
                 news_items.append({
                     'title': title[:200],
                     'source_url': full_url,
+                    'published_time': datetime.now().strftime('%Y-%m-%d'),
                 })
 
         # 抓取详情页获取内容和图片（限制并发，最多5个）
