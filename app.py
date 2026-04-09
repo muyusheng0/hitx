@@ -1005,6 +1005,19 @@ def media():
     from datetime import datetime
     current_year = datetime.now().year
     news = [n for n in news if int(n['published_time'][:4]) >= current_year]
+    # 按内容类型排序：学生/活动/比赛优先，领导相关内容靠后
+    def news_priority(n):
+        text = (n.get('title', '') + ' ' + n.get('content', '')).lower()
+        score = 0
+        for kw in ['学生', '同学', '比赛', '活动', '运动会', '晚会', '讲座', '论坛',
+                   '教学', '科研', '创新', '实践', '志愿者', '社团', '杏花节', '校庆']:
+            if kw in text:
+                score += 5
+        for kw in ['领导', '校长', '书记', '部长', '主任', '会谈', '调研', '视察', '考察', '出访']:
+            if kw in text:
+                score -= 8
+        return score
+    news.sort(key=news_priority, reverse=True)
 
     # 检查当前用户是否是管理员
     is_admin_user = False
@@ -2421,6 +2434,21 @@ def get_news():
     from datetime import datetime
     current_year = datetime.now().year
     news = [n for n in news if int(n['published_time'][:4]) >= current_year]
+    # 按内容类型排序：学生/活动/比赛优先，领导相关内容靠后
+    def news_priority(n):
+        text = (n.get('title', '') + ' ' + n.get('content', '')).lower()
+        score = 0
+        # 学生/活动/比赛相关内容加分
+        for kw in ['学生', '同学', '比赛', '活动', '运动会', '晚会', '讲座', '论坛',
+                   '教学', '科研', '创新', '实践', '志愿者', '社团', '杏花节', '校庆']:
+            if kw in text:
+                score += 5
+        # 领导相关内容降分
+        for kw in ['领导', '校长', '书记', '部长', '主任', '会谈', '调研', '视察', '考察', '出访']:
+            if kw in text:
+                score -= 8
+        return score
+    news.sort(key=news_priority, reverse=True)
     return jsonify({'success': True, 'news': news})
 
 
