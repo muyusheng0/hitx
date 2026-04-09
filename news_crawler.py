@@ -255,12 +255,19 @@ def _fetch_nanling_news():
             content = ' '.join([_clean_text(p) for p in paras[:15] if _clean_text(p)])
             content = content[:500] if content else '来源：南岭校区东区事务办公室'
 
-            # 提取发布时间（常见格式：XXXX年XX月XX日 或 XXXX-XX-XX）
+            # 提取发布时间（多种格式支持）
+            # 格式1: 2026年3月27日 / 2026-03-27 / 2026/03/27
             time_match = re.search(r'(\d{4})[年/-](\d{1,2})[月/-](\d{1,2})', html)
             if time_match:
                 pub_time = f"{time_match.group(1)}-{time_match.group(2).zfill(2)}-{time_match.group(3).zfill(2)}"
             else:
-                pub_time = datetime.now().strftime('%Y-%m-%d')
+                # 格式2: 3月27日（从正文中找，使用当前年份）
+                chinese_date = re.search(r'(\d{1,2})月(\d{1,2})日', html)
+                if chinese_date:
+                    current_year = datetime.now().year
+                    pub_time = f"{current_year}-{chinese_date.group(1).zfill(2)}-{chinese_date.group(2).zfill(2)}"
+                else:
+                    pub_time = datetime.now().strftime('%Y-%m-%d')
 
             # 提取图片
             img_url = ''

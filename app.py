@@ -1000,8 +1000,8 @@ def media():
     """媒体中心 - 相册和视频合并页面"""
     img_files = get_gallery_images()
     videos = get_videos()
-    news = database.get_news(5)
-    # 过滤掉旧新闻，只展示2026年的新闻
+    news = database.get_news(50)
+    # 过滤掉旧新闻，只展示今年的新闻
     from datetime import datetime
     current_year = datetime.now().year
     news = [n for n in news if int(n['published_time'][:4]) >= current_year]
@@ -2416,8 +2416,8 @@ def delete_login_logs():
 @app.route('/api/news')
 def get_news():
     """获取新闻列表"""
-    news = database.get_news(5)
-    # 过滤掉旧新闻，只展示2026年的新闻
+    news = database.get_news(50)
+    # 过滤掉旧新闻，只展示今年的新闻
     from datetime import datetime
     current_year = datetime.now().year
     news = [n for n in news if int(n['published_time'][:4]) >= current_year]
