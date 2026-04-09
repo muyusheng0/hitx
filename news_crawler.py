@@ -68,7 +68,7 @@ def fetch_jlu_news(keywords=None):
 
 
 def _fetch_jlu_homepage():
-    """抓取吉大新闻网首页"""
+    """抓取吉大新闻网首页及其详情页内容"""
     import urllib.request
 
     results = []
@@ -85,11 +85,12 @@ def _fetch_jlu_homepage():
             html = resp.read().decode('utf-8', errors='ignore')
 
         # 提取新闻链接和标题
-        # 格式: <a href="info/xxx.htm">标题</a>
         pattern = r'<a[^>]+href="([^"]+\.htm[^"]*)"[^>]*>([^<]{5,100})</a>'
         matches = re.findall(pattern, html)
 
         base_url = 'https://news.jlu.edu.cn/'
+        news_items = []
+
         for link, title in matches[:15]:
             title = _clean_text(title.strip())
 
@@ -109,14 +110,26 @@ def _fetch_jlu_homepage():
             title_lower = title.lower()
             if any(kw.lower() in title_lower or kw.lower() in link.lower()
                    for kw in ['吉大', '南岭', '自动化', '学院', '大学', '校园', '学生', '教学', '科研', '杏花']):
-                results.append({
+                news_items.append({
                     'title': title[:200],
-                    'content': f'来源：吉大新闻网',
                     'source_url': full_url,
-                    'image_url': '',
-                    'published_time': datetime.now().strftime('%Y-%m-%d')
                 })
-                print(f"  ✓ {title[:40]}...")
+
+        # 抓取详情页获取内容和图片（限制并发，最多5个）
+        for i, item in enumerate(news_items[:5]):
+            try:
+                detail = _fetch_news_detail(item['source_url'])
+                item['content'] = detail.get('content', '来源：吉大新闻网')
+                item['image_url'] = detail.get('image_url', '')
+                item['published_time'] = detail.get('published_time', datetime.now().strftime('%Y-%m-%d'))
+                print(f"  ✓ {item['title'][:40]}...")
+            except Exception as e:
+                item['content'] = '来源：吉大新闻网'
+                item['image_url'] = ''
+                item['published_time'] = datetime.now().strftime('%Y-%m-%d')
+                print(f"  ✓ {item['title'][:40]}... (详情获取失败)")
+
+        results = news_items
 
     except Exception as e:
         print(f"  ✗ 吉大新闻网失败: {e}")
@@ -172,6 +185,73 @@ def _fetch_college_news(base_url, college_name):
         print(f"  ✗ {college_name}失败: {e}")
 
     return results
+
+
+def _fetch_news_detail(url):
+    """抓取新闻详情页，获取内容和图片"""
+    import urllib.request
+
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'zh-CN,zh;q=0.9',
+    }
+
+    result = {'content': '', 'image_url': '', 'published_time': ''}
+
+    try:
+        req = urllib.request.Request(url, headers=headers)
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            html = resp.read().decode('utf-8', errors='ignore')
+
+        # 提取正文内容 (在 vsbcontent_start 和 vsbcontent_end 之间)
+        # 匹配从 vsbcontent_start 到 vsbcontent_end 的所有内容
+        content_match = re.search(r'<p class="vsbcontent_start">(.*?)</p>\s*<p class="vsbcontent_end">', html, re.DOTALL)
+        if content_match:
+            # 提取 vsbcontent_start 之后、vsbcontent_end 之前的所有段落
+            full_content = content_match.group(1) + ' '
+            # 再加上 vsbcontent_end 之前的内容
+            end_match = re.search(r'</p>\s*<p class="vsbcontent_end">', html)
+            if end_match:
+                # 提取 vsbcontent_start 到 vsbcontent_end 之间的所有<p>标签
+                all_paras = re.findall(r'<p[^>]*>([^<]+)</p>', html)
+                content = ' '.join([_clean_text(p) for p in all_paras[:10] if _clean_text(p)])
+            else:
+                content = _clean_text(full_content)
+            result['content'] = content[:500] if content else '来源：吉大新闻网'
+        else:
+            # 备选：直接提取所有段落
+            all_paras = re.findall(r'<p[^>]*>([^<]+)</p>', html)
+            content = ' '.join([_clean_text(p) for p in all_paras[:10] if _clean_text(p)])
+            result['content'] = content[:500] if content else '来源：吉大新闻网'
+
+        # 提取图片（新闻详情页通常在正文区域有图片）
+        img_patterns = re.findall(r'<img[^>]+src=["\']([^"\']+)["\']', html)
+        for img_url in img_patterns:
+            if img_url.startswith('//'):
+                img_url = 'https:' + img_url
+            elif img_url.startswith('/'):
+                base = '/'.join(url.split('/')[:3])
+                img_url = base + img_url
+
+            if img_url.startswith('http') and _is_valid_img(img_url):
+                # 跳过logo、icon等
+                if any(bad in img_url.lower() for bad in ['logo', 'icon', 'banner', 'nav', 'menu']):
+                    continue
+                downloaded = download_image(img_url)
+                if downloaded:
+                    result['image_url'] = downloaded
+                    break
+
+        # 提取发布时间
+        time_match = re.search(r'(\d{4})[年/-](\d{1,2})[月/-](\d{1,2})', html)
+        if time_match:
+            result['published_time'] = f"{time_match.group(1)}-{time_match.group(2).zfill(2)}-{time_match.group(3).zfill(2)}"
+
+    except Exception as e:
+        print(f"    详情页获取失败: {e}")
+
+    return result
 
 
 def _clean_text(text):
