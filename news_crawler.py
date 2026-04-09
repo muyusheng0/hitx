@@ -1,277 +1,213 @@
 """
-新闻爬虫模块 - 基于 RSSHub 获取吉林大学相关新闻
+新闻爬虫模块 - 吉林大学相关新闻获取
 
-主要数据来源：RSSHub (https://rsshub.app)
-- 社区维护，稳定可靠
-- 不暴露源站IP
-- 输出标准RSS/XML格式
+策略（按优先级）：
+1. 吉大新闻网首页 - 直接爬取，稳定
+2. 吉大各学院官网 - 静态HTML好抓
+3. 示例新闻 - 兜底
 """
 
 import os
-import uuid
 import re
+import uuid
 from datetime import datetime
 import random
-from email.utils import parsedate_to_datetime
-
-# RSSHub 新闻源配置
-RSSHUB_SOURCES = [
-    # 吉大官方新闻网（主源）
-    {'name': '吉大新闻', 'url': 'https://rsshub.app/jlu/news'},
-    # 通知公告
-    {'name': '吉大通知', 'url': 'https://rsshub.app/jlu/notice'},
-    # 南岭校区核心学院
-    {'name': '汽车学院', 'url': 'https://rsshub.app/jlu/college/auto'},
-    {'name': '机械学院', 'url': 'https://rsshub.app/jlu/college/mechanical'},
-    {'name': '材料学院', 'url': 'https://rsshub.app/jlu/college/materials'},
-    {'name': '交通学院', 'url': 'https://rsshub.app/jlu/college/transport'},
-    {'name': '生物学院', 'url': 'https://rsshub.app/jlu/college/bio'},
-    {'name': '通信学院', 'url': 'https://rsshub.app/jlu/college/telecom'},
-]
-
-# 微信公众号源（备用）
-WECHAT_SOURCES = [
-    {'name': '吉大官微', 'url': 'https://rsshub.app/wechat/official/judaxiao'},
-    {'name': '吉大招生', 'url': 'https://rsshub.app/wechat/official/jlu_zsb'},
-]
+import urllib.parse
 
 NEWS_IMGS_DIR = '/home/ubuntu/jlu8/static/imgs/news'
-
-# 本地缓存（避免频繁请求RSSHub）
-_rss_cache = {}
-_CACHE_TTL = 300  # 5分钟缓存
-
-
-def _get_cached(key, ttl=_CACHE_TTL):
-    """获取缓存内容"""
-    import time
-    if key in _rss_cache:
-        entry = _rss_cache[key]
-        if time.time() - entry['time'] < ttl:
-            return entry['data']
-    return None
-
-
-def _set_cached(key, data):
-    """设置缓存"""
-    import time
-    _rss_cache[key] = {'data': data, 'time': time.time()}
-
-
-def fetch_via_rsshub(keywords, timeout=15):
-    """通过 RSSHub 获取吉大新闻
-
-    Args:
-        keywords: 关键词列表，用于过滤新闻
-        timeout: 请求超时时间（秒）
-
-    Returns:
-        list: 新闻列表，每项包含 title, content, source_url, image_url, published_time
-    """
-    import urllib.request
-    import xml.etree.ElementTree as ET
-
-    news_list = []
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (compatible; JLU8-NewsBot/1.0)',
-    }
-
-    for source in RSSHUB_SOURCES:
-        url = source['url']
-
-        # 检查缓存
-        cached = _get_cached(url)
-        if cached:
-            xml_content = cached
-        else:
-            try:
-                req = urllib.request.Request(url, headers=headers)
-                with urllib.request.urlopen(req, timeout=timeout) as resp:
-                    xml_content = resp.read().decode('utf-8')
-                    _set_cached(url, xml_content)
-            except Exception as e:
-                print(f"RSSHub {source['name']} 请求失败: {e}")
-                continue
-
-        try:
-            # 解析 RSS XML
-            root = ET.fromstring(xml_content)
-
-            # 尝试 RSS 2.0 格式
-            items = root.findall('.//item')
-            if not items:
-                # 尝试 Atom 格式
-                items = root.findall('.//entry')
-
-            for item in items[:15]:  # 最多取15条
-                # 获取标题
-                title = item.findtext('title') or ''
-                title = title.strip()
-
-                if not title:
-                    continue
-
-                # 获取链接
-                link_elem = item.find('link')
-                if link_elem is not None:
-                    link = link_elem.text or link_elem.get('href') or ''
-                else:
-                    link = item.findtext('guid') or ''
-
-                # 获取描述
-                desc = item.findtext('description') or item.findtext('summary') or ''
-
-                # 获取发布时间
-                pubDate = item.findtext('pubDate') or item.findtext('published') or ''
-
-                # 清理HTML标签
-                content = _strip_tags(desc)[:500] if desc else ''
-
-                # 关键词过滤（标题优先）
-                title_match = any(kw in title for kw in keywords)
-                content_match = any(kw in content for kw in keywords)
-                if not (title_match or content_match):
-                    # 如果标题不匹配但内容包含关键词，也保留
-                    if not content_match and not title_match:
-                        continue
-
-                # 解析发布时间
-                published_time = _parse_rss_date(pubDate)
-
-                news_list.append({
-                    'title': title[:200],
-                    'content': content,
-                    'source_url': link,
-                    'image_url': '',
-                    'published_time': published_time
-                })
-
-                print(f"  ✓ {source['name']}: {title[:40]}...")
-
-        except ET.ParseError as e:
-            print(f"RSSHub {source['name']} XML解析失败: {e}")
-            continue
-        except Exception as e:
-            print(f"RSSHub {source['name']} 处理失败: {e}")
-            continue
-
-    return news_list
-
-
-def _strip_tags(html_content):
-    """去除HTML标签"""
-    if not html_content:
-        return ''
-    # 移除HTML标签
-    text = re.sub(r'<[^>]+>', '', html_content)
-    # 清理多余空白
-    text = re.sub(r'\s+', ' ', text)
-    return text.strip()
-
-
-def _parse_rss_date(date_str):
-    """解析RSS/Atom中的日期字符串"""
-    if not date_str:
-        return datetime.now().strftime('%Y-%m-%d')
-
-    try:
-        # 尝试 RFC 2822 格式 (RSS标准)
-        dt = parsedate_to_datetime(date_str)
-        return dt.strftime('%Y-%m-%d')
-    except:
-        pass
-
-    try:
-        # 尝试 ISO 格式
-        from email.utils import parsedate_to_datetime
-        dt = parsedate_to_datetime(date_str)
-        return dt.strftime('%Y-%m-%d')
-    except:
-        pass
-
-    # 尝试常见中文日期格式
-    date_match = re.search(r'\d{4}[-/年]\d{1,2}[-/月]\d{1,2}', date_str)
-    if date_match:
-        return date_match.group().replace('年', '-').replace('月', '-').replace('日', '')
-
-    return datetime.now().strftime('%Y-%m-%d')
+DEFAULT_KEYWORDS = ['吉林大学', '南岭', '自动化', '杏花节']
 
 
 def fetch_jlu_news(keywords=None):
-    """爬取吉林大学相关新闻（主入口）
+    """爬取吉林大学相关新闻（主入口）"""
+    results = []
 
-    Args:
-        keywords: 关键词列表，默认从数据库读取
-
-    Returns:
-        list: 新闻列表
-    """
-    news_list = []
-
-    # 如果没有提供关键词，从数据库获取
     if keywords is None:
         try:
             import database
             keywords = database.get_news_keywords()
         except:
-            keywords = ['吉林大学', '南岭校区', '自动化']
+            keywords = DEFAULT_KEYWORDS
 
     if isinstance(keywords, str):
         keywords = [k.strip() for k in keywords.split(',') if k.strip()]
 
-    print(f"=== 开始获取新闻 (关键词: {keywords}) ===")
+    print(f"\n=== 开始获取新闻 (关键词: {keywords}) ===")
 
-    # 优先使用 RSSHub
-    print("\n[1] 通过 RSSHub 获取新闻...")
-    rs_news = fetch_via_rsshub(keywords)
-    news_list.extend(rs_news)
+    # 1. 吉大新闻网首页（最稳定）
+    print("\n[1] 抓取吉大新闻网...")
+    results.extend(_fetch_jlu_homepage())
 
-    # 去重（基于标题）
-    seen_titles = set()
-    unique_news = []
-    for news in news_list:
-        title_key = news['title'][:30]  # 用前30字符作为去重依据
-        if title_key not in seen_titles:
-            seen_titles.add(title_key)
-            unique_news.append(news)
-    news_list = unique_news
+    # 2. 抓取汽车工程学院
+    print("\n[2] 抓取汽车学院...")
+    results.extend(_fetch_college_news('https://auto.jlu.edu.cn', '汽车学院'))
 
-    print(f"\nRSSHub 获取到 {len(news_list)} 条新闻")
+    # 去重
+    seen = set()
+    unique = []
+    for r in results:
+        key = r['title'][:30]
+        if key not in seen:
+            seen.add(key)
+            unique.append(r)
+    results = unique
 
-    # 补充吉大图片（如果新闻没有图片）
-    for news in news_list:
-        if not news.get('image_url'):
-            news['image_url'] = get_jlu_image()
+    # 补充图片
+    for r in results:
+        if not r.get('image_url'):
+            r['image_url'] = get_jlu_image()
 
-    # 如果 RSSHub 完全失败，使用示例新闻
-    if len(news_list) == 0:
-        print("\n[2] RSSHub 全部失败，使用示例新闻...")
-        news_list = _generate_sample_news(keywords)
+    # 兜底
+    if len(results) == 0:
+        print("\n[3] 使用示例新闻...")
+        results = _generate_samples(keywords)
+    else:
+        print(f"\n共获取 {len(results)} 条新闻")
 
-    return news_list[:10]  # 最多返回10条
+    return results[:10]
 
 
-def _generate_sample_news(keywords):
-    """生成示例新闻（当RSSHub不可用时）"""
-    main_kw = keywords[0] if keywords else '吉林大学'
+def _fetch_jlu_homepage():
+    """抓取吉大新闻网首页"""
+    import urllib.request
+
+    results = []
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'zh-CN,zh;q=0.9',
+    }
+
+    try:
+        url = 'https://news.jlu.edu.cn/'
+        req = urllib.request.Request(url, headers=headers)
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            html = resp.read().decode('utf-8', errors='ignore')
+
+        # 提取新闻链接和标题
+        # 格式: <a href="info/xxx.htm">标题</a>
+        pattern = r'<a[^>]+href="([^"]+\.htm[^"]*)"[^>]*>([^<]{5,100})</a>'
+        matches = re.findall(pattern, html)
+
+        base_url = 'https://news.jlu.edu.cn/'
+        for link, title in matches[:15]:
+            title = _clean_text(title.strip())
+
+            # 过滤无效链接
+            if len(title) < 5:
+                continue
+
+            # 完整URL
+            if link.startswith('/'):
+                full_url = 'https://news.jlu.edu.cn' + link
+            elif link.startswith('http'):
+                full_url = link
+            else:
+                full_url = base_url + link
+
+            # 关键词匹配（宽松）
+            title_lower = title.lower()
+            if any(kw.lower() in title_lower or kw.lower() in link.lower()
+                   for kw in ['吉大', '南岭', '自动化', '学院', '大学', '校园', '学生', '教学', '科研', '杏花']):
+                results.append({
+                    'title': title[:200],
+                    'content': f'来源：吉大新闻网',
+                    'source_url': full_url,
+                    'image_url': '',
+                    'published_time': datetime.now().strftime('%Y-%m-%d')
+                })
+                print(f"  ✓ {title[:40]}...")
+
+    except Exception as e:
+        print(f"  ✗ 吉大新闻网失败: {e}")
+
+    return results
+
+
+def _fetch_college_news(base_url, college_name):
+    """抓取学院官网新闻"""
+    import urllib.request
+
+    results = []
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'zh-CN,zh;q=0.9',
+    }
+
+    try:
+        req = urllib.request.Request(base_url, headers=headers)
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            html = resp.read().decode('utf-8', errors='ignore')
+
+        # 提取链接
+        pattern = r'<a[^>]+href="([^"]+\.htm[^"]*)"[^>]*>([^<]{5,80})</a>'
+        matches = re.findall(pattern, html)
+
+        for link, title in matches[:10]:
+            title = _clean_text(title.strip())
+            if len(title) < 5:
+                continue
+
+            # 完整URL
+            if link.startswith('/'):
+                full_url = urllib.parse.urljoin(base_url, link)
+            elif link.startswith('http'):
+                full_url = link
+            else:
+                full_url = base_url.rstrip('/') + '/' + link
+
+            # 过滤新闻类链接
+            if any(kw in link.lower() for kw in ['xw', 'news', 'dt', 'zx', 'xyjj', 'xygk']):
+                results.append({
+                    'title': title[:200],
+                    'content': f'来源：{college_name}',
+                    'source_url': full_url,
+                    'image_url': '',
+                    'published_time': datetime.now().strftime('%Y-%m-%d')
+                })
+                print(f"  ✓ {college_name}: {title[:40]}...")
+
+    except Exception as e:
+        print(f"  ✗ {college_name}失败: {e}")
+
+    return results
+
+
+def _clean_text(text):
+    """清理HTML和特殊字符"""
+    if not text:
+        return ''
+    # 去除HTML标签
+    text = re.sub(r'<[^>]+>', '', text)
+    # 清理空白
+    text = re.sub(r'\s+', ' ', text)
+    # 还原实体
+    text = text.replace('&nbsp;', ' ').replace('&amp;', '&')
+    return text.strip()
+
+
+def _generate_samples(keywords):
+    """生成示例新闻"""
+    kw = keywords[0] if keywords else '吉林大学'
     return [
         {
-            'title': f'{main_kw}相关学术活动圆满举办',
-            'content': f'近日，{main_kw}相关学术活动在校区成功举办，吸引了众多师生参与。活动内容丰富，涵盖了学术研讨、实践操作等多个环节，展现了学校的学术氛围和办学特色。',
+            'title': f'{kw}校园文化活动丰富多彩',
+            'content': f'近日，{kw}校园内举办了多场文化活动，吸引了众多师生参与，展现了校园文化的独特魅力。',
             'source_url': 'https://news.jlu.edu.cn',
             'image_url': get_jlu_image(),
             'published_time': datetime.now().strftime('%Y-%m-%d')
         },
         {
-            'title': f'{main_kw}校园建设取得新进展',
-            'content': f'近期，{main_kw}校园基础设施建设和环境优化工作持续推进，新建的教学楼和科研平台即将投入使用，为师生创造更好的学习生活环境。',
+            'title': f'{kw}南岭校区建设稳步推进',
+            'content': f'{kw}南岭校区各项基础设施建设工作正在稳步推进，为师生创造更好的学习和生活环境。',
             'source_url': 'https://news.jlu.edu.cn',
             'image_url': get_jlu_image(),
             'published_time': datetime.now().strftime('%Y-%m-%d')
         },
         {
-            'title': f'{main_kw}学科建设再创佳绩',
-            'content': f'教育部最新学科评估结果公布，{main_kw}相关学科在全国排名中继续保持领先水平，展现了学校在学科建设和科研创新方面的显著成效。',
+            'title': f'{kw}学科建设取得新成果',
+            'content': f'{kw}相关学科在教学和科研方面取得了新的进展，学科竞争力不断提升。',
             'source_url': 'https://news.jlu.edu.cn',
             'image_url': get_jlu_image(),
             'published_time': datetime.now().strftime('%Y-%m-%d')
@@ -280,177 +216,135 @@ def _generate_sample_news(keywords):
 
 
 # ============================================================
-# 以下为保留的原有功能（图片下载、JLU图片获取）
+# 图片功能
 # ============================================================
 
-_jlu_image_cache = []
+_jlu_img_cache = []
 
 
 def fetch_jlu_images():
-    """爬取吉林大学相关的图片（保留原有逻辑）"""
-    global _jlu_image_cache
+    """获取吉大相关图片"""
+    global _jlu_img_cache
+    if _jlu_img_cache:
+        return _jlu_img_cache
+
+    import urllib.request
     images = []
 
-    if _jlu_image_cache:
-        return _jlu_image_cache
-
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-        'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
-    }
-
-    # 尝试从吉大新闻网获取
     try:
-        import urllib.request
-        url = 'https://news.jlu.edu.cn'
-        req = urllib.request.Request(url, headers=headers)
-        with urllib.request.urlopen(req, timeout=15) as resp:
-            html = resp.read().decode('utf-8')
+        url = 'https://news.jlu.edu.cn/tpxw.htm'
+        req = urllib.request.Request(url, headers={
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        })
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            html = resp.read().decode('utf-8', errors='ignore')
 
-        # 简单提取图片
-        img_patterns = re.findall(r'<img[^>]+src=["\']([^"\']+)["\'][^>]*>', html)
-        for img_url in img_patterns[:10]:
+        # 提取图片
+        for m in re.findall(r'<img[^>]+src="([^"]+)"', html):
+            img_url = m
             if img_url.startswith('//'):
                 img_url = 'https:' + img_url
             elif img_url.startswith('/'):
                 img_url = 'https://news.jlu.edu.cn' + img_url
 
-            if img_url.startswith('http') and _is_valid_image_url(img_url):
-                local_path = download_image(img_url)
-                if local_path:
-                    images.append(local_path)
+            if img_url.startswith('http') and _is_valid_img(img_url):
+                path = download_image(img_url)
+                if path:
+                    images.append(path)
     except Exception as e:
-        print(f"获取吉大图片失败: {e}")
+        print(f"获取图片失败: {e}")
 
-    # 去重
-    images = list(dict.fromkeys(images))
-    _jlu_image_cache = images
-    return images
+    _jlu_img_cache = list(dict.fromkeys(images))
+    return _jlu_img_cache
 
 
-def _is_valid_image_url(url):
-    """检查是否是有效的图片URL"""
+def _is_valid_img(url):
+    """检查是否有效图片URL"""
     if not url:
         return False
-    invalid_ext = ['.gif', '.ico', '.svg', '.bmp', '.webp']
-    for ext in invalid_ext:
-        if ext in url.lower():
-            return False
-    return True
+    bad = ['.gif', '.ico', '.svg', '.bmp', '.webp', 'data:', 'logo', 'icon']
+    return not any(ext in url.lower() for ext in bad)
 
 
 def get_jlu_image():
-    """获取一个吉林大学相关的图片路径"""
-    images = fetch_jlu_images()
-    if images:
-        return random.choice(images)
-    return ''
+    """获取一张吉大图片"""
+    imgs = fetch_jlu_images()
+    return random.choice(imgs) if imgs else ''
 
 
 def download_image(url):
-    """下载图片到本地（带压缩）"""
-    max_retries = 2
-    for attempt in range(max_retries):
-        try:
-            os.makedirs(NEWS_IMGS_DIR, exist_ok=True)
+    """下载图片"""
+    import urllib.request
 
-            referer = 'https://www.baidu.com'
-            if 'bing.com' in url:
-                referer = 'https://cn.bing.com'
-            elif 'sogou' in url:
-                referer = 'https://www.sogou.com'
-            elif 'zsb.jlu.edu.cn' in url:
-                referer = 'https://zsb.jlu.edu.cn/'
-            elif 'news.jlu.edu.cn' in url:
-                referer = 'https://news.jlu.edu.cn/'
+    try:
+        os.makedirs(NEWS_IMGS_DIR, exist_ok=True)
 
-            import urllib.request
-            req = urllib.request.Request(url, headers={
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                'Referer': referer,
-            })
-            with urllib.request.urlopen(req, timeout=20) as resp:
-                content = resp.read()
+        req = urllib.request.Request(url, headers={
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            'Referer': 'https://news.jlu.edu.cn/',
+        })
 
-            content_length = len(content)
-            if content_length > 0 and (content_length < 3000 or content_length > 8000000):
-                return ''
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            content = resp.read()
 
-            # 确定文件扩展名
-            ext = '.jpg'
-            if '.png' in url.lower():
-                ext = '.png'
-            elif '.jpeg' in url.lower():
-                ext = '.jpg'
+        if len(content) < 3000 or len(content) > 8000000:
+            return ''
 
-            filename = f"{uuid.uuid4().hex}{ext}"
-            filepath = os.path.join(NEWS_IMGS_DIR, filename)
+        ext = '.jpg'
+        if '.png' in url.lower():
+            ext = '.png'
 
-            with open(filepath, 'wb') as f:
-                f.write(content)
+        filename = f"{uuid.uuid4().hex}{ext}"
+        filepath = os.path.join(NEWS_IMGS_DIR, filename)
 
-            if os.path.getsize(filepath) < 3000:
-                os.remove(filepath)
-                return ''
+        with open(filepath, 'wb') as f:
+            f.write(content)
 
-            # 压缩图片
-            compressed_path = compress_image(filepath)
-            if compressed_path:
-                return compressed_path
+        # 压缩
+        compressed = _compress(filepath)
+        if compressed:
+            return compressed
+        return filepath.replace(NEWS_IMGS_DIR, '/static/imgs/news')
 
-            return f'/static/imgs/news/{filename}'
-
-        except Exception as e:
-            if attempt < max_retries - 1:
-                continue
-            print(f"下载图片失败: {e}")
-
-    return ''
+    except Exception as e:
+        print(f"下载失败: {e}")
+        return ''
 
 
-def compress_image(filepath, max_width=800, quality=85):
-    """压缩图片并返回压缩后的路径"""
+def _compress(filepath, max_w=800, qual=85):
+    """压缩图片"""
     try:
         from PIL import Image
 
         img = Image.open(filepath)
-        original_size = os.path.getsize(filepath)
-
-        if original_size < 100 * 1024:
+        if os.path.getsize(filepath) < 100 * 1024:
             return ''
 
         if img.mode == 'RGBA':
             img = img.convert('RGB')
 
-        width, height = img.size
-        if width > max_width:
-            ratio = max_width / width
-            new_height = int(height * ratio)
-            img = img.resize((max_width, new_height), Image.LANCZOS)
+        w, h = img.size
+        if w > max_w:
+            img = img.resize((max_w, int(h * max_w / w)), Image.LANCZOS)
 
-        compressed_filename = f"{uuid.uuid4().hex}_thumb.jpg"
-        compressed_filepath = os.path.join(NEWS_IMGS_DIR, compressed_filename)
-
-        img.save(compressed_filepath, 'JPEG', quality=quality, optimize=True)
+        out = os.path.join(NEWS_IMGS_DIR, f"{uuid.uuid4().hex}_thumb.jpg")
+        img.save(out, 'JPEG', quality=qual, optimize=True)
         os.remove(filepath)
 
-        while os.path.getsize(compressed_filepath) > 200 * 1024 and quality > 50:
-            quality -= 10
-            img.save(compressed_filepath, 'JPEG', quality=quality, optimize=True)
+        while os.path.getsize(out) > 200 * 1024 and qual > 50:
+            qual -= 10
+            img.save(out, 'JPEG', quality=qual, optimize=True)
 
-        return f'/static/imgs/news/{compressed_filename}'
+        return out.replace(NEWS_IMGS_DIR, '/static/imgs/news')
 
     except Exception as e:
-        print(f"压缩图片失败: {e}")
+        print(f"压缩失败: {e}")
         return ''
 
 
 if __name__ == '__main__':
-    print("=== RSSHub 新闻获取测试 ===")
-    news_list = fetch_jlu_news()
-    print(f"\n共获取 {len(news_list)} 条新闻:")
-    for i, n in enumerate(news_list, 1):
-        print(f"\n{i}. {n['title']}")
-        print(f"   来源: {n['source_url']}")
-        print(f"   时间: {n['published_time']}")
+    print("=== 新闻获取测试 ===")
+    news = fetch_jlu_news()
+    print(f"\n结果: {len(news)} 条")
+    for i, n in enumerate(news, 1):
+        print(f"{i}. {n['title'][:50]}")
