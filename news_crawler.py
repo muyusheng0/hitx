@@ -38,8 +38,12 @@ def fetch_jlu_news(keywords=None):
     print("\n[1] 抓取吉大新闻网...")
     results.extend(_fetch_jlu_homepage())
 
-    # 2. 抓取汽车工程学院
-    print("\n[2] 抓取汽车学院...")
+    # 2. 抓取南岭校区东区事务办公室新闻（dqswb.jlu.edu.cn）
+    print("\n[2] 抓取南岭校区新闻...")
+    results.extend(_fetch_nanling_news())
+
+    # 3. 抓取汽车工程学院
+    print("\n[3] 抓取汽车学院...")
     results.extend(_fetch_college_news('https://auto.jlu.edu.cn', '汽车学院'))
 
     # 去重
@@ -183,6 +187,108 @@ def _fetch_college_news(base_url, college_name):
 
     except Exception as e:
         print(f"  ✗ {college_name}失败: {e}")
+
+    return results
+
+
+def _fetch_nanling_news():
+    """抓取南岭校区东区事务办公室新闻 (dqswb.jlu.edu.cn)"""
+    import urllib.request
+
+    results = []
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'zh-CN,zh;q=0.9',
+    }
+
+    base_url = 'https://dqswb.jlu.edu.cn'
+    # 收集所有文章链接
+    article_links = set()
+
+    # 1. 首页
+    try:
+        req = urllib.request.Request(base_url, headers=headers)
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            html = resp.read().decode('utf-8', errors='ignore')
+        # 提取 info/XXXX/XXXX.htm 格式的文章链接
+        for link in re.findall(r'href=["\'](info/\d+/\d+\.htm)', html):
+            article_links.add(link)
+        print(f"  ✓ 首页找到 {len(article_links)} 篇文章")
+    except Exception as e:
+        print(f"  ✗ 南岭首页失败: {e}")
+
+    # 2. 学工动态页面 xwkx.htm
+    try:
+        req = urllib.request.Request(f'{base_url}/xwkx.htm', headers=headers)
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            html = resp.read().decode('utf-8', errors='ignore')
+        for link in re.findall(r'href=["\'](info/\d+/\d+\.htm)', html):
+            article_links.add(link)
+        for link in re.findall(r'href=["\'](/info/\d+/\d+\.htm)', html):
+            article_links.add(link.lstrip('/'))
+        print(f"  ✓ 学工动态页面找到 {len(article_links)} 篇文章")
+    except Exception as e:
+        print(f"  ✗ 学工动态页面失败: {e}")
+
+    # 3. 抓取每篇文章详情
+    for link in list(article_links)[:15]:
+        if not link.startswith('http'):
+            url = f'{base_url}/{link}'
+        else:
+            url = link
+
+        try:
+            req = urllib.request.Request(url, headers=headers)
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                html = resp.read().decode('utf-8', errors='ignore')
+
+            # 提取标题
+            title_match = re.search(r'<title>([^<]+)</title>', html)
+            title = _clean_text(title_match.group(1).replace('-吉林大学东区事务办公室', '').replace('-吉林大学东区事务办公室', '').strip()) if title_match else ''
+
+            if not title or len(title) < 5:
+                continue
+
+            # 提取正文段落
+            paras = re.findall(r'<p[^>]*>([^<]+)</p>', html)
+            content = ' '.join([_clean_text(p) for p in paras[:15] if _clean_text(p)])
+            content = content[:500] if content else '来源：南岭校区东区事务办公室'
+
+            # 提取发布时间（常见格式：XXXX年XX月XX日 或 XXXX-XX-XX）
+            time_match = re.search(r'(\d{4})[年/-](\d{1,2})[月/-](\d{1,2})', html)
+            if time_match:
+                pub_time = f"{time_match.group(1)}-{time_match.group(2).zfill(2)}-{time_match.group(3).zfill(2)}"
+            else:
+                pub_time = datetime.now().strftime('%Y-%m-%d')
+
+            # 提取图片
+            img_url = ''
+            img_matches = re.findall(r'<img[^>]+src=["\']([^"\']+)["\']', html)
+            for img in img_matches:
+                if img.startswith('//'):
+                    img = 'https:' + img
+                elif img.startswith('/'):
+                    img = base_url + img
+                if img.startswith('http') and _is_valid_img(img):
+                    if any(bad in img.lower() for bad in ['logo', 'icon', 'banner', 'nav', 'menu', 'button']):
+                        continue
+                    downloaded = download_image(img)
+                    if downloaded:
+                        img_url = downloaded
+                        break
+
+            results.append({
+                'title': title[:200],
+                'content': content,
+                'source_url': url,
+                'image_url': img_url,
+                'published_time': pub_time
+            })
+            print(f"  ✓ {title[:40]}...")
+
+        except Exception as e:
+            print(f"  ✗ 抓取失败 {url}: {e}")
 
     return results
 
