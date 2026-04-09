@@ -19,7 +19,10 @@ DEFAULT_KEYWORDS = ['吉林大学', '南岭', '自动化', '杏花节']
 
 
 def fetch_jlu_news(keywords=None):
-    """爬取吉林大学相关新闻（主入口）"""
+    """爬取吉林大学相关新闻（主入口）
+
+    按关键词匹配度排序，高匹配度的新闻排在前面。
+    """
     results = []
 
     if keywords is None:
@@ -56,6 +59,24 @@ def fetch_jlu_news(keywords=None):
             unique.append(r)
     results = unique
 
+    # 按关键词匹配度打分并排序
+    def keyword_score(news):
+        """计算新闻与关键词的匹配度分数"""
+        text = (news.get('title', '') + ' ' + news.get('content', '')).lower()
+        score = 0
+        for kw in keywords:
+            kw_lower = kw.lower()
+            # 标题中匹配权重更高
+            if kw_lower in news.get('title', '').lower():
+                score += 10
+            # 正文中匹配
+            if kw_lower in text:
+                score += 1
+        return score
+
+    # 按分数降序排序
+    results.sort(key=keyword_score, reverse=True)
+
     # 补充图片
     for r in results:
         if not r.get('image_url'):
@@ -63,12 +84,12 @@ def fetch_jlu_news(keywords=None):
 
     # 兜底
     if len(results) == 0:
-        print("\n[3] 使用示例新闻...")
+        print("\n[4] 使用示例新闻...")
         results = _generate_samples(keywords)
     else:
-        print(f"\n共获取 {len(results)} 条新闻")
+        print(f"\n共获取 {len(results)} 条新闻（已按关键词匹配度排序）")
 
-    return results[:10]
+    return results[:20]
 
 
 def _fetch_jlu_homepage():
