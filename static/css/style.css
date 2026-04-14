@@ -82,10 +82,35 @@ body::before {
     letter-spacing: 2px;
     white-space: nowrap;
     margin-left: 0.5rem;
+    position: relative;
+    display: inline-block;
 }
 
 .header-title span {
     color: var(--secondary);
+}
+
+/* 标题金属光泽效果 */
+.header-title::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+        90deg,
+        transparent 0%,
+        rgba(255, 255, 255, 0.4) 50%,
+        transparent 100%
+    );
+    animation: title-shine 4s ease-in-out infinite;
+    pointer-events: none;
+}
+
+@keyframes title-shine {
+    0%, 100% { left: -100%; }
+    50% { left: 100%; }
 }
 
 .user-status {
@@ -2277,7 +2302,17 @@ body::before {
     scroll-snap-align: start;
     overflow-x: hidden;
     box-sizing: border-box;
+    /* 入场动画 */
+    animation: fade-in-up 0.5s ease-out backwards;
 }
+
+/* 交错动画延迟 */
+.carousel-item:nth-child(1) { animation-delay: 0.1s; }
+.carousel-item:nth-child(2) { animation-delay: 0.2s; }
+.carousel-item:nth-child(3) { animation-delay: 0.3s; }
+.carousel-item:nth-child(4) { animation-delay: 0.4s; }
+.carousel-item:nth-child(5) { animation-delay: 0.5s; }
+.carousel-item:nth-child(6) { animation-delay: 0.6s; }
 
 /* 最新动态类型样式 */
 .carousel-item {

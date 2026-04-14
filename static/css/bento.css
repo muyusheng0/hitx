@@ -1,0 +1,285 @@
+/**
+ * Bento Grid 布局组件
+ * 餐盘式网格，让卡片错落有致
+ */
+
+/* Bento 网格容器 */
+.bento-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    grid-template-rows: auto;
+    gap: 20px;
+    padding: 20px 0;
+}
+
+/* 大卡片 - 占2列2行 */
+.bento-card-large {
+    grid-column: span 2;
+    grid-row: span 2;
+}
+
+/* 中卡片 - 占2列1行 */
+.bento-card-wide {
+    grid-column: span 2;
+    grid-row: span 1;
+}
+
+/* 高卡片 - 占1列2行 */
+.bento-card-tall {
+    grid-column: span 1;
+    grid-row: span 2;
+}
+
+/* 标准卡片 - 1列1行 */
+.bento-card {
+    grid-column: span 1;
+    grid-row: span 1;
+}
+
+/* 入场动画 - 飞入效果 */
+@keyframes bento-enter {
+    from {
+        opacity: 0;
+        transform: translateY(40px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.bento-card,
+.bento-card-large,
+.bento-card-wide,
+.bento-card-tall {
+    animation: bento-enter 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
+}
+
+/* 交错动画延迟 */
+.bento-card:nth-child(1) { animation-delay: 0.05s; grid-area: 1 / 1 / 3 / 3; }
+.bento-card:nth-child(2) { animation-delay: 0.1s; grid-area: 1 / 3 / 2 / 4; }
+.bento-card:nth-child(3) { animation-delay: 0.15s; grid-area: 1 / 4 / 2 / 5; }
+.bento-card:nth-child(4) { animation-delay: 0.2s; grid-area: 2 / 3 / 3 / 5; }
+.bento-card:nth-child(5) { animation-delay: 0.25s; grid-area: 3 / 1 / 4 / 2; }
+.bento-card:nth-child(6) { animation-delay: 0.3s; grid-area: 3 / 2 / 4 / 3; }
+.bento-card:nth-child(7) { animation-delay: 0.35s; grid-area: 3 / 3 / 4 / 4; }
+.bento-card:nth-child(8) { animation-delay: 0.4s; grid-area: 3 / 4 / 4 / 5; }
+
+/* 响应式 */
+@media (max-width: 900px) {
+    .bento-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    .bento-card-large {
+        grid-column: span 2;
+        grid-row: span 2;
+    }
+    .bento-card-wide {
+        grid-column: span 2;
+    }
+}
+
+@media (max-width: 600px) {
+    .bento-grid {
+        grid-template-columns: 1fr;
+    }
+    .bento-card-large,
+    .bento-card-wide,
+    .bento-card-tall {
+        grid-column: span 1;
+        grid-row: span 1;
+    }
+}
+
+/* ==================== 通用入场动画 ==================== */
+
+/* 淡入上浮 */
+@keyframes fade-in-up {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.fade-in-up {
+    animation: fade-in-up 0.5s ease-out backwards;
+}
+
+/* 淡入缩放 */
+@keyframes fade-in-scale {
+    from {
+        opacity: 0;
+        transform: scale(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.fade-in-scale {
+    animation: fade-in-scale 0.4s ease-out backwards;
+}
+
+/* 滑入 */
+@keyframes slide-in-left {
+    from {
+        opacity: 0;
+        transform: translateX(-30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.slide-in-left {
+    animation: slide-in-left 0.5s ease-out backwards;
+}
+
+@keyframes slide-in-right {
+    from {
+        opacity: 0;
+        transform: translateX(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.slide-in-right {
+    animation: slide-in-right 0.5s ease-out backwards;
+}
+
+/* 金属光泽扫过效果 */
+@keyframes shine-sweep {
+    0% {
+        background-position: -200% center;
+    }
+    100% {
+        background-position: 200% center;
+    }
+}
+
+.shine-sweep {
+    background: linear-gradient(
+        90deg,
+        transparent 0%,
+        rgba(255, 255, 255, 0.3) 45%,
+        rgba(255, 255, 255, 0.5) 50%,
+        rgba(255, 255, 255, 0.3) 55%,
+        transparent 100%
+    );
+    background-size: 200% 100%;
+    animation: shine-sweep 3s ease-in-out infinite;
+}
+
+/* 脉冲光晕 */
+@keyframes pulse-glow {
+    0%, 100% {
+        box-shadow: 0 0 5px rgba(243, 156, 18, 0.3);
+    }
+    50% {
+        box-shadow: 0 0 20px rgba(243, 156, 18, 0.6);
+    }
+}
+
+.pulse-glow {
+    animation: pulse-glow 2s ease-in-out infinite;
+}
+
+/* ==================== 卡片hover效果 ==================== */
+
+.card-hover-lift {
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.card-hover-lift:hover {
+    transform: translateY(-5px) scale(1.02);
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.2);
+}
+
+/* 3D翻转效果 */
+.card-flip {
+    perspective: 1000px;
+}
+
+.card-flip-inner {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    transition: transform 0.6s;
+    transform-style: preserve-3d;
+}
+
+.card-flip:hover .card-flip-inner {
+    transform: rotateY(10deg) rotateX(5deg);
+}
+
+/* 边框发光 */
+.card-border-glow {
+    position: relative;
+}
+
+.card-border-glow::before {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    background: linear-gradient(135deg, #f39c12, #e74c3c, #f39c12);
+    border-radius: inherit;
+    z-index: -1;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.card-border-glow:hover::before {
+    opacity: 0.5;
+}
+
+/* ==================== 文字效果 ==================== */
+
+/* 打字机效果 */
+.typewriter {
+    overflow: hidden;
+    white-space: nowrap;
+    border-right: 3px solid #f39c12;
+    animation:
+        typing 2s steps(20) forwards,
+        blink-caret 0.5s step-end infinite;
+}
+
+@keyframes typing {
+    from { width: 0; }
+    to { width: 100%; }
+}
+
+@keyframes blink-caret {
+    50% { border-color: transparent; }
+}
+
+/* 渐变文字 */
+.text-gradient {
+    background: linear-gradient(135deg, #f39c12 0%, #e74c3c 50%, #f39c12 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* 浮雕文字 */
+.text-emboss {
+    color: transparent;
+    text-shadow:
+        1px 1px 1px rgba(255, 255, 255, 0.5),
+        -1px -1px 1px rgba(0, 0, 0, 0.5);
+    background: linear-gradient(135deg, #2c3e50, #34495e);
+    -webkit-background-clip: text;
+    background-clip: text;
+}

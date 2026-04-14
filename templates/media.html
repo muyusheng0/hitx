@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="/static/css/film-grain.css">
     <link rel="stylesheet" href="/static/css/sakura.css">
     <link rel="stylesheet" href="/static/css/news-card.css">
+    <link rel="stylesheet" href="/static/css/bento.css">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='80' font-size='80'>📖</text></svg>">
 </head>
 <body>
@@ -47,13 +48,13 @@
             <!-- 相册区域 -->
             <div id="photosSection">
                 <!-- 上传区域 -->
-                <div class="upload-zone" onclick="showUploadModal()">
+                <div class="upload-zone fade-in-up" onclick="showUploadModal()">
                     <div class="upload-zone-icon">📤</div>
                     <div class="upload-zone-text">点击上传照片（需验证身份）</div>
                 </div>
 
                 <!-- 相册网格 -->
-                <div class="gallery-grid">
+                <div class="gallery-grid fade-in-up">
                     {% if images %}
                     {% for img in images %}
                     {% if '/imgs/messages/' in img.url %}
