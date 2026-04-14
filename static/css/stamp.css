@@ -1,0 +1,265 @@
+/**
+ * 邮票信封留言板样式
+ * 每条留言像贴在信封上的邮票，有锯齿边缘
+ */
+
+/* 留言列表 */
+.message-list {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    padding: 20px 0;
+}
+
+/* 邮票容器 */
+.message-stamp {
+    position: relative;
+    background: linear-gradient(135deg, #faf8f5 0%, #f0ebe3 100%);
+    padding: 20px 20px 60px 20px;
+    margin-left: 20px;
+    transition: all 0.3s ease;
+    box-shadow: 0 3px 12px rgba(0,0,0,0.1);
+}
+
+/* 邮票锯齿边缘 - 左边 */
+.message-stamp::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -18px;
+    width: 20px;
+    height: 100%;
+    background: linear-gradient(135deg, #faf8f5 0%, #f0ebe3 100%);
+    clip-path: polygon(
+        100% 0%,
+        100% 8%,
+        92% 8%,
+        92% 0%,
+        84% 0%,
+        84% 8%,
+        76% 8%,
+        76% 0%,
+        68% 0%,
+        68% 8%,
+        60% 8%,
+        60% 0%,
+        52% 0%,
+        52% 8%,
+        44% 8%,
+        44% 0%,
+        36% 0%,
+        36% 8%,
+        28% 8%,
+        28% 0%,
+        20% 0%,
+        20% 8%,
+        12% 8%,
+        12% 0%,
+        4% 0%,
+        4% 8%,
+        0% 8%,
+        0% 16%,
+        4% 16%,
+        4% 8%,
+        0% 8%
+    );
+    box-shadow: -2px 0 6px rgba(0,0,0,0.1);
+}
+
+/* 顶部装饰线 */
+.message-stamp::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: repeating-linear-gradient(
+        90deg,
+        transparent,
+        transparent 4px,
+        #d4a574 4px,
+        #d4a574 8px
+    );
+}
+
+/* 悬停效果 - 邮票被揭起 */
+.message-stamp:hover {
+    transform: translateY(-4px) scale(1.01);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+}
+
+/* 头像 - 印章样式 */
+.message-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 2px solid #d4a574;
+    margin-right: 12px;
+    float: left;
+    object-fit: cover;
+    background: #f0ebe3;
+}
+
+/* 头部信息 */
+.message-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.message-nickname {
+    font-family: 'ZCOOL XiaoWei', serif;
+    font-size: 1.1rem;
+    color: #2c3e50;
+    font-weight: normal;
+}
+
+.message-time {
+    font-size: 0.75rem;
+    color: #8b7355;
+    margin-left: 10px;
+}
+
+/* 留言内容 - 打字机效果字体 */
+.message-content {
+    font-family: 'Courier New', 'Noto Sans SC', monospace;
+    font-size: 0.9rem;
+    color: #3d3d3d;
+    line-height: 1.8;
+    padding-left: 52px;
+    margin: 0;
+    word-break: break-word;
+}
+
+/* 留言图片 */
+.message-image {
+    margin-top: 12px;
+    padding-left: 52px;
+}
+
+.message-image img {
+    max-width: 200px;
+    max-height: 150px;
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    cursor: pointer;
+    transition: transform 0.2s ease;
+}
+
+.message-image img:hover {
+    transform: scale(1.05);
+}
+
+/* 分类标签 - 胶片孔样式 */
+.message-tags {
+    position: absolute;
+    bottom: 15px;
+    right: 20px;
+    display: flex;
+    gap: 8px;
+}
+
+.message-tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 10px;
+    font-size: 0.65rem;
+    color: #8b7355;
+    border: 1px solid #d4a574;
+    border-radius: 2px;
+    background: rgba(212, 165, 116, 0.1);
+}
+
+.message-tag::before {
+    content: '▣ ';
+    font-size: 0.5rem;
+}
+
+/* 点赞按钮 */
+.message-like-btn {
+    position: absolute;
+    bottom: 15px;
+    left: 20px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 5px 10px;
+    font-size: 0.8rem;
+    color: #8b7355;
+    transition: all 0.2s ease;
+    border-radius: 4px;
+}
+
+.message-like-btn:hover {
+    background: rgba(212, 165, 116, 0.2);
+    color: #e74c3c;
+}
+
+.message-like-btn.liked {
+    color: #e74c3c;
+}
+
+.message-like-btn .like-icon {
+    margin-right: 4px;
+}
+
+/* 入场动画 - 信从信封抽出 */
+@keyframes stamp-slide-in {
+    from {
+        opacity: 0;
+        transform: translateY(20px) translateX(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) translateX(0);
+    }
+}
+
+.message-stamp {
+    animation: stamp-slide-in 0.4s ease-out backwards;
+}
+
+.message-stamp:nth-child(1) { animation-delay: 0.05s; }
+.message-stamp:nth-child(2) { animation-delay: 0.1s; }
+.message-stamp:nth-child(3) { animation-delay: 0.15s; }
+.message-stamp:nth-child(4) { animation-delay: 0.2s; }
+.message-stamp:nth-child(5) { animation-delay: 0.25s; }
+.message-stamp:nth-child(6) { animation-delay: 0.3s; }
+.message-stamp:nth-child(7) { animation-delay: 0.35s; }
+.message-stamp:nth-child(8) { animation-delay: 0.4s; }
+
+/* 新留言弹入动画 */
+@keyframes new-stamp-bounce {
+    0% {
+        opacity: 0;
+        transform: translateY(-30px) scale(0.9);
+    }
+    60% {
+        transform: translateY(5px) scale(1.02);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.message-stamp.new-message {
+    animation: new-stamp-bounce 0.5s ease-out;
+}
+
+/* 响应式 */
+@media (max-width: 600px) {
+    .message-content {
+        padding-left: 0;
+        margin-top: 45px;
+    }
+    .message-image {
+        padding-left: 0;
+    }
+    .message-tags {
+        position: static;
+        margin-top: 15px;
+        padding-left: 52px;
+    }
+}

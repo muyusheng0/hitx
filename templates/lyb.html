@@ -6,6 +6,7 @@
     <title>留言板 - 吉大自动化八班</title>
     <link rel="stylesheet" href="/static/css/style.css">
     <link rel="stylesheet" href="/static/css/film-grain.css">
+    <link rel="stylesheet" href="/static/css/stamp.css">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='80' font-size='80'>📖</text></svg>">
 <div class="film-grain-overlay"></div>
 </head>
@@ -84,7 +85,7 @@
                 <h2 class="section-title">全部留言</h2>
                 <div class="message-list" id="messageList">
                     {% for msg in messages %}
-                    <div class="message-item slide-in" id="msg-{{ msg.id }}" data-nickname="{{ msg.nickname }}" data-msg-id="{{ msg.id }}">
+                    <div class="message-stamp" id="msg-{{ msg.id }}" data-nickname="{{ msg.nickname }}" data-msg-id="{{ msg.id }}">
                         <div class="message-header">
                             <div class="message-nickname">{{ msg.nickname }}</div>
                             <div class="message-time">{{ msg.time }}</div>
