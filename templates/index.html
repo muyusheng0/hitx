@@ -5,9 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>吉大自动化八班 - 同学录</title>
     <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/film-grain.css">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='80' font-size='80'>📖</text></svg>">
 </head>
 <body>
+    <!-- 胶片颗粒质感层 -->
+    <div class="film-grain-overlay"></div>
+
     <!-- 顶部标题栏 -->
     <header class="top-header">
         <h1 class="header-title">吉大<span>自动化</span>八班</h1>
@@ -16,6 +20,20 @@
 
     <!-- 主内容 -->
     <main class="main-content">
+        <!-- 杏花瓣飘落动效 -->
+        <div class="sakura-container">
+            <div class="petal petal-sm petal-1"><svg viewBox="0 0 20 20"><ellipse cx="10" cy="10" rx="8" ry="5" fill="#ffb7c5" transform="rotate(30 10 10)"/></svg></div>
+            <div class="petal petal-md petal-2"><svg viewBox="0 0 20 20"><ellipse cx="10" cy="10" rx="8" ry="5" fill="#ffc0cb" transform="rotate(-20 10 10)"/></svg></div>
+            <div class="petal petal-lg petal-3"><svg viewBox="0 0 20 20"><ellipse cx="10" cy="10" rx="8" ry="5" fill="#ffb7c5" transform="rotate(45 10 10)"/></svg></div>
+            <div class="petal petal-sm petal-4"><svg viewBox="0 0 20 20"><ellipse cx="10" cy="10" rx="8" ry="5" fill="#ffd1dc" transform="rotate(-10 10 10)"/></svg></div>
+            <div class="petal petal-md petal-5"><svg viewBox="0 0 20 20"><ellipse cx="10" cy="10" rx="8" ry="5" fill="#ffb7c5" transform="rotate(60 10 10)"/></svg></div>
+            <div class="petal petal-lg petal-6"><svg viewBox="0 0 20 20"><ellipse cx="10" cy="10" rx="8" ry="5" fill="#ffc0cb" transform="rotate(-40 10 10)"/></svg></div>
+            <div class="petal petal-sm petal-7"><svg viewBox="0 0 20 20"><ellipse cx="10" cy="10" rx="8" ry="5" fill="#ffb7c5" transform="rotate(15 10 10)"/></svg></div>
+            <div class="petal petal-md petal-8"><svg viewBox="0 0 20 20"><ellipse cx="10" cy="10" rx="8" ry="5" fill="#ffd1dc" transform="rotate(-30 10 10)"/></svg></div>
+            <div class="petal petal-lg petal-9"><svg viewBox="0 0 20 20"><ellipse cx="10" cy="10" rx="8" ry="5" fill="#ffb7c5" transform="rotate(50 10 10)"/></svg></div>
+            <div class="petal petal-sm petal-10"><svg viewBox="0 0 20 20"><ellipse cx="10" cy="10" rx="8" ry="5" fill="#ffc0cb" transform="rotate(-15 10 10)"/></svg></div>
+        </div>
+
         <div class="container">
             <!-- 最新动态 -->
             {% if activities %}

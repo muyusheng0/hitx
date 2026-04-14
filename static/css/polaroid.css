@@ -1,0 +1,217 @@
+/**
+ * 宝丽来相框样式
+ * 用于相册展示，让每张照片像老式拍立得照片
+ */
+
+/* 宝丽来相框容器 */
+.polaroid-frame {
+    position: relative;
+    background: #f5f5f0;
+    padding: 12px 12px 45px 12px;
+    box-shadow:
+        0 4px 8px rgba(0,0,0,0.3),
+        0 0 1px rgba(0,0,0,0.2);
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+/* 底部日期标签 - 泛黄效果 */
+.polaroid-frame::after {
+    content: attr(data-date);
+    position: absolute;
+    bottom: 10px;
+    left: 12px;
+    font-family: 'ZCOOL XiaoWei', serif;
+    font-size: 0.75rem;
+    color: #8b7355;
+    letter-spacing: 1px;
+}
+
+/* 照片区域 */
+.polaroid-photo {
+    width: 100%;
+    aspect-ratio: 1;
+    overflow: hidden;
+    background: #ddd;
+    position: relative;
+}
+
+.polaroid-photo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: all 0.4s ease;
+    filter: sepia(0.1) contrast(1.05);
+}
+
+/* 悬停效果 - 照片抽出来变大 */
+.polaroid-frame:hover {
+    transform: rotate(-2deg) scale(1.03);
+    box-shadow:
+        0 12px 24px rgba(0,0,0,0.4),
+        0 0 2px rgba(0,0,0,0.2);
+    z-index: 10;
+}
+
+.polaroid-frame:hover .polaroid-photo img {
+    transform: scale(1.08);
+    filter: sepia(0.15) contrast(1.1);
+}
+
+/* 随机倾斜角度 - 模拟散落的老照片 */
+.polaroid-frame:nth-child(odd) {
+    transform: rotate(-1deg);
+}
+.polaroid-frame:nth-child(even) {
+    transform: rotate(1.5deg);
+}
+.polaroid-frame:nth-child(3n) {
+    transform: rotate(-2deg);
+}
+.polaroid-frame:nth-child(5n) {
+    transform: rotate(0.5deg);
+}
+
+/* 悬停时重置旋转并放大 */
+.polaroid-frame:hover {
+    transform: rotate(-1deg) scale(1.05);
+}
+
+/* 相册网格布局 - Masonry风格 */
+.polaroid-gallery {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 24px;
+    padding: 20px;
+}
+
+@media (min-width: 768px) {
+    .polaroid-gallery {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (min-width: 1024px) {
+    .polaroid-gallery {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+/* 入场动画 */
+@keyframes polaroid-enter {
+    from {
+        opacity: 0;
+        transform: translateY(30px) rotate(-3deg);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) rotate(var(--rotate, 0deg));
+    }
+}
+
+.polaroid-frame {
+    --rotate: 0deg;
+    animation: polaroid-enter 0.5s ease-out backwards;
+}
+
+.polaroid-frame:nth-child(1) { animation-delay: 0.05s; }
+.polaroid-frame:nth-child(2) { animation-delay: 0.1s; }
+.polaroid-frame:nth-child(3) { animation-delay: 0.15s; }
+.polaroid-frame:nth-child(4) { animation-delay: 0.2s; }
+.polaroid-frame:nth-child(5) { animation-delay: 0.25s; }
+.polaroid-frame:nth-child(6) { animation-delay: 0.3s; }
+.polaroid-frame:nth-child(7) { animation-delay: 0.35s; }
+.polaroid-frame:nth-child(8) { animation-delay: 0.4s; }
+
+/* 灯箱样式 */
+.lightbox {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.95);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+}
+
+.lightbox.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+.lightbox-content {
+    position: relative;
+    max-width: 90vw;
+    max-height: 90vh;
+    background: #f5f5f0;
+    padding: 20px 20px 50px 20px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    transform: scale(0.8);
+    transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.lightbox.active .lightbox-content {
+    transform: scale(1);
+}
+
+.lightbox-content img {
+    max-width: 100%;
+    max-height: 80vh;
+    display: block;
+}
+
+.lightbox-title {
+    position: absolute;
+    bottom: 15px;
+    left: 20px;
+    right: 20px;
+    font-family: 'ZCOOL XiaoWei', serif;
+    color: #333;
+}
+
+.lightbox-close {
+    position: absolute;
+    top: -15px;
+    right: -15px;
+    width: 36px;
+    height: 36px;
+    background: #e74c3c;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    font-size: 20px;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.lightbox-close:hover {
+    transform: scale(1.1) rotate(90deg);
+}
+
+/* 投影仪光束效果 */
+.lightbox::before {
+    content: '';
+    position: absolute;
+    top: 10%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 60%;
+    height: 3px;
+    background: linear-gradient(90deg,
+        transparent,
+        rgba(255,248,220,0.1),
+        rgba(255,248,220,0.2),
+        rgba(255,248,220,0.1),
+        transparent
+    );
+    filter: blur(2px);
+}

@@ -5,9 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>相册 - 吉大自动化八班</title>
     <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/polaroid.css">
+    <link rel="stylesheet" href="/static/css/film-grain.css">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='80' font-size='80'>📖</text></svg>">
 </head>
 <body>
+    <!-- 胶片颗粒质感层 -->
+    <div class="film-grain-overlay"></div>
+
     <!-- 顶部标题栏 -->
     <header class="top-header">
         <h1 class="header-title">吉大<span>自动化</span>八班</h1>
@@ -28,13 +33,14 @@
                 <div class="upload-zone-text">点击上传照片（需验证身份）</div>
             </div>
 
-            <!-- 相册网格 -->
-            <div class="gallery-grid">
+            <!-- 相册网格 - 宝丽来风格 -->
+            <div class="polaroid-gallery">
                 {% if images %}
                 {% for img in images %}
-                <div class="gallery-item" onclick="showLightbox('{{ img.url }}')">
-                    <img src="{{ img.url }}" alt="{{ img.name }}">
-                    <div class="gallery-overlay">{{ img.name }}</div>
+                <div class="polaroid-frame" data-date="{{ img.time[:10] if img.time else '2024' }}" onclick="showLightbox('{{ img.url }}')">
+                    <div class="polaroid-photo">
+                        <img src="{{ img.url }}" alt="{{ img.name }}">
+                    </div>
                 </div>
                 {% endfor %}
                 {% else %}
@@ -75,10 +81,13 @@
         </a>
     </nav>
 
-    <!-- 灯箱 -->
+    <!-- 灯箱 - 老式投影仪风格 -->
     <div class="lightbox" id="lightbox" onclick="closeLightbox()">
         <button class="lightbox-close" onclick="closeLightbox()">✕</button>
-        <img id="lightboxImg" src="" alt="">
+        <div class="lightbox-content">
+            <img id="lightboxImg" src="" alt="">
+            <div class="lightbox-title" id="lightboxTitle"></div>
+        </div>
     </div>
 
     <!-- 验证模态框 -->

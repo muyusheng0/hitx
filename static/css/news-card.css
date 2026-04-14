@@ -1,0 +1,180 @@
+/**
+ * 新闻卡片 - 报纸剪报风格
+ * 泛黄纸张 + 印章日期 + 撕裂边缘
+ */
+
+/* 新闻列表容器 */
+.news-list {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    padding: 20px 0;
+}
+
+/* 剪报卡片 */
+.news-card {
+    position: relative;
+    background: linear-gradient(135deg, #f5f0e6 0%, #ebe4d4 100%);
+    padding: 20px;
+    border-radius: 2px;
+    box-shadow:
+        0 2px 8px rgba(0,0,0,0.15),
+        inset 0 0 30px rgba(139, 119, 101, 0.1);
+    transition: all 0.3s ease;
+    overflow: hidden;
+}
+
+/* 泛黄纸张纹理 */
+.news-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='paper'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.04' numOctaves='5' result='noise'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3CfeBlend in='SourceGraphic' in2='noise' mode='multiply'/%3E%3C/filter%3E%3Crect width='100' height='100' filter='url(%23paper)' opacity='0.03'/%3E%3C/svg%3E");
+    pointer-events: none;
+}
+
+/* 撕裂边缘效果 */
+.news-card::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -5px;
+    width: 10px;
+    height: 100%;
+    background: linear-gradient(90deg,
+        transparent,
+        rgba(139, 119, 101, 0.1) 2px,
+        transparent 4px
+    );
+    filter: blur(1px);
+}
+
+/* 悬停效果 - 像从墙上取下 */
+.news-card:hover {
+    transform: translateY(-3px) rotate(0.5deg);
+    box-shadow:
+        0 8px 25px rgba(0,0,0,0.25),
+        inset 0 0 30px rgba(139, 119, 101, 0.05);
+}
+
+/* 新闻图片区域 */
+.news-image {
+    position: relative;
+    width: 120px;
+    height: 80px;
+    float: right;
+    margin: 0 0 15px 20px;
+    overflow: hidden;
+    border: 3px solid #fff;
+    box-shadow:
+        0 2px 8px rgba(0,0,0,0.2),
+        inset 0 0 5px rgba(0,0,0,0.1);
+}
+
+.news-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    filter: sepia(0.2) contrast(1.05);
+    transition: transform 0.3s ease;
+}
+
+.news-card:hover .news-image img {
+    transform: scale(1.1);
+}
+
+/* 日期印章 - 红色印章样式 */
+.news-date-stamp {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    font-family: 'ZCOOL XiaoWei', serif;
+    font-size: 0.7rem;
+    color: #c0392b;
+    border: 2px solid #c0392b;
+    padding: 2px 6px;
+    border-radius: 3px;
+    transform: rotate(-5deg);
+    opacity: 0.8;
+    background: rgba(255,255,255,0.5);
+}
+
+.news-date-stamp::before {
+    content: '📅 ';
+    margin-right: 2px;
+}
+
+/* 新闻内容 */
+.news-content {
+    position: relative;
+    z-index: 1;
+    padding-right: 140px; /* 为图片留空间 */
+}
+
+.news-title {
+    font-family: 'ZCOOL XiaoWei', serif;
+    font-size: 1.1rem;
+    color: #2c3e50;
+    margin: 0 0 8px 0;
+    line-height: 1.4;
+    font-weight: normal;
+}
+
+.news-desc {
+    font-size: 0.85rem;
+    color: #5d6d7e;
+    line-height: 1.6;
+    margin: 0 0 10px 0;
+    /* 多行截断 */
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+/* 来源 - 打字机字体效果 */
+.news-source {
+    font-family: 'Courier New', monospace;
+    font-size: 0.7rem;
+    color: #7f8c8d;
+    letter-spacing: 0.5px;
+}
+
+/* 入场动画 */
+@keyframes news-clip-in {
+    from {
+        opacity: 0;
+        transform: translateX(-20px) rotate(-1deg);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0) rotate(0deg);
+    }
+}
+
+.news-card {
+    animation: news-clip-in 0.5s ease-out backwards;
+}
+
+.news-card:nth-child(1) { animation-delay: 0.05s; }
+.news-card:nth-child(2) { animation-delay: 0.1s; }
+.news-card:nth-child(3) { animation-delay: 0.15s; }
+.news-card:nth-child(4) { animation-delay: 0.2s; }
+.news-card:nth-child(5) { animation-delay: 0.25s; }
+.news-card:nth-child(6) { animation-delay: 0.3s; }
+
+/* 响应式 */
+@media (max-width: 600px) {
+    .news-image {
+        float: none;
+        width: 100%;
+        height: 150px;
+        margin: 0 0 15px 0;
+    }
+    .news-content {
+        padding-right: 0;
+    }
+}
