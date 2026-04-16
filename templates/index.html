@@ -6,12 +6,122 @@
     <title>吉大自动化八班 - 同学录</title>
     <link rel="stylesheet" href="/static/css/style.css">
     <link rel="stylesheet" href="/static/css/film-grain.css">
+    <link rel="stylesheet" href="/static/css/sakura.css">
     <link rel="stylesheet" href="/static/css/bento.css">
+    <link rel="stylesheet" href="/static/css/ambient-bg.css">
+    <link rel="stylesheet" href="/static/css/special-effects.css">
+    <link rel="stylesheet" href="/static/css/interactions.css">
+    <link rel="stylesheet" href="/static/css/night-mode.css">
+    <link rel="stylesheet" href="/static/css/timeline-vintage.css">
+    <link rel="stylesheet" href="/static/css/timeline-play.css">
+    <link rel="stylesheet" href="/static/css/activities-grand.css">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='80' font-size='80'>📖</text></svg>">
 </head>
 <body>
     <!-- 胶片颗粒质感层 -->
     <div class="film-grain-overlay"></div>
+
+    <!-- 氛围背景层 -->
+    <div class="ambient-bg-container">
+        <!-- 星空 -->
+        <div class="starfield">
+            <div class="star small"></div><div class="star medium"></div><div class="star large"></div>
+            <div class="star small"></div><div class="star medium"></div><div class="star small"></div>
+            <div class="star large"></div><div class="star small"></div><div class="star medium"></div>
+            <div class="star small"></div><div class="star medium"></div><div class="star small"></div>
+            <div class="star medium"></div><div class="star large"></div><div class="star small"></div>
+        </div>
+        <!-- 萤火虫 -->
+        <div class="fireflies">
+            <div class="firefly"></div><div class="firefly"></div><div class="firefly"></div>
+            <div class="firefly"></div><div class="firefly"></div><div class="firefly"></div>
+            <div class="firefly"></div><div class="firefly"></div>
+        </div>
+        <!-- 光晕 -->
+        <div class="ambient-glow warm"></div>
+        <div class="ambient-glow cool"></div>
+        <div class="ambient-glow accent"></div>
+        <!-- 云影 -->
+        <div class="clouds">
+            <div class="cloud"></div><div class="cloud"></div><div class="cloud"></div>
+            <div class="cloud"></div><div class="cloud"></div>
+        </div>
+    </div>
+
+    <!-- Opening 吉大时光胶囊动画 -->
+    <div class="opening-cinematic" id="openingCinematic">
+        <!-- 跳过按钮 -->
+        <button class="opening-skip" onclick="skipOpening()">跳过动画</button>
+
+        <!-- 流星 -->
+        <div class="opening-shooting-stars">
+            <div class="opening-shooting-star"></div>
+            <div class="opening-shooting-star"></div>
+            <div class="opening-shooting-star"></div>
+        </div>
+
+        <!-- 星空粒子背景 -->
+        <div class="opening-stars-container">
+            <div class="opening-star" style="left: 10%; top: 20%; --duration: 3s; --delay: 0s;"></div>
+            <div class="opening-star" style="left: 20%; top: 40%; --duration: 4s; --delay: 0.5s;"></div>
+            <div class="opening-star" style="left: 30%; top: 10%; --duration: 3.5s; --delay: 0.2s;"></div>
+            <div class="opening-star" style="left: 40%; top: 50%; --duration: 5s; --delay: 0.8s;"></div>
+            <div class="opening-star" style="left: 50%; top: 30%; --duration: 3s; --delay: 0.3s;"></div>
+            <div class="opening-star" style="left: 60%; top: 60%; --duration: 4.5s; --delay: 0.1s;"></div>
+            <div class="opening-star" style="left: 70%; top: 15%; --duration: 3s; --delay: 0.7s;"></div>
+            <div class="opening-star" style="left: 80%; top: 45%; --duration: 4s; --delay: 0.4s;"></div>
+            <div class="opening-star" style="left: 90%; top: 25%; --duration: 3.5s; --delay: 0.6s;"></div>
+            <div class="opening-star" style="left: 15%; top: 70%; --duration: 4s; --delay: 1s;"></div>
+            <div class="opening-star" style="left: 25%; top: 85%; --duration: 3s; --delay: 0.9s;"></div>
+            <div class="opening-star" style="left: 35%; top: 55%; --duration: 5s; --delay: 0.2s;"></div>
+            <div class="opening-star" style="left: 45%; top: 75%; --duration: 3.5s; --delay: 0.5s;"></div>
+            <div class="opening-star" style="left: 55%; top: 90%; --duration: 4s; --delay: 1.2s;"></div>
+            <div class="opening-star" style="left: 65%; top: 35%; --duration: 3s; --delay: 0.4s;"></div>
+            <div class="opening-star" style="left: 75%; top: 80%; --duration: 4.5s; --delay: 0.7s;"></div>
+            <div class="opening-star" style="left: 85%; top: 65%; --duration: 3.5s; --delay: 0.3s;"></div>
+            <div class="opening-star" style="left: 95%; top: 50%; --duration: 4s; --delay: 0.8s;"></div>
+        </div>
+
+        <!-- 光幕效果 -->
+        <div class="opening-light-curtain"></div>
+
+        <!-- 中心光晕 -->
+        <div class="opening-center-glow"></div>
+
+        <!-- 主内容区 -->
+        <div class="opening-content">
+            <!-- 校徽/图标 -->
+            <div class="opening-emblem">
+                <img src="/static/imgs/jlu-emblem.svg" alt="吉林大学校徽" class="jlu-emblem-img">
+            </div>
+
+            <!-- 主标题 -->
+            <div class="opening-title">
+                <h1>吉大自动化八班</h1>
+            </div>
+
+            <!-- 副标题 - 打字机效果 -->
+            <div class="opening-subtitle">
+                <span class="typing-text">青春不散场，友谊永长存</span>
+            </div>
+
+            <!-- 年份线 -->
+            <div class="opening-timeline">
+                <span class="opening-year-text">2015</span>
+                <div class="opening-year-line"></div>
+                <div class="opening-year-dot"></div>
+                <div class="opening-year-line"></div>
+                <div class="opening-year-dot"></div>
+                <div class="opening-year-line"></div>
+                <span class="opening-year-text">2026</span>
+            </div>
+        </div>
+
+        <!-- 进度条 -->
+        <div class="opening-progress">
+            <div class="opening-progress-bar"></div>
+        </div>
+    </div>
 
     <!-- 顶部标题栏 -->
     <header class="top-header fade-in-up">
@@ -19,25 +129,82 @@
         <div id="userStatus" class="user-status"></div>
     </header>
 
+    <!-- Hero区域 -->
+    <section class="hero-section" id="heroSection">
+        <div class="hero-gradient-overlay"></div>
+        <div class="hero-glow"></div>
+        <div class="hero-content">
+            <div class="hero-card">
+                <div class="hero-badge">🎓 同窗之谊 · 青春不散</div>
+                <h1 class="hero-title">吉大自动化<span>八班</span></h1>
+                <p class="hero-subtitle">珍藏十年记忆 · 延续一世情缘</p>
+                <div class="hero-meta">
+                    <span class="hero-location">📍 吉林大学南岭校区</span>
+                    <span class="hero-year">📅 2015级</span>
+                </div>
+            </div>
+            <div class="hero-stats">
+                <div class="hero-stat scroll-reveal">
+                    <div class="stat-number" id="studentCount">--</div>
+                    <div class="stat-label">同窗好友</div>
+                </div>
+                <div class="hero-stat scroll-reveal">
+                    <div class="stat-number" id="photoCount">--</div>
+                    <div class="stat-label">珍贵照片</div>
+                </div>
+                <div class="hero-stat scroll-reveal">
+                    <div class="stat-number" id="messageCount">--</div>
+                    <div class="stat-label">温暖留言</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 下滑提示 -->
+        <div class="scroll-hint" id="scrollHint">
+            <div class="scroll-hint-content">
+                <span class="scroll-hint-text">下滑探索更多</span>
+                <div class="scroll-hint-arrow">
+                    <svg viewBox="0 0 24 24" width="24" height="24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 5L12 19M12 19L6 13M12 19L18 13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </div>
+            </div>
+        </div>
+    </section>
+
     <!-- 主内容 -->
     <main class="main-content">
         <!-- 杏花瓣飘落动效 -->
         <div class="sakura-container">
-            <div class="petal petal-sm petal-1"><svg viewBox="0 0 20 20"><ellipse cx="10" cy="10" rx="8" ry="5" fill="#ffb7c5" transform="rotate(30 10 10)"/></svg></div>
-            <div class="petal petal-md petal-2"><svg viewBox="0 0 20 20"><ellipse cx="10" cy="10" rx="8" ry="5" fill="#ffc0cb" transform="rotate(-20 10 10)"/></svg></div>
-            <div class="petal petal-lg petal-3"><svg viewBox="0 0 20 20"><ellipse cx="10" cy="10" rx="8" ry="5" fill="#ffb7c5" transform="rotate(45 10 10)"/></svg></div>
-            <div class="petal petal-sm petal-4"><svg viewBox="0 0 20 20"><ellipse cx="10" cy="10" rx="8" ry="5" fill="#ffd1dc" transform="rotate(-10 10 10)"/></svg></div>
-            <div class="petal petal-md petal-5"><svg viewBox="0 0 20 20"><ellipse cx="10" cy="10" rx="8" ry="5" fill="#ffb7c5" transform="rotate(60 10 10)"/></svg></div>
-            <div class="petal petal-lg petal-6"><svg viewBox="0 0 20 20"><ellipse cx="10" cy="10" rx="8" ry="5" fill="#ffc0cb" transform="rotate(-40 10 10)"/></svg></div>
-            <div class="petal petal-sm petal-7"><svg viewBox="0 0 20 20"><ellipse cx="10" cy="10" rx="8" ry="5" fill="#ffb7c5" transform="rotate(15 10 10)"/></svg></div>
-            <div class="petal petal-md petal-8"><svg viewBox="0 0 20 20"><ellipse cx="10" cy="10" rx="8" ry="5" fill="#ffd1dc" transform="rotate(-30 10 10)"/></svg></div>
-            <div class="petal petal-lg petal-9"><svg viewBox="0 0 20 20"><ellipse cx="10" cy="10" rx="8" ry="5" fill="#ffb7c5" transform="rotate(50 10 10)"/></svg></div>
-            <div class="petal petal-sm petal-10"><svg viewBox="0 0 20 20"><ellipse cx="10" cy="10" rx="8" ry="5" fill="#ffc0cb" transform="rotate(-15 10 10)"/></svg></div>
+            <div class="petal petal-1"><svg viewBox="0 0 20 20"><ellipse cx="10" cy="10" rx="8" ry="5" fill="#ffb7c5" transform="rotate(30 10 10)"/></svg></div>
+            <div class="petal petal-2"><svg viewBox="0 0 20 20"><ellipse cx="10" cy="10" rx="8" ry="5" fill="#ffc0cb" transform="rotate(-20 10 10)"/></svg></div>
+            <div class="petal petal-3"><svg viewBox="0 0 20 20"><ellipse cx="10" cy="10" rx="8" ry="5" fill="#ffb7c5" transform="rotate(45 10 10)"/></svg></div>
+            <div class="petal petal-4"><svg viewBox="0 0 20 20"><ellipse cx="10" cy="10" rx="8" ry="5" fill="#ffd1dc" transform="rotate(-10 10 10)"/></svg></div>
+            <div class="petal petal-5"><svg viewBox="0 0 20 20"><ellipse cx="10" cy="10" rx="8" ry="5" fill="#ffb7c5" transform="rotate(60 10 10)"/></svg></div>
+            <div class="petal petal-6"><svg viewBox="0 0 20 20"><ellipse cx="10" cy="10" rx="8" ry="5" fill="#ffc0cb" transform="rotate(-40 10 10)"/></svg></div>
+            <div class="petal petal-7"><svg viewBox="0 0 20 20"><ellipse cx="10" cy="10" rx="8" ry="5" fill="#ffb7c5" transform="rotate(15 10 10)"/></svg></div>
+            <div class="petal petal-8"><svg viewBox="0 0 20 20"><ellipse cx="10" cy="10" rx="8" ry="5" fill="#ffd1dc" transform="rotate(-30 10 10)"/></svg></div>
+            <div class="petal petal-9"><svg viewBox="0 0 20 20"><ellipse cx="10" cy="10" rx="8" ry="5" fill="#ffb7c5" transform="rotate(50 10 10)"/></svg></div>
+            <div class="petal petal-10"><svg viewBox="0 0 20 20"><ellipse cx="10" cy="10" rx="8" ry="5" fill="#ffc0cb" transform="rotate(-15 10 10)"/></svg></div>
         </div>
 
         <div class="container">
+            <!-- 未登录提示 -->
+            {% if not logged_in %}
+            <div class="index-login-prompt">
+                <div class="index-login-card">
+                    <div class="index-login-icon">🔒</div>
+                    <h3>登录解锁更多精彩</h3>
+                    <p>登录后可查看：最新动态、留言信件、时光相册</p>
+                    <button class="index-login-btn" onclick="window.location.href='/about'">
+                        <span>🔑</span> 立即登录
+                    </button>
+                </div>
+            </div>
+            {% endif %}
+
             <!-- 最新动态 -->
-            {% if activities %}
+            {% if logged_in and activities %}
             <section class="latest-activities fade-in-up">
                 <h2 class="section-title">📅 最新动态<span id="unreadBadge" class="unread-badge" style="display:none;">0</span></h2>
                 <p class="section-hint">👇 点击卡片查看详情</p>
@@ -84,30 +251,22 @@
             </section>
             {% endif %}
 
-            <!-- 最新留言 -->
-            <section class="recent-messages">
-                <h2 class="section-title" onclick="window.location.href='/lyb'" style="cursor:pointer;">📝 最新留言</h2>
-                <p class="section-hint">👇 点击查看更多留言</p>
-                <div class="message-list">
-                    {% for msg in recent_messages %}
-                    <div class="message-item" onclick="window.location.href='/lyb#msg-{{ msg.id }}'" style="cursor:pointer;">
-                        <div class="message-nickname">{{ msg.nickname }}</div>
-                        <div class="message-content">{{ msg.content }}</div>
-                        {% if msg.image %}
-                        <img src="{{ msg.image }}" style="max-width: 150px; max-height: 150px; margin-top: 10px; border-radius: 8px; display: block;">
-                        {% endif %}
-                        <div class="message-time">{{ msg.time }}</div>
-                    </div>
-                    {% else %}
-                    <div class="empty-message">还没有留言，快去写下第一句吧~</div>
-                    {% endfor %}
-                </div>
-            </section>
-
             <!-- 时光轴 -->
+            {% if logged_in %}
             <section class="timeline-section">
                 <h2 class="section-title">我们的时光</h2>
-                <p class="section-hint">👆 可在媒体相册中上传照片</p>
+                <div class="timeline-controls">
+                    <button class="timeline-play-btn" id="timelinePlayBtn" onclick="toggleTimelinePlay()">
+                        <span class="play-icon">▶</span>
+                        <span class="play-text">时光播放</span>
+                    </button>
+                    <button class="timeline-reset-btn" id="timelineResetBtn" onclick="resetTimeline()" style="display:none;">
+                        <span>↺</span> 重置
+                    </button>
+                </div>
+                <p class="section-hint">👆 点击「时光播放」开启回忆之旅</p>
+                <!-- 时光粒子特效层 -->
+                <div class="timeline-particles" id="timelineParticles"></div>
                 <div class="timeline">
                     <div class="timeline-item">
                         <div class="timeline-year">2015年 秋</div>
@@ -220,7 +379,9 @@
                         {% endif %}
                     </div>
                 </div>
+                <p class="timeline-upload-tip">📸 在<a href="/media" style="color: #d4a574; font-weight: 500;">媒体相册</a>上传照片，会自动出现在时光里哦~</p>
             </section>
+            {% endif %}
         </div>
     </main>
 
@@ -242,7 +403,7 @@
         </a>
         <a href="/lyb" class="tab-item">
             <span class="tab-icon">💬</span>
-            <span class="tab-label">留言板</span>
+            <span class="tab-label">留言信件</span>
         </a>
         <a href="/media" class="tab-item">
             <span class="tab-icon">📷</span>
@@ -347,5 +508,614 @@
     <button id="backToTopBtn" class="back-to-top" onclick="scrollToTop()">↑</button>
     <!-- 页面底部提示 -->
     <div id="pageEndMessage" class="page-end-message">已加载全部内容</div>
+
+    <!-- 夜间模式切换 -->
+    <button class="night-mode-toggle" id="nightModeToggle" onclick="toggleNightMode()" title="切换夜间模式"></button>
+    <!-- 季节装饰容器 -->
+    <div class="corner-decor top-right" id="seasonalDecor"></div>
+
+    <script>
+        // Opening 吉大时光胶囊动画
+        let openingTimeout = null;
+
+        function skipOpening() {
+            const cinematic = document.getElementById('openingCinematic');
+            if (cinematic) {
+                cinematic.classList.add('done');
+                if (openingTimeout) {
+                    clearTimeout(openingTimeout);
+                    openingTimeout = null;
+                }
+            }
+        }
+
+        function playOpeningAnimation() {
+            const cinematic = document.getElementById('openingCinematic');
+            if (cinematic) {
+                // 每次都显示开场动画
+                setTimeout(() => {
+                    cinematic.classList.add('animate');
+                    // 动画结束后隐藏
+                    openingTimeout = setTimeout(() => {
+                        cinematic.classList.add('done');
+                    }, 3500);
+                }, 300);
+            }
+        }
+
+        // IntersectionObserver 滚动淡入动画
+        function initScrollReveal() {
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('revealed');
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, {
+                threshold: 0.1,
+                rootMargin: '0px 0px -50px 0px'
+            });
+
+            document.querySelectorAll('.scroll-reveal').forEach(el => {
+                observer.observe(el);
+            });
+        }
+
+        // 下滑提示隐藏逻辑
+        function initScrollHint() {
+            const scrollHint = document.getElementById('scrollHint');
+            if (!scrollHint) return;
+
+            let hasHidden = false;
+            function hideHint() {
+                if (hasHidden) return;
+                const heroSection = document.getElementById('heroSection');
+                if (heroSection) {
+                    const heroBottom = heroSection.getBoundingClientRect().bottom;
+                    if (window.scrollY > heroBottom * 0.3) {
+                        hasHidden = true;
+                        scrollHint.classList.add('hidden');
+                    }
+                }
+            }
+
+            window.addEventListener('scroll', hideHint, { passive: true });
+            // 也用 IntersectionObserver 监听
+            const heroObserver = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (!entry.isIntersecting) {
+                        hasHidden = true;
+                        scrollHint.classList.add('hidden');
+                    }
+                });
+            }, { threshold: 0 });
+            const heroSection = document.getElementById('heroSection');
+            if (heroSection) {
+                heroObserver.observe(heroSection);
+            }
+        }
+
+        // 获取统计数据
+        function fetchHeroStats() {
+            fetch('/api/stats')
+                .then(r => r.json())
+                .then(data => {
+                    animateNumber('studentCount', data.students || 0);
+                    animateNumber('messageCount', data.messages || 0);
+                    animateNumber('photoCount', data.photos || 0);
+                })
+                .catch(() => {
+                    document.getElementById('studentCount').textContent = '30+';
+                    document.getElementById('messageCount').textContent = '100+';
+                    document.getElementById('photoCount').textContent = '200+';
+                });
+        }
+
+        // 数字动画
+        function animateNumber(elementId, target) {
+            const el = document.getElementById(elementId);
+            if (!el) return;
+            const duration = 1500;
+            const start = 0;
+            const startTime = performance.now();
+
+            function update(currentTime) {
+                const elapsed = currentTime - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                const easeOut = 1 - Math.pow(1 - progress, 3);
+                const current = Math.round(start + (target - start) * easeOut);
+                el.textContent = current + (target > 50 ? '+' : '');
+
+                if (progress < 1) {
+                    requestAnimationFrame(update);
+                }
+            }
+            requestAnimationFrame(update);
+        }
+
+        // 夜间模式
+        function toggleNightMode() {
+            document.body.classList.toggle('night-mode');
+            localStorage.setItem('nightMode', document.body.classList.contains('night-mode'));
+        }
+
+        // 页面加载时恢复夜间模式
+        if (localStorage.getItem('nightMode') === 'true') {
+            document.body.classList.add('night-mode');
+        }
+
+        // 季节装饰
+        function loadSeasonalDecor() {
+            const decor = document.getElementById('seasonalDecor');
+            if (!decor) return;
+            const month = new Date().getMonth();
+            if (month === 11 || month === 0 || month === 1) {
+                // 冬季 - 雪花
+                decor.innerHTML = '<div class="snowflakes">' +
+                    '<div class="snowflake">❄</div><div class="snowflake">❄</div>' +
+                    '<div class="snowflake">❄</div><div class="snowflake">❄</div>' +
+                    '<div class="snowflake">❄</div><div class="snowflake">❄</div>' +
+                    '<div class="snowflake">❄</div><div class="snowflake">❄</div>' +
+                    '<div class="snowflake">❄</div><div class="snowflake">❄</div>' +
+                    '</div>';
+            } else if (month >= 1 && month <= 2) {
+                // 春节期间 - 灯笼
+                decor.innerHTML = '<div class="lantern-string">' +
+                    '<div class="lantern"><div class="lantern-body"></div><div class="lantern-tassel"></div></div>' +
+                    '<div class="lantern"><div class="lantern-body"></div><div class="lantern-tassel"></div></div>' +
+                    '<div class="lantern"><div class="lantern-body"></div><div class="lantern-tassel"></div></div>' +
+                    '<div class="lantern"><div class="lantern-body"></div><div class="lantern-tassel"></div></div>' +
+                    '<div class="lantern"><div class="lantern-body"></div><div class="lantern-tassel"></div></div>' +
+                    '</div>';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            playOpeningAnimation();
+            loadSeasonalDecor();
+            initScrollReveal();
+            initScrollHint();
+            fetchHeroStats();
+            initTimelinePlay();
+        });
+        
+        // ===== 时光播放功能 =====
+        let timelinePlaying = false;
+        let timelineTimeouts = [];
+        let currentTimelineIndex = 0;
+        let timelineAudio = null;
+        let timelineBgMusicUrl = null;
+
+        async function fetchTimelineBgMusic() {
+            try {
+                const res = await fetch('/api/music/bg');
+                const data = await res.json();
+                if (data.success && data.timeline) {
+                    timelineBgMusicUrl = data.timeline;
+                    return timelineBgMusicUrl;
+                }
+            } catch (e) {
+                console.log('获取时光播放背景音乐失败');
+            }
+            return null;
+        }
+
+        function initTimelinePlay() {
+            const items = document.querySelectorAll('.timeline-item');
+            const photos = document.querySelectorAll('.timeline-photos img');
+
+            // 初始可见状态（不隐藏）
+            items.forEach((item, idx) => {
+                item.dataset.timelineIndex = idx;
+            });
+
+            // 图片设置序号
+            photos.forEach((img, idx) => {
+                img.style.setProperty('--photo-index', idx);
+            });
+
+            // 预加载背景音乐
+            fetchTimelineBgMusic();
+        }
+        
+        function toggleTimelinePlay() {
+            if (timelinePlaying) {
+                stopTimelinePlay();
+            } else {
+                startTimelinePlay();
+            }
+        }
+        
+        function startTimelinePlay() {
+            timelinePlaying = true;
+            currentTimelineIndex = 0;
+            
+            const btn = document.getElementById('timelinePlayBtn');
+            const resetBtn = document.getElementById('timelineResetBtn');
+            const particles = document.getElementById('timelineParticles');
+            const items = document.querySelectorAll('.timeline-item');
+            
+            // 先隐藏所有节点，准备动画
+            items.forEach((item, idx) => {
+                item.classList.add('timeline-hidden');
+                item.classList.remove('timeline-done', 'timeline-current', 'timeline-reveal');
+            });
+            
+            // 更新按钮状态
+            btn.classList.add('playing');
+            btn.querySelector('.play-icon').textContent = '⏸';
+            btn.querySelector('.play-text').textContent = '暂停播放';
+            resetBtn.style.display = 'inline-flex';
+            
+            // 启动粒子效果
+            particles.classList.add('active');
+            createParticles();
+            
+            // 创建进度条
+            createProgressBar();
+
+            // 播放背景音乐
+            if (timelineBgMusicUrl) {
+                if (!timelineAudio) {
+                    timelineAudio = new Audio(timelineBgMusicUrl);
+                    timelineAudio.loop = true;
+                    timelineAudio.volume = 0.4;
+                }
+                timelineAudio.play().catch(() => {});
+            }
+
+            // 逐个展示时光节点
+            const nodeInterval = 3000; // 每个节点3秒
+            const duration = items.length * nodeInterval;
+            items.forEach((item, idx) => {
+                const timeout = setTimeout(() => {
+                    revealTimelineItem(item, idx, items.length);
+
+                    // 更新进度条
+                    const progress = ((idx + 1) / items.length) * 100;
+                    updateProgressBar(progress);
+
+                    currentTimelineIndex = idx;
+
+                    // 播放完成
+                    if (idx === items.length - 1) {
+                        setTimeout(() => {
+                            finishTimelinePlay();
+                        }, 2000);
+                    }
+                }, idx * nodeInterval);
+
+                timelineTimeouts.push(timeout);
+            });
+        }
+        
+        function stopTimelinePlay() {
+            timelinePlaying = false;
+            
+            // 清除所有定时器
+            timelineTimeouts.forEach(t => clearTimeout(t));
+            timelineTimeouts = [];
+            
+            const btn = document.getElementById('timelinePlayBtn');
+            btn.classList.remove('playing');
+            btn.querySelector('.play-icon').textContent = '▶';
+            btn.querySelector('.play-text').textContent = '时光播放';
+            
+            // 停止粒子
+            stopParticles();
+
+            // 停止背景音乐
+            if (timelineAudio) {
+                timelineAudio.pause();
+                timelineAudio.currentTime = 0;
+            }
+        }
+        
+        function resetTimeline() {
+            stopTimelinePlay();
+            
+            const items = document.querySelectorAll('.timeline-item');
+            items.forEach(item => {
+                item.classList.remove('timeline-reveal', 'timeline-current', 'timeline-done', 'timeline-hidden');
+            });
+            
+            const resetBtn = document.getElementById('timelineResetBtn');
+            resetBtn.style.display = 'none';
+            
+            const progress = document.querySelector('.timeline-progress');
+            if (progress) {
+                progress.remove();
+            }
+            
+            currentTimelineIndex = 0;
+        }
+        
+        function revealTimelineItem(item, index, total) {
+            item.classList.remove('timeline-hidden');
+            item.classList.add('timeline-reveal', 'timeline-current');
+
+            // 滚动到当前节点
+            item.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+            // 创建向当前节点掉落的星星特效
+            createFallingStars(item);
+
+            // 移除上一个节点的高亮
+            const items = document.querySelectorAll('.timeline-item');
+            items.forEach((itm, i) => {
+                if (i < index) {
+                    itm.classList.remove('timeline-current');
+                    itm.classList.add('timeline-done');
+                }
+            });
+
+            // 2026最终章 - 特效升华
+            const isFinale = index === total - 1;
+            console.log('revealTimelineItem:', index, total, 'isFinale:', isFinale);
+            if (isFinale) {
+                triggerGrandFinale(item);
+            }
+
+            // 1秒后移除当前高亮
+            setTimeout(() => {
+                item.classList.remove('timeline-current');
+                item.classList.add('timeline-done');
+            }, isFinale ? 2000 : 1000);
+        }
+
+        function createFallingStars(targetItem) {
+            const container = document.getElementById('timelineParticles');
+            const itemRect = targetItem.getBoundingClientRect();
+            const targetY = itemRect.top + itemRect.height / 2;
+
+            // 创建5-8颗星星
+            const starCount = 5 + Math.floor(Math.random() * 4);
+            for (let i = 0; i < starCount; i++) {
+                const star = document.createElement('div');
+                star.className = 'particle-star';
+                star.textContent = '✨';
+                // 从屏幕顶部附近开始
+                star.style.left = (itemRect.left + Math.random() * itemRect.width) + 'px';
+                star.style.top = '-30px';
+                star.style.animation = `star-fall-to ${1.5 + Math.random()}s ease-in forwards`;
+                star.style.animationDelay = (i * 0.1) + 's';
+                star.style.zIndex = '1001';
+                container.appendChild(star);
+
+                // 动画结束后移除
+                setTimeout(() => {
+                    star.remove();
+                }, 3000 + i * 100);
+            }
+        }
+
+        function triggerGrandFinale(item) {
+            console.log('triggerGrandFinale called!', item);
+            // 1. 触发全屏闪光特效
+            createFullScreenFlash();
+
+            // 2. 年份文字特殊金色脉冲
+            const yearEl = item.querySelector('.timeline-year');
+            if (yearEl) {
+                yearEl.classList.add('timeline-year-finale');
+            }
+
+            // 3. 所有之前节点一起闪耀
+            const items = document.querySelectorAll('.timeline-item');
+            items.forEach((itm, i) => {
+                if (itm !== item) {
+                    itm.classList.add('timeline-done', 'timeline-celebrate');
+                }
+            });
+
+            // 4. 粒子数量暴增
+            createFinaleParticles();
+
+            // 5. 背景渐变
+            document.body.classList.add('timeline-finale-bg');
+
+            // 6. 添加庆祝音效
+            playCelebrationSound();
+
+            // 3秒后移除庆祝特效
+            setTimeout(() => {
+                items.forEach(itm => itm.classList.remove('timeline-celebrate'));
+                document.body.classList.remove('timeline-finale-bg');
+                const yearEl = item.querySelector('.timeline-year');
+                if (yearEl) yearEl.classList.remove('timeline-year-finale');
+            }, 3000);
+        }
+
+        function createFullScreenFlash() {
+            console.log('createFullScreenFlash called!');
+            const flash = document.createElement('div');
+            flash.className = 'timeline-flash';
+            document.body.appendChild(flash);
+            setTimeout(() => flash.remove(), 1000);
+        }
+
+        function createFinaleParticles() {
+            console.log('createFinaleParticles called!');
+            const container = document.getElementById('timelineParticles');
+            // 再加一批烟花粒子
+            for (let i = 0; i < 50; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle particle-finale';
+                particle.style.left = Math.random() * 100 + '%';
+                particle.style.top = Math.random() * 50 + '%';
+                particle.style.animationDelay = Math.random() * 2 + 's';
+                particle.style.animationDuration = (2 + Math.random() * 2) + 's';
+                particle.style.width = (10 + Math.random() * 10) + 'px';
+                particle.style.height = particle.style.width;
+                container.appendChild(particle);
+            }
+            // 庆祝星星
+            for (let i = 0; i < 20; i++) {
+                const star = document.createElement('div');
+                star.className = 'particle-star particle-star-finale';
+                star.textContent = ['✨', '⭐', '🌟', '💫'][Math.floor(Math.random() * 4)];
+                star.style.left = Math.random() * 100 + '%';
+                star.style.top = Math.random() * 60 + '%';
+                star.style.fontSize = (14 + Math.random() * 16) + 'px';
+                star.style.animationDelay = Math.random() * 2 + 's';
+                container.appendChild(star);
+            }
+        }
+
+        function playCelebrationSound() {
+            console.log('playCelebrationSound called!');
+            // 使用 Web Audio API 生成庆祝音效
+            try {
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const frequencies = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+                frequencies.forEach((freq, i) => {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.value = freq;
+                    gain.gain.setValueAtTime(0.1, audioCtx.currentTime + i * 0.15);
+                    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + i * 0.15 + 0.5);
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.start(audioCtx.currentTime + i * 0.15);
+                    osc.stop(audioCtx.currentTime + i * 0.15 + 0.5);
+                });
+            } catch (e) {
+                // 音频不可用，静默忽略
+            }
+        }
+
+        function finishTimelinePlay() {
+            timelinePlaying = false;
+
+            const btn = document.getElementById('timelinePlayBtn');
+            btn.classList.remove('playing');
+            btn.classList.add('playing-complete');
+            btn.querySelector('.play-icon').textContent = '✓';
+            btn.querySelector('.play-text').textContent = '时光永存';
+
+            setTimeout(() => {
+                btn.classList.remove('playing-complete');
+                btn.querySelector('.play-icon').textContent = '▶';
+                btn.querySelector('.play-text').textContent = '时光播放';
+            }, 4000);
+
+            // 保留粒子效果8秒后消失
+            setTimeout(() => {
+                stopParticles();
+            }, 8000);
+
+            // 淡出停止背景音乐
+            if (timelineAudio) {
+                timelineAudio.pause();
+                timelineAudio.currentTime = 0;
+            }
+        }
+        
+        function createParticles() {
+            const container = document.getElementById('timelineParticles');
+            
+            // 清空现有粒子
+            container.innerHTML = '';
+            
+            // 创建金色光点
+            for (let i = 0; i < 30; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.style.left = Math.random() * 100 + '%';
+                particle.style.animationDelay = Math.random() * 4 + 's';
+                particle.style.animationDuration = (3 + Math.random() * 2) + 's';
+                container.appendChild(particle);
+            }
+            
+            // 创建星星
+            for (let i = 0; i < 15; i++) {
+                const star = document.createElement('div');
+                star.className = 'particle-star';
+                star.textContent = '✨';
+                star.style.left = Math.random() * 100 + '%';
+                star.style.top = Math.random() * 100 + '%';
+                star.style.animationDelay = Math.random() * 3 + 's';
+                container.appendChild(star);
+            }
+        }
+        
+        function stopParticles() {
+            const particles = document.getElementById('timelineParticles');
+            particles.classList.remove('active');
+            
+            // 渐渐消失粒子
+            const children = particles.children;
+            Array.from(children).forEach(child => {
+                child.style.animationPlayState = 'paused';
+                child.style.opacity = '0';
+                child.style.transition = 'opacity 0.5s ease';
+            });
+        }
+        
+        function createProgressBar() {
+            const existing = document.querySelector('.timeline-progress');
+            if (existing) return;
+            
+            const progress = document.createElement('div');
+            progress.className = 'timeline-progress active';
+            progress.innerHTML = '<div class="timeline-progress-bar"></div>';
+            document.body.appendChild(progress);
+        }
+        
+        function updateProgressBar(percent) {
+            const bar = document.querySelector('.timeline-progress-bar');
+            if (bar) {
+                bar.style.width = percent + '%';
+            }
+        }
+        
+        function playChimeSound() {
+            // 播放悦耳的铃声效果 - 类似风铃
+            try {
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                
+                // 创建多个音符组成和弦 - C-E-G (C大调三和弦)
+                const notes = [523.25, 659.25, 783.99]; // C5, E5, G5
+                const duration = 0.8;
+                
+                notes.forEach((freq, index) => {
+                    const oscillator = audioCtx.createOscillator();
+                    const gainNode = audioCtx.createGain();
+                    
+                    oscillator.connect(gainNode);
+                    gainNode.connect(audioCtx.destination);
+                    
+                    oscillator.type = 'sine';
+                    oscillator.frequency.setValueAtTime(freq, audioCtx.currentTime + index * 0.05);
+                    
+                    // 更柔和的音量曲线
+                    gainNode.gain.setValueAtTime(0, audioCtx.currentTime + index * 0.05);
+                    gainNode.gain.linearRampToValueAtTime(0.15, audioCtx.currentTime + index * 0.05 + 0.1);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration + index * 0.05);
+                    
+                    oscillator.start(audioCtx.currentTime + index * 0.05);
+                    oscillator.stop(audioCtx.currentTime + duration + index * 0.05 + 0.1);
+                });
+                
+                // 添加一个高音泛音增加清脆感
+                const highNote = audioCtx.createOscillator();
+                const highGain = audioCtx.createGain();
+                highNote.connect(highGain);
+                highGain.connect(audioCtx.destination);
+                highNote.type = 'sine';
+                highNote.frequency.setValueAtTime(1046.5, audioCtx.currentTime + 0.15); // C6
+                highGain.gain.setValueAtTime(0, audioCtx.currentTime + 0.15);
+                highGain.gain.linearRampToValueAtTime(0.08, audioCtx.currentTime + 0.25);
+                highGain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.8);
+                highNote.start(audioCtx.currentTime + 0.15);
+                highNote.stop(audioCtx.currentTime + 0.9);
+                
+            } catch (e) {
+                // 音频API不可用时静默处理
+            }
+        }
+    </script>
 </body>
 </html>

@@ -250,16 +250,52 @@
 
 /* 响应式 */
 @media (max-width: 600px) {
+    .message-stamp {
+        margin-left: 0;
+        padding: 15px 15px 50px 15px;
+    }
+
+    /* 隐藏移动端的锯齿边缘 */
+    .message-stamp::before {
+        display: none;
+    }
+
     .message-content {
         padding-left: 0;
         margin-top: 45px;
     }
+
     .message-image {
         padding-left: 0;
     }
+
     .message-tags {
         position: static;
         margin-top: 15px;
-        padding-left: 52px;
+        padding-left: 0;
+        flex-wrap: wrap;
+    }
+
+    .message-like-btn {
+        left: 15px;
+        bottom: 12px;
+    }
+
+    .message-tags {
+        right: 15px;
+        bottom: 12px;
+    }
+}
+
+/* 移动端安全区域 - 防止溢出 */
+@media (max-width: 480px) {
+    .message-list {
+        padding: 15px 10px;
+    }
+
+    .message-stamp {
+        margin-left: 0;
+        width: calc(100% - 30px);
+        box-sizing: border-box;
     }
 }

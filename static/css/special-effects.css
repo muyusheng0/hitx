@@ -1,0 +1,550 @@
+/**
+ * 特殊时刻特效
+ * Opening欢迎动画、雪花、节日灯笼、彩屑等惊喜效果
+ */
+
+/* ==================== Opening 吉大时光胶囊动画 ==================== */
+.opening-cinematic {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 100000;
+    background: #0d0d1a;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+/* 简洁的星空背景 */
+.opening-stars-container {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+}
+
+.opening-star {
+    position: absolute;
+    background: #fff;
+    border-radius: 50%;
+    opacity: 0;
+}
+
+.opening-cinematic.animate .opening-star {
+    animation: star-twinkle var(--duration, 3s) ease-in-out infinite;
+    animation-delay: var(--delay, 0s);
+}
+
+@keyframes star-twinkle {
+    0%, 100% { opacity: 0.15; }
+    50% { opacity: 0.8; }
+}
+
+/* 流星 - 更简洁 */
+.opening-shooting-stars {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    pointer-events: none;
+}
+
+.opening-shooting-star {
+    position: absolute;
+    width: 100px;
+    height: 1px;
+    background: linear-gradient(90deg, rgba(255,255,255,0.6), transparent);
+    opacity: 0;
+}
+
+.opening-cinematic.animate .opening-shooting-star:nth-child(1) {
+    top: 15%; left: -10%;
+    animation: shooting-star 1.5s ease-out 1.5s forwards;
+}
+.opening-cinematic.animate .opening-shooting-star:nth-child(2) {
+    top: 40%; left: -10%;
+    animation: shooting-star 1.2s ease-out 2.8s forwards;
+}
+.opening-cinematic.animate .opening-shooting-star:nth-child(3) {
+    top: 60%; left: -10%;
+    animation: shooting-star 1.5s ease-out 4s forwards;
+}
+
+@keyframes shooting-star {
+    0% { transform: translateX(0) translateY(0) rotate(-30deg); opacity: 0; }
+    5% { opacity: 0.7; }
+    100% { transform: translateX(120vw) translateY(60vh) rotate(-30deg); opacity: 0; }
+}
+
+/* 跳过按钮 - 极简 */
+.opening-skip {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    padding: 8px 16px;
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 0.75rem;
+    cursor: pointer;
+    z-index: 100;
+    transition: all 0.2s ease;
+    letter-spacing: 1px;
+}
+
+.opening-skip:hover {
+    color: rgba(255, 255, 255, 0.8);
+    border-color: rgba(255, 255, 255, 0.4);
+}
+
+/* 中心光晕 - 更克制的冷色调 */
+.opening-center-glow {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 300px;
+    height: 300px;
+    border-radius: 50%;
+    background: radial-gradient(
+        circle at center,
+        rgba(100, 120, 180, 0.12) 0%,
+        transparent 70%
+    );
+    opacity: 0;
+}
+
+.opening-cinematic.animate .opening-center-glow {
+    animation: glow-pulse 4s ease-in-out infinite;
+}
+
+@keyframes glow-pulse {
+    0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.5; }
+    50% { transform: translate(-50%, -50%) scale(1.1); opacity: 0.8; }
+}
+
+/* 主内容区 */
+.opening-content {
+    position: relative;
+    text-align: center;
+    z-index: 10;
+    opacity: 0;
+    transform: translateY(20px);
+}
+
+.opening-cinematic.animate .opening-content {
+    animation: content-emerge 1.2s cubic-bezier(0.22, 1, 0.36, 1) 0.4s forwards;
+}
+
+@keyframes content-emerge {
+    0% { opacity: 0; transform: translateY(30px); }
+    100% { opacity: 1; transform: translateY(0); }
+}
+
+/* 校徽/图标 - 简洁金色线条 */
+.opening-emblem {
+    width: 80px;
+    height: 80px;
+    margin: 0 auto 2rem;
+    opacity: 0;
+    transform: scale(0.8);
+    filter: drop-shadow(0 0 20px rgba(201, 169, 110, 0.3));
+}
+
+.opening-cinematic.animate .opening-emblem {
+    animation: emblem-appear 0.8s cubic-bezier(0.22, 1, 0.36, 1) 0.3s forwards;
+}
+
+@keyframes emblem-appear {
+    0% { opacity: 0; transform: scale(0.6); }
+    100% { opacity: 1; transform: scale(1); }
+}
+
+.opening-emblem svg,
+.opening-emblem img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+/* 主标题 - 简洁白色 */
+.opening-title h1 {
+    font-family: 'ZCOOL XiaoWei', 'Noto Serif SC', serif;
+    font-size: 2.8rem;
+    font-weight: normal;
+    color: #ffffff;
+    letter-spacing: 8px;
+    margin-bottom: 0.8rem;
+    position: relative;
+    display: inline-block;
+}
+
+/* 副标题 */
+.opening-subtitle {
+    font-size: 1rem;
+    color: rgba(255, 255, 255, 0.5);
+    letter-spacing: 3px;
+    margin-top: 0.8rem;
+}
+
+.opening-subtitle .typing-text {
+    display: inline-block;
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+.opening-cinematic.animate .typing-text {
+    animation: typewriter 1.5s steps(20) 1.2s forwards;
+    width: 0;
+}
+
+@keyframes typewriter {
+    from { width: 0; }
+    to { width: 100%; }
+}
+
+/* 年份线 - 极简 */
+.opening-timeline {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1.5rem;
+    margin-top: 2rem;
+    opacity: 0;
+}
+
+.opening-cinematic.animate .opening-timeline {
+    animation: timeline-fade 0.8s ease 2s forwards;
+}
+
+@keyframes timeline-fade {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.opening-year-dot {
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: rgba(201, 169, 110, 0.6);
+}
+
+.opening-year-line {
+    width: 40px;
+    height: 1px;
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.opening-year-text {
+    font-family: 'ZCOOL XiaoWei', serif;
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.35);
+    letter-spacing: 2px;
+}
+
+/* 进度条 - 极简 */
+.opening-progress {
+    position: absolute;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 120px;
+    height: 2px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 1px;
+    overflow: hidden;
+}
+
+.opening-progress-bar {
+    height: 100%;
+    background: rgba(201, 169, 110, 0.5);
+    width: 0;
+    border-radius: 1px;
+}
+
+.opening-cinematic.animate .opening-progress-bar {
+    animation: progress-fill 3s ease-out forwards;
+}
+
+@keyframes progress-fill {
+    0% { width: 0; }
+    100% { width: 100%; }
+}
+
+/* 隐藏动画 */
+.opening-cinematic.done {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.6s ease-out;
+}
+
+/* ==================== 雪花效果 ==================== */
+.snowflakes {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 9998;
+    overflow: hidden;
+}
+
+.snowflake {
+    position: absolute;
+    top: -20px;
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 1rem;
+    text-shadow: 0 0 5px rgba(255, 255, 255, 0.5);
+    animation: snowfall linear infinite;
+}
+
+@keyframes snowfall {
+    0% {
+        transform: translateY(-20px) rotate(0deg);
+        opacity: 1;
+    }
+    100% {
+        transform: translateY(100vh) rotate(360deg);
+        opacity: 0.3;
+    }
+}
+
+.snowflake:nth-child(odd) { font-size: 0.8rem; }
+.snowflake:nth-child(3n) { font-size: 1.2rem; }
+.snowflake:nth-child(1) { left: 5%; animation-duration: 10s; animation-delay: 0s; }
+.snowflake:nth-child(2) { left: 15%; animation-duration: 12s; animation-delay: 1s; }
+.snowflake:nth-child(3) { left: 25%; animation-duration: 8s; animation-delay: 2s; }
+.snowflake:nth-child(4) { left: 35%; animation-duration: 11s; animation-delay: 0.5s; }
+.snowflake:nth-child(5) { left: 45%; animation-duration: 9s; animation-delay: 3s; }
+.snowflake:nth-child(6) { left: 55%; animation-duration: 13s; animation-delay: 1.5s; }
+.snowflake:nth-child(7) { left: 65%; animation-duration: 10s; animation-delay: 2.5s; }
+.snowflake:nth-child(8) { left: 75%; animation-duration: 12s; animation-delay: 0.8s; }
+.snowflake:nth-child(9) { left: 85%; animation-duration: 8s; animation-delay: 3.5s; }
+.snowflake:nth-child(10) { left: 95%; animation-duration: 11s; animation-delay: 1.8s; }
+
+/* ==================== 节日灯笼 ==================== */
+.lantern-string {
+    position: fixed;
+    top: 55px;
+    left: 0;
+    width: 100%;
+    height: 80px;
+    z-index: 9997;
+    pointer-events: none;
+    overflow: hidden;
+}
+
+.lantern {
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    animation: lantern-sway 4s ease-in-out infinite;
+}
+
+.lantern:nth-child(1) { left: 10%; animation-delay: 0s; }
+.lantern:nth-child(2) { left: 30%; animation-delay: 1s; }
+.lantern:nth-child(3) { left: 50%; animation-delay: 0.5s; }
+.lantern:nth-child(4) { left: 70%; animation-delay: 1.5s; }
+.lantern:nth-child(5) { left: 90%; animation-delay: 0.8s; }
+
+.lantern-body {
+    width: 24px;
+    height: 32px;
+    background: radial-gradient(ellipse at center, #ff6b6b 0%, #c0392b 100%);
+    border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+    position: relative;
+    box-shadow: 0 0 15px rgba(255, 107, 107, 0.5);
+    animation: lantern-glow 1s ease-in-out infinite alternate;
+}
+
+.lantern-body::before {
+    content: '';
+    position: absolute;
+    top: -8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 14px;
+    height: 8px;
+    background: #8b4513;
+    border-radius: 2px;
+}
+
+.lantern-body::after {
+    content: '';
+    position: absolute;
+    bottom: -12px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 2px;
+    height: 12px;
+    background: linear-gradient(to bottom, #8b4513, #f39c12);
+}
+
+.lantern-tassel {
+    width: 6px;
+    height: 18px;
+    background: linear-gradient(to bottom, #f39c12, #e74c3c);
+    border-radius: 0 0 3px 3px;
+    margin-top: -2px;
+}
+
+@keyframes lantern-sway {
+    0%, 100% { transform: rotate(-5deg); }
+    50% { transform: rotate(5deg); }
+}
+
+@keyframes lantern-glow {
+    from {
+        box-shadow: 0 0 10px rgba(255, 107, 107, 0.4);
+        filter: brightness(1);
+    }
+    to {
+        box-shadow: 0 0 25px rgba(255, 107, 107, 0.8);
+        filter: brightness(1.2);
+    }
+}
+
+/* ==================== 生日彩屑 ==================== */
+.confetti-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 9996;
+    overflow: hidden;
+}
+
+.confetti {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    animation: confetti-fall linear forwards;
+}
+
+@keyframes confetti-fall {
+    0% {
+        transform: translateY(-100px) rotate(0deg);
+        opacity: 1;
+    }
+    100% {
+        transform: translateY(100vh) rotate(720deg);
+        opacity: 0;
+    }
+}
+
+.confetti:nth-child(1) { left: 10%; background: #e74c3c; animation-duration: 3s; }
+.confetti:nth-child(2) { left: 20%; background: #f39c12; animation-duration: 2.5s; animation-delay: 0.2s; }
+.confetti:nth-child(3) { left: 30%; background: #3498db; animation-duration: 3.2s; animation-delay: 0.4s; }
+.confetti:nth-child(4) { left: 40%; background: #2ecc71; animation-duration: 2.8s; animation-delay: 0.1s; }
+.confetti:nth-child(5) { left: 50%; background: #9b59b6; animation-duration: 3.5s; animation-delay: 0.3s; }
+.confetti:nth-child(6) { left: 60%; background: #e74c3c; animation-duration: 2.6s; animation-delay: 0.5s; }
+.confetti:nth-child(7) { left: 70%; background: #f39c12; animation-duration: 3.1s; animation-delay: 0.2s; }
+.confetti:nth-child(8) { left: 80%; background: #3498db; animation-duration: 2.9s; animation-delay: 0.4s; }
+.confetti:nth-child(9) { left: 90%; background: #2ecc71; animation-duration: 3.3s; animation-delay: 0.1s; }
+
+/* ==================== 闪烁通知 ==================== */
+.flash-notification {
+    position: fixed;
+    top: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: linear-gradient(135deg, var(--accent), var(--secondary));
+    color: #fff;
+    padding: 0.8rem 1.5rem;
+    border-radius: 30px;
+    font-size: 0.9rem;
+    box-shadow: 0 4px 20px rgba(243, 156, 18, 0.4);
+    z-index: 10000;
+    animation: flash-in 0.5s ease, flash-out 0.5s ease 2.5s forwards;
+}
+
+@keyframes flash-in {
+    from {
+        opacity: 0;
+        transform: translateX(-50%) translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
+}
+
+@keyframes flash-out {
+    to {
+        opacity: 0;
+        transform: translateX(-50%) translateY(-20px);
+    }
+}
+
+/* ==================== 响应式 ==================== */
+@media (max-width: 768px) {
+    .opening-curtain .opening-logo h1 {
+        font-size: 1.8rem;
+        letter-spacing: 4px;
+    }
+
+    .lantern-string {
+        display: none;
+    }
+
+    .snowflake:nth-child(n+6) {
+        display: none;
+    }
+
+    /* 开场动画手机端适配 */
+    .opening-emblem {
+        width: 52px;
+        height: 52px;
+        margin-bottom: 1.2rem;
+    }
+
+    .opening-title h1 {
+        font-size: 1.6rem;
+        letter-spacing: 4px;
+    }
+
+    .opening-subtitle {
+        font-size: 0.8rem;
+    }
+
+    .opening-timeline {
+        gap: 1rem;
+        margin-top: 1.5rem;
+    }
+
+    .opening-year-line {
+        width: 30px;
+    }
+
+    .opening-skip {
+        top: 12px;
+        right: 12px;
+        font-size: 0.7rem;
+        padding: 6px 12px;
+    }
+
+    .opening-progress {
+        bottom: 20px;
+        width: 80px;
+    }
+}
+
+/* 打印时隐藏特效 */
+@media print {
+    .opening-curtain,
+    .snowflakes,
+    .lantern-string,
+    .confetti-container,
+    .flash-notification {
+        display: none;
+    }
+}

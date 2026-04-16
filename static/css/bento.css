@@ -283,3 +283,273 @@
     -webkit-background-clip: text;
     background-clip: text;
 }
+
+/* ==================== Hero 区域 ==================== */
+.hero-section {
+    position: relative;
+    min-height: 80vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    background: #0d0d1a;
+}
+
+/* 极简渐变 */
+.hero-gradient-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(ellipse 80% 50% at 50% 0%, rgba(60, 80, 120, 0.15) 0%, transparent 60%);
+    pointer-events: none;
+}
+
+/* 简洁光晕 */
+.hero-glow {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 400px;
+    height: 400px;
+    background: radial-gradient(circle, rgba(60, 80, 120, 0.1) 0%, transparent 70%);
+    border-radius: 50%;
+    pointer-events: none;
+}
+
+/* Hero 内容 */
+.hero-content {
+    position: relative;
+    z-index: 10;
+    text-align: center;
+    padding: 4rem 2rem;
+    max-width: 800px;
+    width: 100%;
+}
+
+/* 玻璃卡片 - 简洁风格 */
+.hero-card {
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 20px;
+    padding: 3rem 2.5rem;
+    margin-bottom: 2.5rem;
+    animation: hero-card-enter 1s cubic-bezier(0.22, 1, 0.36, 1) 0.2s backwards;
+}
+
+@keyframes hero-card-enter {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.hero-badge {
+    display: inline-block;
+    background: rgba(201, 169, 110, 0.1);
+    border: 1px solid rgba(201, 169, 110, 0.2);
+    border-radius: 4px;
+    padding: 0.4rem 1rem;
+    font-size: 0.75rem;
+    color: #c9a96e;
+    margin-bottom: 1.5rem;
+    letter-spacing: 2px;
+}
+
+.hero-title {
+    font-family: 'ZCOOL XiaoWei', 'Noto Serif SC', serif;
+    font-size: 3.2rem;
+    font-weight: normal;
+    color: #fff;
+    letter-spacing: 6px;
+    margin-bottom: 1rem;
+}
+
+.hero-title span {
+    color: #c9a96e;
+}
+
+.hero-subtitle {
+    font-size: 1.1rem;
+    color: rgba(255, 255, 255, 0.5);
+    letter-spacing: 1px;
+}
+
+.hero-meta {
+    display: flex;
+    justify-content: center;
+    gap: 2rem;
+    flex-wrap: wrap;
+}
+
+.hero-location,
+.hero-year {
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.4);
+}
+
+/* 统计数字 */
+.hero-stats {
+    display: flex;
+    justify-content: center;
+    gap: 4rem;
+    flex-wrap: wrap;
+}
+
+.hero-stat {
+    text-align: center;
+    animation: hero-stat-enter 0.6s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+
+.hero-stat:nth-child(1) { animation-delay: 0.4s; }
+.hero-stat:nth-child(2) { animation-delay: 0.5s; }
+.hero-stat:nth-child(3) { animation-delay: 0.6s; }
+
+@keyframes hero-stat-enter {
+    from {
+        opacity: 0;
+        transform: translateY(15px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.stat-number {
+    font-family: 'ZCOOL XiaoWei', serif;
+    font-size: 2.8rem;
+    font-weight: bold;
+    color: #fff;
+    line-height: 1.2;
+}
+
+.stat-label {
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.4);
+    margin-top: 0.5rem;
+    letter-spacing: 1px;
+}
+
+/* 下滑提示动画 - 简洁优雅 */
+.scroll-hint {
+    position: absolute;
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10;
+    opacity: 0;
+    animation: scroll-hint-fade-in 1s ease-out 2.5s forwards;
+}
+
+@keyframes scroll-hint-fade-in {
+    from {
+        opacity: 0;
+        transform: translateX(-50%) translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
+}
+
+.scroll-hint.hidden {
+    animation: scroll-hint-fade-out 0.5s ease-out forwards;
+}
+
+@keyframes scroll-hint-fade-out {
+    to {
+        opacity: 0;
+        transform: translateX(-50%) translateY(10px);
+        visibility: hidden;
+    }
+}
+
+.scroll-hint-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.6rem;
+}
+
+.scroll-hint-text {
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.35);
+    letter-spacing: 2px;
+}
+
+.scroll-hint-arrow {
+    color: rgba(201, 169, 110, 0.5);
+    animation: scroll-hint-bounce 2s ease-in-out infinite;
+}
+
+@keyframes scroll-hint-bounce {
+    0%, 100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(6px);
+    }
+}
+
+/* 滚动淡入动画 */
+.scroll-reveal {
+    opacity: 0;
+    transform: translateY(30px);
+    transition: opacity 0.6s ease, transform 0.6s ease;
+}
+
+.scroll-reveal.revealed {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* 响应式 */
+@media (max-width: 768px) {
+    .hero-section {
+        min-height: 60vh;
+        padding: 2rem 0;
+    }
+
+    .hero-card {
+        padding: 2rem 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .hero-title {
+        font-size: 2rem;
+        letter-spacing: 4px;
+    }
+
+    .hero-subtitle {
+        font-size: 0.9rem;
+    }
+
+    .hero-meta {
+        gap: 1.5rem;
+    }
+
+    .hero-stats {
+        gap: 2.5rem;
+    }
+
+    .stat-number {
+        font-size: 2.2rem;
+    }
+
+    .scroll-hint {
+        bottom: 1.5rem;
+    }
+
+    .scroll-hint-text {
+        font-size: 0.7rem;
+    }
+}

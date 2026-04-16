@@ -1,0 +1,382 @@
+/**
+ * 最新动态「大画幅」样式
+ * 让动态轮播更加大气舒展，卡片更大更有冲击力
+ */
+
+/* ==================== 最新动态区域 ==================== */
+.latest-activities {
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.95), rgba(250, 248, 245, 0.9));
+    border-radius: 24px;
+    padding: 2.5rem;
+    margin-bottom: 3rem;
+    position: relative;
+    overflow: hidden;
+    box-shadow:
+        0 10px 40px rgba(0, 0, 0, 0.08),
+        inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+/* 装饰顶边 */
+.latest-activities::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg,
+        var(--secondary) 0%,
+        var(--accent) 50%,
+        var(--secondary) 100%
+    );
+    background-size: 200% 100%;
+    animation: gradient-flow 3s linear infinite;
+}
+
+@keyframes gradient-flow {
+    0% { background-position: 0% 50%; }
+    100% { background-position: 200% 50%; }
+}
+
+/* 角落装饰 */
+.latest-activities::after {
+    content: '✦';
+    position: absolute;
+    top: 20px;
+    right: 25px;
+    font-size: 1.5rem;
+    color: var(--secondary);
+    opacity: 0.15;
+}
+
+/* ==================== 轮播容器 ==================== */
+.activity-carousel {
+    position: relative;
+}
+
+.carousel-viewport {
+    display: flex;
+    overflow-x: auto;
+    scroll-behavior: smooth;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    gap: 1.25rem;
+    padding: 1rem 0.5rem 1.5rem 0.5rem;
+}
+
+.carousel-viewport::-webkit-scrollbar {
+    height: 4px;
+}
+
+.carousel-viewport::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 2px;
+}
+
+.carousel-viewport::-webkit-scrollbar-thumb {
+    background: linear-gradient(90deg, var(--secondary), var(--accent));
+    border-radius: 2px;
+}
+
+/* ==================== 动态卡片 - 大画幅 ==================== */
+.carousel-item {
+    flex: 0 0 calc(50% - 0.625rem);
+    min-width: 320px;
+    max-width: 550px;
+    scroll-snap-align: start;
+    box-sizing: border-box;
+    animation: fade-in-up 0.6s ease-out backwards;
+}
+
+.carousel-item:nth-child(1) { animation-delay: 0.1s; }
+.carousel-item:nth-child(2) { animation-delay: 0.2s; }
+.carousel-item:nth-child(3) { animation-delay: 0.3s; }
+.carousel-item:nth-child(4) { animation-delay: 0.4s; }
+.carousel-item:nth-child(5) { animation-delay: 0.5s; }
+.carousel-item:nth-child(6) { animation-delay: 0.6s; }
+
+.carousel-item {
+    position: relative;
+    perspective: 1000px;
+}
+
+/* 卡片主体 */
+.carousel-item-inner {
+    background: linear-gradient(145deg, #fff, #faf8f5);
+    border-radius: 20px;
+    padding: 1.75rem;
+    min-height: 180px;
+    box-shadow:
+        0 8px 30px rgba(0, 0, 0, 0.1),
+        inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    overflow: hidden;
+}
+
+/* 顶部装饰条 */
+.carousel-item-inner::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--secondary), var(--accent));
+    opacity: 0.8;
+}
+
+.carousel-item:hover .carousel-item-inner {
+    transform: translateY(-5px);
+    box-shadow:
+        0 15px 45px rgba(0, 0, 0, 0.15),
+        inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+/* 类型标签 */
+.type-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    margin-bottom: 1rem;
+    align-self: flex-start;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.type-tag[data-type="profile_update"] {
+    background: linear-gradient(135deg, #3498db, #2980b9);
+    color: #fff;
+}
+
+.type-tag[data-type="message"] {
+    background: linear-gradient(135deg, #2ecc71, #27ae60);
+    color: #fff;
+}
+
+.type-tag[data-type="photo"] {
+    background: linear-gradient(135deg, #e67e22, #d35400);
+    color: #fff;
+}
+
+.type-tag[data-type="video"] {
+    background: linear-gradient(135deg, #9b59b6, #8e44ad);
+    color: #fff;
+}
+
+.type-tag[data-type="voice_shout"] {
+    background: linear-gradient(135deg, #e74c3c, #c0392b);
+    color: #fff;
+}
+
+/* 人物名称 */
+.carousel-actor {
+    font-family: 'ZCOOL XiaoWei', serif;
+    font-size: 1.35rem;
+    color: var(--primary);
+    margin-bottom: 0.5rem;
+}
+
+/* 内容 */
+.carousel-content {
+    font-size: 1rem;
+    color: var(--text);
+    line-height: 1.7;
+    flex: 1;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+}
+
+/* 时间 */
+.carousel-time {
+    font-size: 0.8rem;
+    color: var(--text-light);
+    margin-top: auto;
+    padding-top: 0.75rem;
+    opacity: 0.7;
+}
+
+/* ==================== 导航 ==================== */
+.carousel-nav {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.carousel-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--secondary), var(--accent));
+    border: none;
+    color: #fff;
+    font-size: 1rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 15px rgba(231, 76, 60, 0.3);
+    transition: all 0.3s ease;
+}
+
+.carousel-btn:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 20px rgba(231, 76, 60, 0.4);
+}
+
+.carousel-btn:active {
+    transform: scale(0.95);
+}
+
+.carousel-dots {
+    display: flex;
+    gap: 8px;
+}
+
+.carousel-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.15);
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.carousel-dot.active {
+    background: linear-gradient(135deg, var(--secondary), var(--accent));
+    width: 24px;
+    border-radius: 4px;
+}
+
+/* ==================== 入场动画 ==================== */
+@keyframes fade-in-up {
+    from {
+        opacity: 0;
+        transform: translateY(30px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* ==================== 夜间模式 ==================== */
+body.night-mode .latest-activities {
+    background: linear-gradient(145deg, rgba(26, 26, 46, 0.95), rgba(22, 33, 62, 0.9)) !important;
+}
+
+body.night-mode .carousel-item-inner {
+    background: linear-gradient(145deg, #1a1a2e, #16213e) !important;
+}
+
+body.night-mode .carousel-actor {
+    color: var(--accent) !important;
+}
+
+body.night-mode .carousel-content {
+    color: var(--text) !important;
+}
+
+body.night-mode .carousel-time {
+    color: var(--text-light) !important;
+}
+
+body.night-mode .carousel-viewport::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+body.night-mode .carousel-dot {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+body.night-mode .carousel-dot.active {
+    background: linear-gradient(135deg, var(--secondary), var(--accent));
+}
+
+/* ==================== 响应式 ==================== */
+@media (max-width: 1024px) {
+    .carousel-item {
+        flex: 0 0 calc(60% - 0.625rem);
+        min-width: 280px;
+    }
+}
+
+@media (max-width: 768px) {
+    .latest-activities {
+        padding: 1.75rem;
+        border-radius: 20px;
+    }
+
+    .carousel-item {
+        flex: 0 0 calc(85% - 0.625rem);
+        min-width: 260px;
+    }
+
+    .carousel-item-inner {
+        padding: 1.25rem;
+        min-height: 160px;
+    }
+
+    .carousel-actor {
+        font-size: 1.15rem;
+    }
+
+    .carousel-content {
+        font-size: 0.9rem;
+        -webkit-line-clamp: 2;
+    }
+
+    .type-tag {
+        font-size: 0.75rem;
+        padding: 5px 12px;
+    }
+
+    .carousel-btn {
+        width: 36px;
+        height: 36px;
+    }
+}
+
+@media (max-width: 480px) {
+    .latest-activities {
+        padding: 1.25rem;
+        border-radius: 16px;
+        margin-bottom: 2rem;
+    }
+
+    .carousel-viewport {
+        gap: 1rem;
+        padding: 0.75rem 0.25rem 1.25rem 0.25rem;
+    }
+
+    .carousel-item {
+        flex: 0 0 90%;
+        min-width: 240px;
+    }
+
+    .carousel-item-inner {
+        padding: 1rem;
+        min-height: 140px;
+    }
+
+    .carousel-actor {
+        font-size: 1.05rem;
+    }
+
+    .carousel-content {
+        font-size: 0.85rem;
+    }
+
+    .section-title {
+        font-size: 1.4rem;
+    }
+}

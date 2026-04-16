@@ -818,6 +818,63 @@ def init_db():
         )
     ''')
 
+    # AI 聊天记录表
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS ai_chat_history (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_name TEXT NOT NULL,
+            user_message TEXT NOT NULL,
+            ai_reply TEXT NOT NULL,
+            session_id TEXT DEFAULT '',
+            created_time TEXT NOT NULL
+        )
+    ''')
+
+    # AI生成音乐表
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS generated_music (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            prompt TEXT NOT NULL,
+            lyrics TEXT DEFAULT '',
+            filename TEXT NOT NULL,
+            created_by TEXT NOT NULL,
+            created_time TEXT NOT NULL
+        )
+    ''')
+
+    # 创建索引提升查询性能
+    _create_indexes(conn)
+
+    conn.commit()
+
+
+def _create_indexes(conn=None):
+    """创建数据库索引"""
+    if conn is None:
+        conn = get_db()
+    cursor = conn.cursor()
+
+    indexes = [
+        # 新闻表索引
+        'CREATE INDEX IF NOT EXISTS idx_news_published_time ON news(published_time)',
+        'CREATE INDEX IF NOT EXISTS idx_news_is_deleted ON news(is_deleted)',
+        # 留言表索引
+        'CREATE INDEX IF NOT EXISTS idx_messages_time ON messages(time)',
+        # 活动表索引
+        'CREATE INDEX IF NOT EXISTS idx_activities_time ON activities(time)',
+        # 已删除表索引
+        'CREATE INDEX IF NOT EXISTS idx_deleted_type ON deleted(type)',
+        # 通知表索引
+        'CREATE INDEX IF NOT EXISTS idx_notifications_recipient ON notifications(recipient)',
+        'CREATE INDEX IF NOT EXISTS idx_notifications_is_read ON notifications(is_read)',
+    ]
+
+    for idx_sql in indexes:
+        try:
+            cursor.execute(idx_sql)
+        except Exception as e:
+            print(f"索引创建失败: {e}")
     conn.commit()
 
 
@@ -1409,6 +1466,81 @@ def delete_login_logs(username):
     return cursor.rowcount
 
 
+# ==================== AI 聊天记录操作 ====================
+
+def save_ai_chat(user_name, user_message, ai_reply, session_id=''):
+    """保存 AI 聊天记录"""
+    conn = get_db()
+    cursor = conn.cursor()
+    created_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    cursor.execute('''
+        INSERT INTO ai_chat_history (user_name, user_message, ai_reply, session_id, created_time)
+        VALUES (?, ?, ?, ?, ?)
+    ''', (user_name, user_message, ai_reply, session_id, created_time))
+    conn.commit()
+    return cursor.lastrowid
+
+
+def get_ai_chat_history(user_name=None, limit=50, offset=0):
+    """获取 AI 聊天记录
+
+    Args:
+        user_name: 如果指定，只返回该用户的记录；None 表示返回所有记录
+        limit: 返回记录数量限制
+        offset: 分页偏移量
+
+    Returns:
+        聊天记录列表，按时间倒序
+    """
+    conn = get_db()
+    cursor = conn.cursor()
+    if user_name:
+        cursor.execute('''
+            SELECT * FROM ai_chat_history
+            WHERE user_name = ?
+            ORDER BY created_time DESC
+            LIMIT ? OFFSET ?
+        ''', (user_name, limit, offset))
+    else:
+        cursor.execute('''
+            SELECT * FROM ai_chat_history
+            ORDER BY created_time DESC
+            LIMIT ? OFFSET ?
+        ''', (limit, offset))
+    rows = cursor.fetchall()
+    history = []
+    for row in rows:
+        history.append(dict(row))
+    return history
+
+
+def get_ai_chat_history_count(user_name=None):
+    """获取 AI 聊天记录总数
+
+    Args:
+        user_name: 如果指定，只统计该用户的记录数
+
+    Returns:
+        记录总数
+    """
+    conn = get_db()
+    cursor = conn.cursor()
+    if user_name:
+        cursor.execute('SELECT COUNT(*) FROM ai_chat_history WHERE user_name = ?', (user_name,))
+    else:
+        cursor.execute('SELECT COUNT(*) FROM ai_chat_history')
+    return cursor.fetchone()[0]
+
+
+def delete_ai_chat_history(user_name):
+    """删除指定用户的所有聊天记录（仅管理员使用）"""
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('DELETE FROM ai_chat_history WHERE user_name = ?', (user_name,))
+    conn.commit()
+    return cursor.rowcount
+
+
 # ==================== 喊话数据操作 ====================
 
 def read_voice_shouts(include_deleted=False):
@@ -1848,3 +1980,34 @@ def get_student_by_openid(openid):
     cursor.execute('SELECT * FROM students WHERE wx_openid = ?', (openid,))
     row = cursor.fetchone()
     return dict(row) if row else None
+
+
+def save_generated_music(title, prompt, lyrics, filename, created_by):
+    """保存AI生成的音乐元数据"""
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('''
+        INSERT INTO generated_music (title, prompt, lyrics, filename, created_by, created_time)
+        VALUES (?, ?, ?, ?, ?, ?)
+    ''', (title, prompt, lyrics, filename, created_by, datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+    conn.commit()
+    return cursor.lastrowid
+
+
+def get_generated_music_list(limit=50):
+    """获取AI生成的音乐列表"""
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT * FROM generated_music ORDER BY created_time DESC LIMIT ?
+    ''', (limit,))
+    return [dict(row) for row in cursor.fetchall()]
+
+
+def delete_generated_music(music_id):
+    """删除AI生成的音乐"""
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('DELETE FROM generated_music WHERE id = ?', (music_id,))
+    conn.commit()
+    return True

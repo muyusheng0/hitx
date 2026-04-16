@@ -10,11 +10,70 @@
     <link rel="stylesheet" href="/static/css/style.css?v=20260407b">
     <link rel="stylesheet" href="/static/css/film-grain.css">
     <link rel="stylesheet" href="/static/css/vinyl-player.css">
+    <link rel="stylesheet" href="/static/css/ambient-bg.css">
+    <link rel="stylesheet" href="/static/css/special-effects.css">
+    <link rel="stylesheet" href="/static/css/interactions.css">
+    <link rel="stylesheet" href="/static/css/vinyl-spectrum.css">
+    <link rel="stylesheet" href="/static/css/night-mode.css">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='80' font-size='80'>📖</text></svg>">
+    <style>
+    /* 个人中心Tab样式 */
+    .profile-tabs {
+        display: flex;
+        gap: 0;
+        background: var(--bg-dark);
+        border-radius: 12px;
+        padding: 4px;
+        margin-bottom: 1rem;
+    }
+    .profile-tab {
+        flex: 1;
+        padding: 0.7rem 1rem;
+        border: none;
+        background: transparent;
+        color: var(--text-light);
+        font-size: 0.95rem;
+        font-weight: 500;
+        cursor: pointer;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+    }
+    .profile-tab.active {
+        background: var(--secondary);
+        color: white;
+    }
+    .profile-tab:hover:not(.active) {
+        background: rgba(255,255,255,0.1);
+    }
+    </style>
 </head>
 <body>
     <!-- 胶片颗粒质感层 -->
     <div class="film-grain-overlay"></div>
+
+    <!-- 氛围背景层 -->
+    <div class="ambient-bg-container">
+        <div class="starfield">
+            <div class="star small"></div><div class="star medium"></div><div class="star large"></div>
+            <div class="star small"></div><div class="star medium"></div><div class="star small"></div>
+            <div class="star large"></div><div class="star small"></div><div class="star medium"></div>
+            <div class="star small"></div><div class="star medium"></div><div class="star small"></div>
+            <div class="star medium"></div><div class="star large"></div><div class="star small"></div>
+        </div>
+        <div class="fireflies">
+            <div class="firefly"></div><div class="firefly"></div><div class="firefly"></div>
+            <div class="firefly"></div><div class="firefly"></div><div class="firefly"></div>
+            <div class="firefly"></div><div class="firefly"></div>
+        </div>
+        <div class="ambient-glow warm"></div>
+        <div class="ambient-glow cool"></div>
+        <div class="ambient-glow accent"></div>
+        <div class="clouds">
+            <div class="cloud"></div><div class="cloud"></div><div class="cloud"></div>
+            <div class="cloud"></div><div class="cloud"></div>
+        </div>
+    </div>
+
     <script>
 if ('caches' in window) {
     caches.keys().then(function(names) {
@@ -60,90 +119,116 @@ if ('caches' in window) {
                     </div>
                 </div>
 
-                <!-- 消息通知 -->
-                <div class="profile-detail-card" id="notificationCard" style="margin-top: 1rem;">
-                    <h3 class="profile-detail-title">🔔 消息通知</h3>
-                    <div class="notification-list-about" id="notificationListAbout">
-                        <p style="color: var(--text-light); text-align: center; padding: 1rem;">加载中...</p>
-                    </div>
-                    <div id="notificationPagination" style="display: none; justify-content: center; gap: 0.5rem; margin-top: 0.8rem;"></div>
-                    <div id="notificationActions" style="display: none; justify-content: center; margin-top: 0.8rem;">
-                        <button class="notification-mark-read" onclick="markAllNotificationsRead()">全部已读</button>
-                    </div>
+                <!-- 管理员内容 Tab 切换 -->
+                <div class="profile-tabs" id="profileTabs" style="display: none; margin-top: 1.5rem;">
+                    <button class="profile-tab active" onclick="switchProfileTab('personal')" id="tabPersonal">个人中心</button>
+                    <button class="profile-tab" onclick="switchProfileTab('admin')" id="tabAdmin">管理员入口</button>
                 </div>
 
-                <!-- 详细信息 -->
-                <div class="profile-detail-card">
-                    <h3 class="profile-detail-title">基本信息</h3>
-                    <div class="profile-detail-list">
-                        <div class="profile-detail-item">
-                            <span class="detail-label">姓名</span>
-                            <span class="detail-value" id="detailName">-</span>
+                <!-- 个人中心 Tab 内容 -->
+                <div id="personalTabContent">
+                    <!-- 消息通知 -->
+                    <div class="profile-detail-card" id="notificationCard" style="margin-top: 1rem;">
+                        <h3 class="profile-detail-title">🔔 消息通知</h3>
+                        <div class="notification-list-about" id="notificationListAbout">
+                            <p style="color: var(--text-light); text-align: center; padding: 1rem;">加载中...</p>
                         </div>
-                        <div class="profile-detail-item">
-                            <span class="detail-label">性别</span>
-                            <span class="detail-value" id="detailGender">-</span>
-                        </div>
-                        <div class="profile-detail-item">
-                            <span class="detail-label">生日</span>
-                            <span class="detail-value" id="detailBirthday">-</span>
-                        </div>
-                        <div class="profile-detail-item">
-                            <span class="detail-label">当前所在地</span>
-                            <span class="detail-value" id="detailHometown">-</span>
-                        </div>
-                        <div class="profile-detail-item">
-                            <span class="detail-label">手机</span>
-                            <span class="detail-value" id="detailPhone">-</span>
-                        </div>
-                        <div class="profile-detail-item">
-                            <span class="detail-label">从事行业</span>
-                            <span class="detail-value" id="detailIndustry">-</span>
-                        </div>
-                        <div class="profile-detail-item">
-                            <span class="detail-label">工作单位</span>
-                            <span class="detail-value" id="detailCompany">-</span>
-                        </div>
-                        <div class="profile-detail-item">
-                            <span class="detail-label">职位</span>
-                            <span class="detail-value" id="detailPosition">-</span>
+                        <div id="notificationPagination" style="display: none; justify-content: center; gap: 0.5rem; margin-top: 0.8rem;"></div>
+                        <div id="notificationActions" style="display: none; justify-content: center; margin-top: 0.8rem;">
+                            <button class="notification-mark-read" onclick="markAllNotificationsRead()">全部已读</button>
                         </div>
                     </div>
-                </div>
 
-                <!-- 社交媒体 -->
-                <div class="profile-detail-card" id="socialMediaCard" style="display: none;">
-                    <h3 class="profile-detail-title">社交媒体</h3>
-                    <div class="profile-detail-list">
-                        <div class="profile-detail-item" id="detailGithubItem" style="display: none;">
-                            <span class="detail-label">GitHub</span>
-                            <span class="detail-value" id="detailGithub">-</span>
-                        </div>
-                        <div class="profile-detail-item" id="detailDouyinItem" style="display: none;">
-                            <span class="detail-label">抖音</span>
-                            <span class="detail-value" id="detailDouyin">-</span>
-                        </div>
-                        <div class="profile-detail-item" id="detailXiaohongshuItem" style="display: none;">
-                            <span class="detail-label">小红书</span>
-                            <span class="detail-value" id="detailXiaohongshu">-</span>
+                    <!-- 详细信息 -->
+                    <div class="profile-detail-card">
+                        <h3 class="profile-detail-title">基本信息</h3>
+                        <div class="profile-detail-list">
+                            <div class="profile-detail-item">
+                                <span class="detail-label">姓名</span>
+                                <span class="detail-value" id="detailName">-</span>
+                            </div>
+                            <div class="profile-detail-item">
+                                <span class="detail-label">性别</span>
+                                <span class="detail-value" id="detailGender">-</span>
+                            </div>
+                            <div class="profile-detail-item">
+                                <span class="detail-label">生日</span>
+                                <span class="detail-value" id="detailBirthday">-</span>
+                            </div>
+                            <div class="profile-detail-item">
+                                <span class="detail-label">当前所在地</span>
+                                <span class="detail-value" id="detailHometown">-</span>
+                            </div>
+                            <div class="profile-detail-item">
+                                <span class="detail-label">手机</span>
+                                <span class="detail-value" id="detailPhone">-</span>
+                            </div>
+                            <div class="profile-detail-item">
+                                <span class="detail-label">从事行业</span>
+                                <span class="detail-value" id="detailIndustry">-</span>
+                            </div>
+                            <div class="profile-detail-item">
+                                <span class="detail-label">工作单位</span>
+                                <span class="detail-value" id="detailCompany">-</span>
+                            </div>
+                            <div class="profile-detail-item">
+                                <span class="detail-label">职位</span>
+                                <span class="detail-value" id="detailPosition">-</span>
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                <!-- 登出按钮 -->
-                <button class="profile-logout-btn" onclick="logout()">退出登录</button>
-
-                <!-- 已删除内容模块 -->
-                <div class="profile-detail-card" id="deletedItemsCard" style="margin-top: 1.5rem;">
-                    <h3 class="profile-detail-title">📦 已删除的内容</h3>
-                    <div id="deletedItemsList">
-                        <p style="color: var(--text-light); text-align: center; padding: 1rem;">加载中...</p>
+                    <!-- 社交媒体 -->
+                    <div class="profile-detail-card" id="socialMediaCard" style="display: none;">
+                        <h3 class="profile-detail-title">社交媒体</h3>
+                        <div class="profile-detail-list">
+                            <div class="profile-detail-item" id="detailGithubItem" style="display: none;">
+                                <span class="detail-label">GitHub</span>
+                                <span class="detail-value" id="detailGithub">-</span>
+                            </div>
+                            <div class="profile-detail-item" id="detailDouyinItem" style="display: none;">
+                                <span class="detail-label">抖音</span>
+                                <span class="detail-value" id="detailDouyin">-</span>
+                            </div>
+                            <div class="profile-detail-item" id="detailXiaohongshuItem" style="display: none;">
+                                <span class="detail-label">小红书</span>
+                                <span class="detail-value" id="detailXiaohongshu">-</span>
+                            </div>
+                        </div>
                     </div>
-                    <div id="deletedPagination" style="display: none; justify-content: center; gap: 0.5rem; margin-top: 1rem;"></div>
+
+                    <!-- 密码设置模块 -->
+                    <div class="profile-detail-card" id="loginPasswordCard" style="margin-top: 1.5rem; display: none;">
+                        <h3 class="profile-detail-title">🔑 登录密码</h3>
+                        <div id="loginPasswordContent">
+                            <p style="color: var(--text-light); text-align: center; padding: 1rem;">加载中...</p>
+                        </div>
+                    </div>
+
+                    <!-- 已删除内容模块 -->
+                    <div class="profile-detail-card" id="deletedItemsCard" style="margin-top: 1.5rem;">
+                        <h3 class="profile-detail-title">📦 已删除的内容</h3>
+                        <div id="deletedItemsList">
+                            <p style="color: var(--text-light); text-align: center; padding: 1rem;">加载中...</p>
+                        </div>
+                        <div id="deletedPagination" style="display: none; justify-content: center; gap: 0.5rem; margin-top: 1rem;"></div>
+                    </div>
+
+                    <!-- 登出按钮 -->
+                    <button class="profile-logout-btn" onclick="logout()" style="margin-top: 1.5rem;">退出登录</button>
                 </div>
 
-                <!-- 管理员设置模块（仅超级管理员） -->
-                <div class="profile-detail-card" id="adminManagementCard" style="margin-top: 1.5rem; display: none;">
+                <!-- 管理功能 Tab 内容 -->
+                <div id="adminTabContent" style="display: none;">
+                    <!-- AI 助手模块（仅管理员） -->
+                    <div class="profile-detail-card" id="aiChatCard" style="margin-top: 1rem; display: none;">
+                        <h3 class="profile-detail-title">🦞 AI 网站优化助手 <span style="font-size: 0.75rem; color: var(--secondary);">(管理员功能)</span></h3>
+                        <p style="color: var(--text-light); margin-bottom: 1rem;">通过 AI 助手优化和改进网站设计、代码和运营。</p>
+                        <button onclick="window.open('/ai-chat', '_blank')" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 0.8rem 1.5rem; border-radius: 10px; cursor: pointer; font-size: 0.95rem; font-weight: 500;">打开 AI 助手 →</button>
+                    </div>
+
+                    <!-- 管理员设置模块（仅超级管理员） -->
+                    <div class="profile-detail-card" id="adminManagementCard" style="margin-top: 1.5rem;">
                     <h3 class="profile-detail-title">👑 管理员设置 <span style="font-size: 0.75rem; color: var(--secondary);">(超级管理员功能)</span></h3>
                     <div id="adminManagementContent">
                         <p style="color: var(--text-light); text-align: center; padding: 1rem;">加载中...</p>
@@ -194,14 +279,6 @@ if ('caches' in window) {
                     </div>
                 </div>
 
-                <!-- 密码设置模块 -->
-                <div class="profile-detail-card" id="loginPasswordCard" style="margin-top: 1.5rem; display: none;">
-                    <h3 class="profile-detail-title">🔑 登录密码</h3>
-                    <div id="loginPasswordContent">
-                        <p style="color: var(--text-light); text-align: center; padding: 1rem;">加载中...</p>
-                    </div>
-                </div>
-
                 <!-- 动态管理模块（仅管理员） -->
                 <div class="profile-detail-card" id="activityManagementCard" style="margin-top: 1.5rem; display: none;">
                     <h3 class="profile-detail-title">📰 最新动态管理 <span style="font-size: 0.75rem; color: var(--secondary);">(管理员功能)</span></h3>
@@ -210,12 +287,70 @@ if ('caches' in window) {
                     </div>
                 </div>
 
-                <!-- 登录日志模块（仅管理员） -->
+                <!-- AI 音乐生成模块（仅管理员） -->
+                <div class="profile-detail-card" id="musicGenCard" style="margin-top: 1.5rem; display: none;">
+                    <h3 class="profile-detail-title">🎵 AI 背景音乐生成 <span style="font-size: 0.75rem; color: var(--secondary);">(管理员)</span></h3>
+                    <p style="color: var(--text-light); margin-bottom: 1rem;">通过 AI 生成网站背景音乐，生成的音乐将保存在 static/music/ 目录。</p>
+
+                    <!-- 音量控制 -->
+                    <div style="margin-bottom: 1rem; padding: 0.8rem; background: var(--bg-dark); border-radius: 8px;">
+                        <p style="color: var(--text-light); margin-bottom: 0.5rem;">背景音乐音量：<span id="bgVolumeDisplay">60%</span></p>
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            <button onclick="setBgVolume(-10)" style="background: var(--secondary); color: white; border: none; width: 32px; height: 32px; border-radius: 6px; cursor: pointer; font-size: 1.2rem; line-height: 1;">−</button>
+                            <input type="range" id="bgVolumeSlider" min="0" max="100" value="60" style="flex: 1; cursor: pointer;" onchange="setBgVolumeFromSlider()">
+                            <button onclick="setBgVolume(10)" style="background: var(--secondary); color: white; border: none; width: 32px; height: 32px; border-radius: 6px; cursor: pointer; font-size: 1.2rem; line-height: 1;">+</button>
+                            <button onclick="toggleBgMute()" id="bgMuteBtn" style="background: var(--secondary); color: white; border: none; padding: 0.4rem 0.8rem; border-radius: 6px; cursor: pointer; font-size: 0.8rem;">🔊</button>
+                        </div>
+                    </div>
+
+                    <div style="margin-bottom: 1rem;">
+                        <p style="color: var(--text-light); margin-bottom: 0.5rem;">音乐标题：</p>
+                        <input type="text" id="musicTitleInput" placeholder="例如：怀旧时光" style="width: 100%; padding: 0.6rem; border: 1px solid var(--border); border-radius: 8px; box-sizing: border-box; font-size: 0.9rem; background: var(--bg-dark); color: var(--text);">
+                    </div>
+
+                    <div style="margin-bottom: 1rem;">
+                        <p style="color: var(--text-light); margin-bottom: 0.5rem;">音乐描述（prompt）：</p>
+                        <textarea id="musicPromptInput" placeholder="例如：复古民谣，温暖怀旧，适合回忆校园时光" style="width: 100%; padding: 0.6rem; border: 1px solid var(--border); border-radius: 8px; box-sizing: border-box; font-size: 0.9rem; background: var(--bg-dark); color: var(--text); min-height: 60px; resize: vertical;"></textarea>
+                    </div>
+
+                    <div style="margin-bottom: 1rem;">
+                        <p style="color: var(--text-light); margin-bottom: 0.5rem;">歌词（可选，留空则生成纯音乐）：</p>
+                        <textarea id="musicLyricsInput" placeholder="[Verse]
+第一段歌词...
+[Verse]
+第二段歌词..." style="width: 100%; padding: 0.6rem; border: 1px solid var(--border); border-radius: 8px; box-sizing: border-box; font-size: 0.9rem; background: var(--bg-dark); color: var(--text); min-height: 100px; resize: vertical;"></textarea>
+                    </div>
+
+                    <!-- 生成进度条 -->
+                    <div id="musicProgressContainer" style="display: none; margin-bottom: 1rem;">
+                        <p style="color: var(--text-light); margin-bottom: 0.5rem;">生成进度：<span id="musicProgressText">0%</span></p>
+                        <div style="background: var(--bg-dark); border-radius: 4px; height: 8px; overflow: hidden;">
+                            <div id="musicProgressBar" style="background: linear-gradient(90deg, #f093fb, #f5576c); height: 100%; width: 0%; transition: width 0.3s ease;"></div>
+                        </div>
+                    </div>
+
+                    <button onclick="generateMusic()" id="generateMusicBtn" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; border: none; padding: 0.8rem 1.5rem; border-radius: 10px; cursor: pointer; font-size: 0.95rem; font-weight: 500;">生成音乐</button>
+                    <div id="generateMusicStatus" style="font-size: 0.9rem; color: var(--text-light); margin-top: 0.5rem;"></div>
+
+                    <!-- 已有音乐列表 -->
+                    <div style="margin-top: 1.5rem; border-top: 1px solid var(--border); padding-top: 1rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.8rem;">
+                            <p style="color: var(--text-light);">已生成的音乐：</p>
+                            <div id="musicPagination" style="display: flex; gap: 0.3rem; align-items: center;"></div>
+                        </div>
+                        <div id="musicListContainer">
+                            <p style="color: var(--text-light); text-align: center; padding: 0.5rem;">加载中...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 登录日志模块（仅超级管理员） -->
                 <div class="profile-detail-card" id="loginLogsCard" style="margin-top: 1.5rem; display: none;">
-                    <h3 class="profile-detail-title">🔐 登录日志 <span style="font-size: 0.75rem; color: var(--secondary);">(管理员功能)</span></h3>
+                    <h3 class="profile-detail-title">🔐 登录日志 <span style="font-size: 0.75rem; color: var(--secondary);">(超级管理员功能)</span></h3>
                     <div id="loginLogsList">
                         <p style="color: var(--text-light); text-align: center; padding: 1rem;">加载中...</p>
                     </div>
+                </div>
                 </div>
             </div>
 
@@ -249,7 +384,7 @@ if ('caches' in window) {
         </a>
         <a href="/lyb" class="tab-item">
             <span class="tab-icon">💬</span>
-            <span class="tab-label">留言板</span>
+            <span class="tab-label">留言信件</span>
         </a>
         <a href="/media" class="tab-item">
             <span class="tab-icon">📷</span>
@@ -426,6 +561,32 @@ if ('caches' in window) {
 
                 <button type="submit" class="verify-btn">保存修改</button>
             </form>
+        </div>
+    </div>
+
+    <!-- 管理员权限说明模态框 -->
+    <div class="modal-overlay" id="adminNoticeModal" style="display: none; z-index: 2000;">
+        <div class="modal" style="max-width: 420px; text-align: center;">
+            <div style="padding: 2rem 1.5rem;">
+                <div style="font-size: 3rem; margin-bottom: 1rem;">👑</div>
+                <h3 style="margin: 0 0 1rem 0; color: var(--text); font-size: 1.2rem;">管理员特权</h3>
+                <p style="color: var(--text-light); line-height: 1.7; margin-bottom: 1.5rem;">
+                    作为管理员，你可以使用 <strong style="color: #667eea;">🦞 AI 网站自主设计助手</strong>
+                    <br><br>
+                    你的想法，我来帮你实现！
+                    <br>
+                    可以随时对我说：
+                    <br>
+                    "我想添加XXX功能"
+                    <br>
+                    "帮我优化一下页面设计"
+                </p>
+                <div style="display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 1.2rem;">
+                    <input type="checkbox" id="adminNoticeDontShow" style="width: 18px; height: 18px; cursor: pointer;">
+                    <label for="adminNoticeDontShow" style="color: var(--text-light); font-size: 0.9rem; cursor: pointer;">不再提示</label>
+                </div>
+                <button onclick="closeAdminNotice()" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 0.8rem 2rem; border-radius: 25px; cursor: pointer; font-size: 1rem; width: 100%;">我知道了</button>
+            </div>
         </div>
     </div>
 
@@ -683,6 +844,9 @@ if ('caches' in window) {
                     adminManagementCard.style.display = 'none';
                 }
             }
+
+            // 初始化 Tab 切换
+            initProfileTabs();
         }
 
         // 加载新闻爬取时间设置
@@ -840,6 +1004,324 @@ if ('caches' in window) {
                 statusEl.textContent = '爬取失败';
                 statusEl.style.color = '#e74c3c';
             }
+        }
+
+        // 加载 MiniMax API Key
+        async function loadMusicApiKey() {
+            try {
+                const res = await fetch('/api/admin/music/apikey', { credentials: 'same-origin' });
+                const data = await res.json();
+                const statusEl = document.getElementById('musicApiKeyStatus');
+                if (data.success) {
+                    if (data.has_key) {
+                        statusEl.textContent = '已配置: ' + data.masked_key;
+                        statusEl.style.color = '#4CAF50';
+                    } else {
+                        statusEl.textContent = '未配置 API Key';
+                        statusEl.style.color = '#e74c3c';
+                    }
+                }
+            } catch (e) {
+                console.error('加载API Key失败:', e);
+            }
+        }
+
+        // 保存 MiniMax API Key
+        async function saveMusicApiKey() {
+            const apiKey = document.getElementById('musicApiKeyInput').value.trim();
+            const statusEl = document.getElementById('musicApiKeyStatus');
+            if (!apiKey) {
+                statusEl.textContent = '请输入API Key';
+                statusEl.style.color = '#e74c3c';
+                return;
+            }
+            try {
+                const res = await fetch('/api/admin/music/apikey', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ api_key: apiKey }),
+                    credentials: 'same-origin'
+                });
+                const data = await res.json();
+                if (data.success) {
+                    statusEl.textContent = '保存成功';
+                    statusEl.style.color = '#4CAF50';
+                    document.getElementById('musicApiKeyInput').value = '';
+                    loadMusicApiKey();
+                } else {
+                    statusEl.textContent = data.message || '保存失败';
+                    statusEl.style.color = '#e74c3c';
+                }
+            } catch (e) {
+                statusEl.textContent = '保存失败';
+                statusEl.style.color = '#e74c3c';
+            }
+        }
+
+        // 背景音乐音量控制
+        let bgVolume = parseInt(localStorage.getItem('bgVolume') || '60');
+        let bgMuted = localStorage.getItem('bgMuted') === 'true';
+
+        function initBgVolume() {
+            document.getElementById('bgVolumeSlider').value = bgVolume;
+            document.getElementById('bgVolumeDisplay').textContent = bgMuted ? '静音' : bgVolume + '%';
+            updateMuteBtn();
+        }
+
+        function updateMuteBtn() {
+            const btn = document.getElementById('bgMuteBtn');
+            btn.textContent = bgMuted ? '🔇' : '🔊';
+        }
+
+        function setBgVolume(delta) {
+            if (bgMuted) {
+                bgMuted = false;
+            }
+            bgVolume = Math.max(0, Math.min(100, bgVolume + delta));
+            localStorage.setItem('bgVolume', bgVolume);
+            localStorage.setItem('bgMuted', bgMuted);
+            document.getElementById('bgVolumeSlider').value = bgVolume;
+            document.getElementById('bgVolumeDisplay').textContent = bgVolume + '%';
+            updateMuteBtn();
+            applyBgVolume();
+        }
+
+        function setBgVolumeFromSlider() {
+            bgVolume = parseInt(document.getElementById('bgVolumeSlider').value);
+            if (bgVolume > 0) bgMuted = false;
+            localStorage.setItem('bgVolume', bgVolume);
+            localStorage.setItem('bgMuted', bgMuted);
+            document.getElementById('bgVolumeDisplay').textContent = bgVolume + '%';
+            updateMuteBtn();
+            applyBgVolume();
+        }
+
+        function toggleBgMute() {
+            bgMuted = !bgMuted;
+            localStorage.setItem('bgMuted', bgMuted);
+            document.getElementById('bgVolumeDisplay').textContent = bgMuted ? '静音' : bgVolume + '%';
+            updateMuteBtn();
+            applyBgVolume();
+        }
+
+        function applyBgVolume() {
+            const volume = bgMuted ? 0 : bgVolume / 100;
+            if (window.timelineAudio) window.timelineAudio.volume = volume * 0.6;
+            if (window.galleryAudio) window.galleryAudio.volume = volume * 0.6;
+            if (window.vinylAudio) window.vinylAudio.volume = volume * 0.6;
+        }
+
+        // 加载音乐列表（带分页）
+        let musicListData = [];
+        let musicCurrentPage = 1;
+        const musicPerPage = 2;
+
+        function renderMusicPage(page) {
+            musicCurrentPage = page;
+            const container = document.getElementById('musicListContainer');
+            const paginationEl = document.getElementById('musicPagination');
+            const start = (page - 1) * musicPerPage;
+            const end = start + musicPerPage;
+            const pageItems = musicListData.slice(start, end);
+            const totalPages = Math.ceil(musicListData.length / musicPerPage);
+
+            fetch('/api/admin/music/setting', { credentials: 'same-origin' })
+                .then(res => res.json())
+                .then(settingsData => {
+                    const currentSettings = settingsData.success ? {
+                        timeline: settingsData.bg_music_timeline ? settingsData.bg_music_timeline.id : null,
+                        gallery: settingsData.bg_music_gallery ? settingsData.bg_music_gallery.id : null,
+                        vinyl: settingsData.bg_music_vinyl ? settingsData.bg_music_vinyl.id : null
+                    } : { timeline: null, gallery: null, vinyl: null };
+
+                    let html = '<div style="display: flex; flex-direction: column; gap: 0.8rem;">';
+                    pageItems.forEach(music => {
+                        const isTimeline = currentSettings.timeline == music.id;
+                        const isGallery = currentSettings.gallery == music.id;
+                        const isVinyl = currentSettings.vinyl == music.id;
+                        html += `
+                        <div style="background: var(--bg-dark); padding: 0.8rem; border-radius: 8px; word-wrap: break-word;">
+                            <div style="margin-bottom: 0.4rem; display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem;">
+                                <span style="font-weight: 500; word-break: break-all;">${escapeHtml(music.title)}</span>
+                                ${isTimeline ? '<span style="background: #4CAF50; color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.65rem;">时光</span>' : ''}
+                                ${isGallery ? '<span style="background: #2196F3; color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.65rem;">相册</span>' : ''}
+                                ${isVinyl ? '<span style="background: #9C27B0; color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.65rem;">胶片</span>' : ''}
+                            </div>
+                            <div style="font-size: 0.75rem; color: var(--text-light); margin-bottom: 0.3rem; word-break: break-all; line-height: 1.3;">${escapeHtml(music.prompt.substring(0, 60))}${music.prompt.length > 60 ? '...' : ''}</div>
+                            <div style="font-size: 0.7rem; color: var(--secondary); margin-bottom: 0.4rem;">${music.created_time}</div>
+                            <div style="margin-bottom: 0.4rem;">
+                                <audio src="/static/music/${music.filename}" controls style="width: 100%; height: 28px;"></audio>
+                            </div>
+                            <div style="display: flex; flex-wrap: wrap; gap: 0.3rem;">
+                                <button onclick="setBgMusic('timeline', ${music.id})" style="background: ${isTimeline ? '#4CAF50' : 'var(--secondary)'}; color: white; border: none; padding: 0.25rem 0.5rem; border-radius: 4px; cursor: pointer; font-size: 0.7rem; white-space: nowrap;">${isTimeline ? '✓时光' : '时光'}</button>
+                                <button onclick="setBgMusic('gallery', ${music.id})" style="background: ${isGallery ? '#2196F3' : 'var(--secondary)'}; color: white; border: none; padding: 0.25rem 0.5rem; border-radius: 4px; cursor: pointer; font-size: 0.7rem; white-space: nowrap;">${isGallery ? '✓相册' : '相册'}</button>
+                                <button onclick="setBgMusic('vinyl', ${music.id})" style="background: ${isVinyl ? '#9C27B0' : 'var(--secondary)'}; color: white; border: none; padding: 0.25rem 0.5rem; border-radius: 4px; cursor: pointer; font-size: 0.7rem; white-space: nowrap;">${isVinyl ? '✓胶片' : '胶片'}</button>
+                                <button onclick="deleteMusic(${music.id}, '${music.filename}')" style="background: #e74c3c; color: white; border: none; padding: 0.25rem 0.5rem; border-radius: 4px; cursor: pointer; font-size: 0.7rem; white-space: nowrap;">删除</button>
+                            </div>
+                        </div>
+                        `;
+                    });
+                    html += '</div>';
+                    container.innerHTML = html;
+
+                    if (totalPages > 1) {
+                        let pageHtml = '';
+                        for (let i = 1; i <= totalPages; i++) {
+                            pageHtml += `<button onclick="renderMusicPage(${i})" style="min-width: 28px; height: 28px; border: 1px solid ${i === page ? 'var(--secondary)' : 'var(--border)'}; background: ${i === page ? 'var(--secondary)' : 'transparent'}; color: ${i === page ? 'white' : 'var(--text)'}; border-radius: 6px; cursor: pointer; font-size: 0.75rem;">${i}</button>`;
+                        }
+                        paginationEl.innerHTML = pageHtml;
+                    } else {
+                        paginationEl.innerHTML = '';
+                    }
+                });
+        }
+
+        async function loadMusicList() {
+            try {
+                const res = await fetch('/api/admin/music/list', { credentials: 'same-origin' });
+                const data = await res.json();
+                const container = document.getElementById('musicListContainer');
+                if (!data.success || !data.list || data.list.length === 0) {
+                    container.innerHTML = '<p style="color: var(--text-light); text-align: center;">暂无生成的音乐</p>';
+                    document.getElementById('musicPagination').innerHTML = '';
+                    return;
+                }
+
+                musicListData = data.list;
+                renderMusicPage(1);
+            } catch (e) {
+                document.getElementById('musicListContainer').innerHTML = '<p style="color: var(--text-light); text-align: center;">加载失败</p>';
+            }
+        }
+
+        // 设置背景音乐
+        async function setBgMusic(location, musicId) {
+            try {
+                const res = await fetch('/api/admin/music/setting', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ location, music_id: musicId }),
+                    credentials: 'same-origin'
+                });
+                const data = await res.json();
+                if (data.success) {
+                    loadMusicList(); // 刷新列表
+                } else {
+                    alert(data.message || '设置失败');
+                }
+            } catch (e) {
+                alert('设置失败');
+            }
+        }
+
+        // 生成音乐
+        async function generateMusic() {
+            const title = document.getElementById('musicTitleInput').value.trim();
+            const prompt = document.getElementById('musicPromptInput').value.trim();
+            const lyrics = document.getElementById('musicLyricsInput').value.trim();
+            const statusEl = document.getElementById('generateMusicStatus');
+            const btn = document.getElementById('generateMusicBtn');
+            const progressContainer = document.getElementById('musicProgressContainer');
+            const progressBar = document.getElementById('musicProgressBar');
+            const progressText = document.getElementById('musicProgressText');
+
+            if (!prompt) {
+                statusEl.textContent = '请输入音乐描述';
+                statusEl.style.color = '#e74c3c';
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = '生成中...';
+            statusEl.textContent = '正在连接AI服务...';
+            statusEl.style.color = 'var(--secondary)';
+            progressContainer.style.display = 'block';
+            progressBar.style.width = '10%';
+            progressText.textContent = '10%';
+
+            // 模拟进度动画
+            let progress = 10;
+            const progressInterval = setInterval(() => {
+                if (progress < 85) {
+                    progress += Math.random() * 5;
+                    if (progress > 85) progress = 85;
+                    progressBar.style.width = progress + '%';
+                    progressText.textContent = Math.round(progress) + '%';
+                    if (progress < 30) {
+                        statusEl.textContent = '正在生成音乐...';
+                    } else if (progress < 60) {
+                        statusEl.textContent = '音乐生成中，请稍候...';
+                    } else {
+                        statusEl.textContent = '即将完成...';
+                    }
+                }
+            }, 2000);
+
+            try {
+                const res = await fetch('/api/admin/music/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title: title || '背景音乐', prompt, lyrics }),
+                    credentials: 'same-origin'
+                });
+                clearInterval(progressInterval);
+                const data = await res.json();
+                if (data.success) {
+                    progressBar.style.width = '100%';
+                    progressText.textContent = '100%';
+                    statusEl.textContent = '生成成功！';
+                    statusEl.style.color = '#4CAF50';
+                    document.getElementById('musicTitleInput').value = '';
+                    document.getElementById('musicPromptInput').value = '';
+                    document.getElementById('musicLyricsInput').value = '';
+                    setTimeout(() => {
+                        progressContainer.style.display = 'none';
+                        progressBar.style.width = '0%';
+                    }, 2000);
+                    loadMusicList();
+                } else {
+                    progressBar.style.width = '0%';
+                    progressContainer.style.display = 'none';
+                    statusEl.textContent = data.message || '生成失败';
+                    statusEl.style.color = '#e74c3c';
+                }
+            } catch (e) {
+                clearInterval(progressInterval);
+                progressBar.style.width = '0%';
+                progressContainer.style.display = 'none';
+                statusEl.textContent = '生成失败';
+                statusEl.style.color = '#e74c3c';
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '生成音乐';
+            }
+        }
+
+        // 删除音乐
+        async function deleteMusic(musicId, filename) {
+            if (!confirm('确定要删除这首音乐吗？')) return;
+            try {
+                const res = await fetch('/api/admin/music/delete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ music_id: musicId, filename }),
+                    credentials: 'same-origin'
+                });
+                const data = await res.json();
+                if (data.success) {
+                    loadMusicList();
+                } else {
+                    alert(data.message || '删除失败');
+                }
+            } catch (e) {
+                alert('删除失败');
+            }
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
         }
 
         // 加载管理员设置（超级管理员）
@@ -1352,6 +1834,45 @@ if ('caches' in window) {
             });
         }
 
+        // Tab 切换功能
+        function switchProfileTab(tab) {
+            const personalTab = document.getElementById('tabPersonal');
+            const adminTab = document.getElementById('tabAdmin');
+            const personalContent = document.getElementById('personalTabContent');
+            const adminContent = document.getElementById('adminTabContent');
+
+            if (tab === 'personal') {
+                personalTab.classList.add('active');
+                adminTab.classList.remove('active');
+                personalContent.style.display = 'block';
+                adminContent.style.display = 'none';
+            } else {
+                personalTab.classList.remove('active');
+                adminTab.classList.add('active');
+                personalContent.style.display = 'none';
+                adminContent.style.display = 'block';
+            }
+        }
+
+        // 初始化 Tab 显示
+        function initProfileTabs() {
+            const profileTabs = document.getElementById('profileTabs');
+            if (!profileTabs) return;
+
+            if (window.currentUser && (window.currentUser.is_admin || window.currentUser.is_super_admin)) {
+                profileTabs.style.display = 'flex';
+                // 默认显示个人中心 tab
+                switchProfileTab('personal');
+            } else {
+                profileTabs.style.display = 'none';
+                // 非管理员只显示个人中心内容
+                const personalContent = document.getElementById('personalTabContent');
+                const adminContent = document.getElementById('adminTabContent');
+                if (personalContent) personalContent.style.display = 'block';
+                if (adminContent) adminContent.style.display = 'none';
+            }
+        }
+
         window.addEventListener('userLoginSuccess', async function(e) {
             console.log('[DEBUG] userLoginSuccess事件触发 at', new Date().toISOString(), 'detail:', e.detail);
             try {
@@ -1359,6 +1880,11 @@ if ('caches' in window) {
                     console.log('[DEBUG] 调用showLoggedView');
                     showLoggedView(window.currentUser);
                     console.log('[DEBUG] showLoggedView完成');
+
+                    // 检查是否是管理员，显示权限说明
+                    if (window.currentUser.is_admin || window.currentUser.is_super_admin) {
+                        checkAdminNotice();
+                    }
                 }
             } catch (err) {
                 console.error('[DEBUG] showLoggedView error:', err);
@@ -1384,6 +1910,29 @@ if ('caches' in window) {
             }
             console.log('[DEBUG] userLoginSuccess事件处理完成');
         });
+
+        // 管理员权限说明
+        function checkAdminNotice() {
+            const key = 'jlu8_admin_notice_dont_show_' + window.currentUser.name;
+            if (localStorage.getItem(key) === 'true') return;
+
+            const modal = document.getElementById('adminNoticeModal');
+            if (modal) {
+                modal.style.display = 'flex';
+            }
+        }
+
+        function closeAdminNotice() {
+            const modal = document.getElementById('adminNoticeModal');
+            const dontShow = document.getElementById('adminNoticeDontShow');
+            if (dontShow && dontShow.checked) {
+                const key = 'jlu8_admin_notice_dont_show_' + window.currentUser.name;
+                localStorage.setItem(key, 'true');
+            }
+            if (modal) {
+                modal.style.display = 'none';
+            }
+        }
 
         async function loadDeletedItems(page = 1) {
             const listEl = document.getElementById('deletedItemsList');
@@ -1635,7 +2184,7 @@ if ('caches' in window) {
 
         // 加载登录日志
         async function loadLoginLogs(page = 1) {
-            if (window.currentUser && window.currentUser.is_admin) {
+            if (window.currentUser && window.currentUser.is_super_admin) {
                 document.getElementById('loginLogsCard').style.display = 'block';
                 loginLogsPage = page;
 
@@ -1685,6 +2234,28 @@ if ('caches' in window) {
             } else {
                 document.getElementById('loginLogsCard').style.display = 'none';
             }
+
+            // AI 助手卡片 - 管理员可见
+            const aiChatCard = document.getElementById('aiChatCard');
+            if (aiChatCard) {
+                if (window.currentUser && (window.currentUser.is_admin || window.currentUser.is_super_admin)) {
+                    aiChatCard.style.display = 'block';
+                } else {
+                    aiChatCard.style.display = 'none';
+                }
+            }
+
+            // AI 音乐生成卡片 - 管理员可见
+            const musicGenCard = document.getElementById('musicGenCard');
+            if (musicGenCard) {
+                if (window.currentUser && (window.currentUser.is_admin || window.currentUser.is_super_admin)) {
+                    musicGenCard.style.display = 'block';
+                    initBgVolume();
+                    loadMusicList();
+                } else {
+                    musicGenCard.style.display = 'none';
+                }
+            }
         }
 
         window.addEventListener('userLoginSuccess', function() {
@@ -1692,12 +2263,14 @@ if ('caches' in window) {
             loadActivityManagement();
             loadLoginLogs();
             loadNotifications();
+            initProfileTabs();
         });
 
         // 页面加载时也检查
         if (window.currentUser) {
             loadActivityManagement();
             loadLoginLogs();
+            initProfileTabs();
         }
     </script>
 
@@ -1709,7 +2282,7 @@ if ('caches' in window) {
         </div>
         <div class="player-content">
             <div class="record-area">
-                <div class="record" id="vinylRecord">
+                <div class="record" id="vinylRecord" onclick="togglePlay()">
                     <div class="record-label"></div>
                 </div>
                 <div class="tonearm">
@@ -1739,18 +2312,6 @@ if ('caches' in window) {
                 <div class="volume-bar"></div>
             </div>
             <div class="playlist" id="playlist">
-                <div class="playlist-item active">
-                    <div class="record-thumb"></div>
-                    <div class="song-title">那些年（汪苏泷）</div>
-                </div>
-                <div class="playlist-item">
-                    <div class="record-thumb"></div>
-                    <div class="song-title">小幸运（田馥甄）</div>
-                </div>
-                <div class="playlist-item">
-                    <div class="record-thumb"></div>
-                    <div class="song-title">青春修炼手册（TFBOYS）</div>
-                </div>
             </div>
             <button class="playlist-toggle" onclick="togglePlaylist()">播放列表</button>
         </div>
@@ -1761,27 +2322,95 @@ if ('caches' in window) {
     const playerState = {
         playing: false,
         currentTrack: 0,
-        tracks: [
-            '那些年（汪苏泷）',
-            '小幸运（田馥甄）',
-            '青春修炼手册（TFBOYS）'
-        ]
+        tracks: []  // 动态加载
     };
 
     let audioElement = null;
     let progressInterval = null;
+    let bgMusicUrl = null;
+    let bgMusicFetched = false;
+    let allMusicFetched = false;
 
-    function initAudio() {
-        // 创建音频元素（实际使用时替换为真实音频URL）
+    async function fetchAllMusic() {
+        if (allMusicFetched) return playerState.tracks;
+        try {
+            const res = await fetch('/api/music/all');
+            const data = await res.json();
+            if (data.success && data.list && data.list.length > 0) {
+                playerState.tracks = data.list.map(m => ({
+                    id: m.id,
+                    url: m.url,
+                    title: m.prompt ? m.prompt.substring(0, 30) + (m.prompt.length > 30 ? '...' : '') : 'AI音乐'
+                }));
+                allMusicFetched = true;
+                updatePlaylistUI();
+                // 如果还没获取过URL，设置第一首
+                if (!bgMusicUrl && playerState.tracks.length > 0) {
+                    bgMusicUrl = playerState.tracks[0].url;
+                }
+                return playerState.tracks;
+            }
+        } catch (e) {
+            console.error('获取音乐列表失败:', e);
+        }
+        return [];
+    }
+
+    function updatePlaylistUI() {
+        const playlist = document.getElementById('playlist');
+        if (!playlist) return;
+        playlist.innerHTML = playerState.tracks.map((t, i) => `
+            <div class="playlist-item ${i === playerState.currentTrack ? 'active' : ''}" onclick="playTrack(${i})">
+                <div class="record-thumb"></div>
+                <div class="song-title">${t.title}</div>
+            </div>
+        `).join('');
+    }
+
+    async function fetchBgMusic() {
+        if (bgMusicFetched) return bgMusicUrl;
+        try {
+            const res = await fetch('/api/music/bg');
+            const data = await res.json();
+            if (data.success && data.vinyl) {
+                bgMusicUrl = data.vinyl;
+                bgMusicFetched = true;
+                return bgMusicUrl;
+            }
+        } catch (e) {
+            console.log('获取背景音乐失败');
+        }
+        return null;
+    }
+
+    async function initAudio() {
+        // 先获取所有音乐列表
+        if (!allMusicFetched) {
+            await fetchAllMusic();
+        }
+        // 如果还没URL但有音乐列表，使用第一首
+        if (!bgMusicUrl && playerState.tracks.length > 0) {
+            bgMusicUrl = playerState.tracks[0].url;
+        }
         if (!audioElement) {
-            audioElement = new Audio();
+            audioElement = new Audio(bgMusicUrl || '');
+            audioElement.loop = false; // 不循环，由程序控制
+            audioElement.volume = 0.6;
             audioElement.addEventListener('ended', nextTrack);
             audioElement.addEventListener('timeupdate', updateProgress);
         }
     }
 
-    function togglePlay() {
-        initAudio();
+    // 页面加载时获取所有音乐
+    fetchAllMusic();
+
+    async function togglePlay() {
+        try {
+            await initAudio();
+        } catch (e) {
+            console.error('初始化音频失败:', e);
+            return;
+        }
         const player = document.getElementById('vinylPlayer');
         const record = document.getElementById('vinylRecord');
         const btn = document.getElementById('playPauseBtn');
@@ -1794,7 +2423,10 @@ if ('caches' in window) {
             btn.textContent = '▶';
             volumeInd.classList.remove('playing');
         } else {
-            audioElement.play().catch(() => {});
+            const playPromise = audioElement.play();
+            if (playPromise) {
+                playPromise.catch(e => console.error('播放失败:', e));
+            }
             record.classList.add('record-spinning');
             player.classList.add('player-playing');
             btn.textContent = '⏸';
@@ -1803,16 +2435,44 @@ if ('caches' in window) {
         playerState.playing = !playerState.playing;
     }
 
+    function playTrack(index) {
+        if (playerState.tracks.length === 0) return;
+        playerState.currentTrack = index;
+        const track = playerState.tracks[index];
+        if (track && track.url) {
+            bgMusicUrl = track.url;
+            if (audioElement) {
+                audioElement.src = bgMusicUrl;
+                if (playerState.playing) {
+                    audioElement.play().catch(e => console.error('播放失败:', e));
+                }
+            }
+            document.getElementById('nowPlayingTitle').textContent = track.title;
+            updatePlaylistUI();
+        }
+    }
+
     function nextTrack() {
+        if (playerState.tracks.length === 0) return;
         playerState.currentTrack = (playerState.currentTrack + 1) % playerState.tracks.length;
-        document.getElementById('nowPlayingTitle').textContent = playerState.tracks[playerState.currentTrack];
-        updatePlaylist();
+        playTrack(playerState.currentTrack);
     }
 
     function prevTrack() {
+        if (playerState.tracks.length === 0) return;
         playerState.currentTrack = (playerState.currentTrack - 1 + playerState.tracks.length) % playerState.tracks.length;
-        document.getElementById('nowPlayingTitle').textContent = playerState.tracks[playerState.currentTrack];
-        updatePlaylist();
+        playTrack(playerState.currentTrack);
+    }
+
+    function updatePlaylistUI() {
+        const playlist = document.getElementById('playlist');
+        if (!playlist) return;
+        playlist.innerHTML = playerState.tracks.map((t, i) => `
+            <div class="playlist-item ${i === playerState.currentTrack ? 'active' : ''}" onclick="playTrack(${i})">
+                <div class="record-thumb"></div>
+                <div class="song-title">${t.title}</div>
+            </div>
+        `).join('');
     }
 
     function updatePlaylist() {
@@ -1839,6 +2499,55 @@ if ('caches' in window) {
 
     // 页面加载时默认折叠
     document.getElementById('vinylPlayer').classList.add('collapsed');
+
+    // 折叠状态下点击整个播放器则展开
+    document.getElementById('vinylPlayer').addEventListener('click', function(e) {
+        if (this.classList.contains('collapsed')) {
+            // 只有点击的不是关闭按钮才展开
+            if (!e.target.classList.contains('player-close')) {
+                this.classList.remove('collapsed');
+            }
+        }
+    });
+
+    // 夜间模式
+    function toggleNightMode() {
+        document.body.classList.toggle('night-mode');
+        localStorage.setItem('nightMode', document.body.classList.contains('night-mode'));
+    }
+    if (localStorage.getItem('nightMode') === 'true') {
+        document.body.classList.add('night-mode');
+    }
+
+    // 季节装饰
+    function loadSeasonalDecor() {
+        const decor = document.getElementById('seasonalDecor');
+        if (!decor) return;
+        const month = new Date().getMonth();
+        if (month === 11 || month === 0 || month === 1) {
+            decor.innerHTML = '<div class="snowflakes">' +
+                '<div class="snowflake">❄</div><div class="snowflake">❄</div>' +
+                '<div class="snowflake">❄</div><div class="snowflake">❄</div>' +
+                '<div class="snowflake">❄</div><div class="snowflake">❄</div>' +
+                '<div class="snowflake">❄</div><div class="snowflake">❄</div>' +
+                '<div class="snowflake">❄</div><div class="snowflake">❄</div>' +
+                '</div>';
+        } else if (month >= 1 && month <= 2) {
+            decor.innerHTML = '<div class="lantern-string">' +
+                '<div class="lantern"><div class="lantern-body"></div><div class="lantern-tassel"></div></div>' +
+                '<div class="lantern"><div class="lantern-body"></div><div class="lantern-tassel"></div></div>' +
+                '<div class="lantern"><div class="lantern-body"></div><div class="lantern-tassel"></div></div>' +
+                '<div class="lantern"><div class="lantern-body"></div><div class="lantern-tassel"></div></div>' +
+                '<div class="lantern"><div class="lantern-body"></div><div class="lantern-tassel"></div></div>' +
+                '</div>';
+        }
+    }
+    loadSeasonalDecor();
     </script>
+
+    <!-- 夜间模式切换 -->
+    <button class="night-mode-toggle" id="nightModeToggle" onclick="toggleNightMode()" title="切换夜间模式"></button>
+    <!-- 季节装饰容器 -->
+    <div class="corner-decor top-right" id="seasonalDecor"></div>
 </body>
 </html>

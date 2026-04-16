@@ -19,23 +19,17 @@
 .petal {
     position: absolute;
     top: -50px;
-    opacity: 0.7;
-    animation-timing-function: ease-in-out;
-    animation-iteration-count: infinite;
-    animation-fill-mode: forwards;
+    opacity: 0;
+    width: 15px;
+    height: 15px;
 }
 
-/* 花瓣SVG形状 - 杏花/樱花瓣 */
+/* 花瓣SVG形状 */
 .petal svg {
     width: 100%;
     height: 100%;
     filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
 }
-
-/* 多种花瓣大小 */
-.petal-sm { width: 12px; height: 12px; }
-.petal-md { width: 18px; height: 18px; }
-.petal-lg { width: 24px; height: 24px; }
 
 /* 飘落动画 */
 @keyframes fall-1 {
@@ -43,14 +37,14 @@
         transform: translate(0, 0) rotate(0deg);
         opacity: 0;
     }
-    10% {
-        opacity: 0.7;
+    5% {
+        opacity: 0.8;
     }
-    90% {
-        opacity: 0.7;
+    95% {
+        opacity: 0.8;
     }
     100% {
-        transform: translate(80px, 110vh) rotate(360deg);
+        transform: translate(100px, 110vh) rotate(360deg);
         opacity: 0;
     }
 }
@@ -60,14 +54,14 @@
         transform: translate(0, 0) rotate(0deg);
         opacity: 0;
     }
-    10% {
-        opacity: 0.6;
+    5% {
+        opacity: 0.7;
     }
-    90% {
-        opacity: 0.6;
+    95% {
+        opacity: 0.7;
     }
     100% {
-        transform: translate(-60px, 110vh) rotate(-280deg);
+        transform: translate(-80px, 110vh) rotate(-320deg);
         opacity: 0;
     }
 }
@@ -77,78 +71,101 @@
         transform: translate(0, 0) rotate(0deg);
         opacity: 0;
     }
-    10% {
-        opacity: 0.5;
+    5% {
+        opacity: 0.6;
     }
-    90% {
-        opacity: 0.5;
+    95% {
+        opacity: 0.6;
     }
     100% {
-        transform: translate(40px, 110vh) rotate(180deg);
+        transform: translate(60px, 110vh) rotate(220deg);
         opacity: 0;
     }
 }
 
+/* 左右摇摆动画 */
 @keyframes sway-1 {
-    0%, 100% { transform: translateX(0); }
-    50% { transform: translateX(15px); }
+    0%, 100% { margin-left: 0; }
+    25% { margin-left: 20px; }
+    75% { margin-left: -15px; }
 }
 
 @keyframes sway-2 {
-    0%, 100% { transform: translateX(0); }
-    50% { transform: translateX(-12px); }
+    0%, 100% { margin-left: 0; }
+    25% { margin-left: -18px; }
+    75% { margin-left: 12px; }
 }
 
-/* 生成多个花瓣实例 */
+/* 生成多个花瓣实例 - 每个花瓣有独立的大小和动画 */
 .petal-1 {
-    left: 5%;
-    animation: fall-1 12s ease-in-out infinite, sway-1 3s ease-in-out infinite;
+    left: 8%;
+    animation: fall-1 10s linear infinite, sway-1 3s ease-in-out infinite;
     animation-delay: 0s, 0s;
+    width: 14px;
+    height: 14px;
 }
 .petal-2 {
-    left: 15%;
-    animation: fall-2 14s ease-in-out infinite, sway-2 4s ease-in-out infinite;
-    animation-delay: 2s, 0.5s;
+    left: 18%;
+    animation: fall-2 12s linear infinite, sway-2 4s ease-in-out infinite;
+    animation-delay: 1s, 0.5s;
+    width: 18px;
+    height: 18px;
 }
 .petal-3 {
-    left: 25%;
-    animation: fall-1 11s ease-in-out infinite, sway-1 2.5s ease-in-out infinite;
-    animation-delay: 4s, 1s;
+    left: 28%;
+    animation: fall-3 14s linear infinite, sway-1 3.5s ease-in-out infinite;
+    animation-delay: 2s, 1s;
+    width: 12px;
+    height: 12px;
 }
 .petal-4 {
-    left: 35%;
-    animation: fall-3 13s ease-in-out infinite, sway-2 3.5s ease-in-out infinite;
-    animation-delay: 1s, 0.8s;
+    left: 38%;
+    animation: fall-1 11s linear infinite, sway-2 4.5s ease-in-out infinite;
+    animation-delay: 0.5s, 0.8s;
+    width: 16px;
+    height: 16px;
 }
 .petal-5 {
-    left: 45%;
-    animation: fall-2 15s ease-in-out infinite, sway-1 4s ease-in-out infinite;
+    left: 48%;
+    animation: fall-2 13s linear infinite, sway-1 3s ease-in-out infinite;
     animation-delay: 3s, 1.2s;
+    width: 15px;
+    height: 15px;
 }
 .petal-6 {
-    left: 55%;
-    animation: fall-1 12s ease-in-out infinite, sway-2 3s ease-in-out infinite;
-    animation-delay: 5s, 0.3s;
+    left: 58%;
+    animation: fall-3 15s linear infinite, sway-2 4s ease-in-out infinite;
+    animation-delay: 1.5s, 0.3s;
+    width: 13px;
+    height: 13px;
 }
 .petal-7 {
-    left: 65%;
-    animation: fall-3 14s ease-in-out infinite, sway-1 3.5s ease-in-out infinite;
-    animation-delay: 0.5s, 1.5s;
+    left: 68%;
+    animation: fall-1 12s linear infinite, sway-1 3.5s ease-in-out infinite;
+    animation-delay: 4s, 1.5s;
+    width: 17px;
+    height: 17px;
 }
 .petal-8 {
-    left: 75%;
-    animation: fall-2 13s ease-in-out infinite, sway-2 4.5s ease-in-out infinite;
+    left: 78%;
+    animation: fall-2 14s linear infinite, sway-2 4s ease-in-out infinite;
     animation-delay: 2.5s, 0.7s;
+    width: 14px;
+    height: 14px;
 }
 .petal-9 {
-    left: 85%;
-    animation: fall-1 11s ease-in-out infinite, sway-1 3s ease-in-out infinite;
-    animation-delay: 4.5s, 1s;
+    left: 88%;
+    animation: fall-3 11s linear infinite, sway-1 3s ease-in-out infinite;
+    animation-delay: 0.8s, 1s;
+    width: 16px;
+    height: 16px;
 }
 .petal-10 {
-    left: 92%;
-    animation: fall-3 16s ease-in-out infinite, sway-2 4s ease-in-out infinite;
-    animation-delay: 1.5s, 0.4s;
+    left: 95%;
+    animation: fall-1 13s linear infinite, sway-2 4.5s ease-in-out infinite;
+    animation-delay: 2s, 0.4s;
+    width: 12px;
+    height: 12px;
 }
 
 /* 移动端减少花瓣数量 */

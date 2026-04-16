@@ -1,0 +1,380 @@
+/**
+ * 夜间怀旧模式
+ * 深色系复古体验
+ */
+
+/* ==================== 夜间模式变量 ==================== */
+body.night-mode {
+    --primary: #1a1a2e;
+    --secondary: #e94560;
+    --accent: #ffc947;
+    --bg: #16213e;
+    --bg-dark: #0f0f23;
+    --text: #eaeaea;
+    --text-light: #a0a0a0;
+    --card-bg: #1a1a2e;
+    --glass: rgba(22, 33, 62, 0.9);
+    --shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+    --shadow-hover: 0 8px 30px rgba(0, 0, 0, 0.5);
+    --border: rgba(255, 255, 255, 0.1);
+}
+
+/* ==================== 夜间模式切换按钮 ==================== */
+.night-mode-toggle {
+    position: fixed;
+    top: 75px;
+    right: 20px;
+    width: 50px;
+    height: 26px;
+    background: var(--bg-dark);
+    border: 2px solid var(--accent);
+    border-radius: 13px;
+    cursor: pointer;
+    z-index: 9999;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    padding: 2px;
+}
+
+.night-mode-toggle::before {
+    content: '🌙';
+    position: absolute;
+    left: 4px;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+}
+
+.night-mode-toggle::after {
+    content: '';
+    position: absolute;
+    left: 2px;
+    width: 18px;
+    height: 18px;
+    background: var(--accent);
+    border-radius: 50%;
+    transition: all 0.3s ease;
+}
+
+body.night-mode .night-mode-toggle {
+    background: var(--accent);
+    border-color: var(--bg-dark);
+}
+
+body.night-mode .night-mode-toggle::before {
+    content: '☀️';
+    left: 28px;
+    color: var(--bg-dark);
+}
+
+body.night-mode .night-mode-toggle::after {
+    left: 26px;
+    background: var(--bg-dark);
+}
+
+/* ==================== 夜间模式过渡 ==================== */
+body {
+    transition: background 0.5s ease, color 0.5s ease;
+}
+
+/* 夜间模式全局背景 */
+body.night-mode {
+    background: var(--bg) !important;
+}
+
+/* 夜间模式卡片效果 */
+body.night-mode .student-card,
+body.night-mode .stat-card,
+body.night-mode .recent-messages,
+body.night-mode .timeline-section,
+body.night-mode .profile-card,
+body.night-mode .profile-detail-card,
+body.night-mode .bento-card,
+body.night-mode .news-card,
+body.night-mode .polaroid-frame,
+body.night-mode .carousel-item,
+body.night-mode .message-stamp,
+body.night-mode .gallery-item,
+body.night-mode .video-card,
+body.night-mode .activity-section {
+    background: linear-gradient(145deg, #1a1a2e 0%, #16213e 100%) !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
+}
+
+/* 夜间模式文字效果 */
+body.night-mode .header-title,
+body.night-mode .hero-title,
+body.night-mode .section-title,
+body.night-mode .timeline-year {
+    color: var(--accent) !important;
+    text-shadow: 0 0 10px rgba(255, 201, 71, 0.3);
+}
+
+body.night-mode .timeline-event,
+body.night-mode .message-content,
+body.night-mode .carousel-content {
+    color: var(--text) !important;
+}
+
+/* 夜间模式胶片颗粒增强 */
+body.night-mode .film-grain-overlay {
+    opacity: 0.08;
+    mix-blend-mode: overlay;
+}
+
+/* 夜间模式分隔线 */
+body.night-mode .timeline::before {
+    background: linear-gradient(to bottom, var(--secondary), var(--accent));
+}
+
+/* 夜间模式输入框 */
+body.night-mode input,
+body.night-mode textarea,
+body.night-mode select {
+    background: var(--bg-dark) !important;
+    color: var(--text) !important;
+    border-color: var(--border) !important;
+}
+
+/* 夜间模式滚动条 */
+body.night-mode ::-webkit-scrollbar-track {
+    background: var(--bg-dark);
+}
+
+body.night-mode ::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, var(--secondary), var(--accent));
+}
+
+/* 夜间模式底部导航 */
+body.night-mode .bottom-tab-bar {
+    background: rgba(22, 33, 62, 0.95) !important;
+    border-top-color: rgba(255, 255, 255, 0.1);
+}
+
+body.night-mode .tab-item {
+    color: var(--text-light) !important;
+}
+
+body.night-mode .tab-item.active {
+    color: var(--accent) !important;
+}
+
+/* 夜间模式模态框 */
+body.night-mode .modal {
+    background: var(--bg) !important;
+}
+
+body.night-mode .modal-overlay {
+    background: rgba(0, 0, 0, 0.8) !important;
+}
+
+/* 夜间模式标签栏 */
+body.night-mode .media-tabs {
+    background: var(--bg-dark);
+}
+
+body.night-mode .media-tab {
+    color: var(--text-light);
+}
+
+body.night-mode .media-tab.active {
+    color: var(--accent);
+    background: var(--bg);
+}
+
+/* 夜间模式按钮 */
+body.night-mode .btn-primary,
+body.night-mode .submit-btn,
+body.night-mode .verify-btn {
+    background: linear-gradient(135deg, var(--secondary), var(--accent)) !important;
+    color: #fff !important;
+}
+
+/* 夜间模式宝丽来效果 */
+body.night-mode .polaroid-frame {
+    background: #1a1a2e !important;
+}
+
+/* 夜间模式印章效果 */
+body.night-mode .message-stamp {
+    background: linear-gradient(145deg, #1a1a2e, #16213e) !important;
+}
+
+body.night-mode .message-stamp::before {
+    border-color: var(--accent) !important;
+}
+
+/* 夜间模式新闻卡片 */
+body.night-mode .news-card {
+    background: linear-gradient(135deg, #1a1a2e, #16213e) !important;
+}
+
+body.night-mode .news-date-stamp {
+    border-color: var(--accent) !important;
+    color: var(--accent) !important;
+}
+
+/* 夜间模式顶部导航 */
+body.night-mode .top-header {
+    background: var(--glass) !important;
+}
+
+/* 夜间模式浮窗提示 */
+body.night-mode .toast,
+body.night-mode .flash-notification {
+    background: linear-gradient(135deg, var(--secondary), var(--accent)) !important;
+}
+
+/* 夜间模式头像 */
+body.night-mode .avatar-placeholder,
+body.night-mode .avatar {
+    background: var(--bg-dark) !important;
+    color: var(--accent) !important;
+}
+
+/* 夜间模式最新动态区域 */
+body.night-mode .latest-activities {
+    background: linear-gradient(145deg, #1a1a2e 0%, #16213e 100%) !important;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
+}
+
+body.night-mode .latest-activities .section-title {
+    color: var(--accent) !important;
+}
+
+body.night-mode .activity-carousel {
+    background: rgba(0, 0, 0, 0.3) !important;
+    border-radius: 12px;
+}
+
+body.night-mode .carousel-item {
+    background: linear-gradient(145deg, #1a1a2e 0%, #16213e 100%) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+body.night-mode .carousel-item:hover {
+    background: linear-gradient(145deg, #252545 0%, #1a2540 100%) !important;
+}
+
+body.night-mode .type-tag {
+    background: linear-gradient(135deg, var(--secondary), var(--accent)) !important;
+    color: #fff !important;
+}
+
+body.night-mode .carousel-actor {
+    color: var(--accent) !important;
+}
+
+body.night-mode .carousel-content {
+    color: var(--text) !important;
+}
+
+body.night-mode .carousel-time {
+    color: var(--text-light) !important;
+}
+
+body.night-mode .carousel-nav {
+    background: rgba(0, 0, 0, 0.2) !important;
+}
+
+body.night-mode .carousel-btn {
+    background: var(--bg-dark) !important;
+    color: var(--accent) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+body.night-mode .carousel-btn:hover {
+    background: var(--bg) !important;
+}
+
+body.night-mode .carousel-dots .dot {
+    background: rgba(255, 255, 255, 0.3) !important;
+}
+
+body.night-mode .carousel-dots .dot.active {
+    background: var(--accent) !important;
+}
+
+/* 夜间模式时光轴 */
+body.night-mode .timeline-section {
+    background: linear-gradient(145deg, #1a1a2e 0%, #16213e 100%) !important;
+    border-radius: 16px;
+    padding: 20px !important;
+}
+
+body.night-mode .timeline-year {
+    color: var(--accent) !important;
+}
+
+body.night-mode .timeline-event {
+    color: var(--text) !important;
+    background: rgba(0, 0, 0, 0.3) !important;
+    border-left: 3px solid var(--secondary) !important;
+}
+
+/* 夜间模式信封卡片 */
+body.night-mode .envelope-card .envelope-body {
+    background: linear-gradient(145deg, #1a1a2e 0%, #16213e 100%) !important;
+}
+
+body.night-mode .envelope-card .envelope-flap {
+    background: linear-gradient(180deg, #252545 0%, #1a1a2e 100%) !important;
+}
+
+body.night-mode .envelope-card .letter-content {
+    background: linear-gradient(to bottom, #16213e 0%, #1a1a2e 100%) !important;
+}
+
+body.night-mode .envelope-card .letter-nickname {
+    color: var(--accent) !important;
+}
+
+body.night-mode .envelope-card .letter-text {
+    color: var(--text) !important;
+}
+
+body.night-mode .envelope-card .letter-signature {
+    color: var(--accent) !important;
+}
+
+body.night-mode .envelope-card .letter-actions {
+    border-top-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+body.night-mode .envelope-card .letter-like-btn,
+body.night-mode .envelope-card .letter-comment-btn {
+    border-color: var(--accent) !important;
+    color: var(--text-light) !important;
+}
+
+body.night-mode .envelope-card .letter-like-btn:hover,
+body.night-mode .envelope-card .letter-comment-btn:hover {
+    background: rgba(243, 156, 18, 0.1) !important;
+}
+
+body.night-mode .envelope-card .expand-hint {
+    color: var(--text-light) !important;
+}
+
+/* ==================== 响应式 ==================== */
+@media (max-width: 768px) {
+    .night-mode-toggle {
+        top: 70px;
+        right: 10px;
+        width: 44px;
+        height: 24px;
+    }
+
+    .night-mode-toggle::before {
+        font-size: 0.8rem;
+    }
+
+    body.night-mode .night-mode-toggle::before {
+        left: 24px;
+    }
+
+    body.night-mode .night-mode-toggle::after {
+        left: 22px;
+    }
+}

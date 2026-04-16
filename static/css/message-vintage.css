@@ -1,0 +1,537 @@
+/**
+ * 留言板「时光信箱」样式
+ * 每条留言像一封从时光信箱投递出来的复古信件
+ */
+
+/* ==================== 信封卡片容器 ==================== */
+.message-list {
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+    padding: 20px 0;
+    perspective: 1000px;
+}
+
+/* ==================== 信封主体 ==================== */
+.envelope-card {
+    position: relative;
+    width: 100%;
+    max-width: 500px;
+    margin: 0 auto;
+    cursor: pointer;
+    transform-style: preserve-3d;
+    transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    box-sizing: border-box;
+}
+
+.envelope-card:hover {
+    transform: translateY(-5px) rotateX(2deg);
+}
+
+/* 信封外壳 */
+.envelope-body {
+    position: relative;
+    background: linear-gradient(145deg, #f5e6d3 0%, #e8d5c4 50%, #dcc8b5 100%);
+    border-radius: 8px;
+    padding: 25px 20px 20px 20px;
+    box-shadow:
+        0 4px 15px rgba(0, 0, 0, 0.15),
+        inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+/* 信封纹理 */
+.envelope-body::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.05'/%3E%3C/svg%3E");
+    border-radius: 8px;
+    pointer-events: none;
+    opacity: 0.5;
+}
+
+/* ==================== 信封封口 ==================== */
+.envelope-flap {
+    position: absolute;
+    top: -5px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 80%;
+    height: 40px;
+    background: linear-gradient(180deg, #dcc8b5 0%, #c9b8a8 100%);
+    clip-path: polygon(50% 0%, 100% 100%, 0% 100%);
+    z-index: 2;
+    transition: all 0.3s ease;
+}
+
+.envelope-card.open .envelope-flap {
+    transform: translateX(-50%) rotateX(180deg);
+    opacity: 0.7;
+}
+
+/* 蜡封 */
+.wax-seal {
+    position: absolute;
+    top: -12px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 36px;
+    height: 36px;
+    background: radial-gradient(circle at 30% 30%, #c0392b 0%, #8b0000 70%, #5c0000 100%);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    z-index: 3;
+    box-shadow:
+        0 2px 8px rgba(0, 0, 0, 0.3),
+        inset 0 -2px 4px rgba(0, 0, 0, 0.2),
+        inset 0 2px 4px rgba(255, 255, 255, 0.1);
+    transition: transform 0.3s ease;
+}
+
+.envelope-card:hover .wax-seal {
+    transform: translateX(-50%) scale(1.1);
+}
+
+.wax-seal::after {
+    content: '✉';
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 14px;
+}
+
+/* ==================== 邮戳日期章 ==================== */
+.postmark {
+    position: absolute;
+    top: 8px;
+    right: 15px;
+    width: 60px;
+    height: 60px;
+    border: 3px solid #8b4513;
+    border-radius: 50%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.6;
+    transform: rotate(-15deg);
+}
+
+.postmark-date {
+    font-family: 'Courier New', monospace;
+    font-size: 8px;
+    font-weight: bold;
+    color: #8b4513;
+    text-align: center;
+    line-height: 1.2;
+}
+
+.postmark-year {
+    font-size: 10px;
+}
+
+/* ==================== 信纸内容 ==================== */
+.letter-content {
+    position: relative;
+    background: linear-gradient(to bottom, #fffef8 0%, #faf6e8 100%);
+    padding: 20px;
+    margin-top: 15px;
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    transform-origin: top center;
+    transition: all 0.4s ease;
+}
+
+.envelope-card:not(.open) .letter-content {
+    max-height: 120px;
+    overflow: hidden;
+}
+
+.envelope-card.open .letter-content {
+    max-height: 500px;
+}
+
+/* 信纸装饰线 */
+.letter-content::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 20px;
+    right: 20px;
+    height: 2px;
+    background: repeating-linear-gradient(
+        90deg,
+        transparent,
+        transparent 3px,
+        #d4a574 3px,
+        #d4a574 6px
+    );
+    opacity: 0.3;
+}
+
+/* ==================== 头部信息 ==================== */
+.letter-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 12px;
+    padding-bottom: 10px;
+    border-bottom: 1px dashed #d4a574;
+}
+
+.letter-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 2px solid #d4a574;
+    object-fit: cover;
+    background: #f5e6d3;
+    background-size: cover;
+    background-position: center;
+}
+
+.letter-info {
+    margin-left: 12px;
+}
+
+.letter-nickname {
+    font-family: 'ZCOOL XiaoWei', 'Noto Serif SC', serif;
+    font-size: 1.1rem;
+    color: #2c3e50;
+}
+
+.letter-time {
+    font-size: 0.75rem;
+    color: #8b7355;
+    margin-top: 2px;
+}
+
+/* ==================== 手写体内容 ==================== */
+.letter-text {
+    font-family: 'Ma Shan Zheng', 'ZCOOL XiaoWei', 'Noto Serif SC', cursive;
+    font-size: 1rem;
+    color: #3d3d3d;
+    line-height: 2;
+    padding: 10px 0;
+}
+
+/* 引号装饰 */
+.letter-text::before {
+    content: '"';
+    font-size: 2rem;
+    color: #d4a574;
+    opacity: 0.5;
+    margin-right: 5px;
+}
+
+.letter-text::after {
+    content: '"';
+    font-size: 2rem;
+    color: #d4a574;
+    opacity: 0.5;
+    margin-left: 5px;
+}
+
+/* ==================== 签名 ==================== */
+.letter-signature {
+    text-align: right;
+    font-family: 'Ma Shan Zheng', cursive;
+    font-size: 1rem;
+    color: #8b4513;
+    margin-top: 15px;
+}
+
+.letter-signature::before {
+    content: '—— ';
+}
+
+/* ==================== 留言图片 ==================== */
+.letter-image {
+    margin-top: 15px;
+    padding: 10px;
+    background: #faf6e8;
+    border-radius: 4px;
+}
+
+.letter-image img {
+    max-width: 100%;
+    max-height: 200px;
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    cursor: pointer;
+    transition: transform 0.2s ease;
+}
+
+.letter-image img:hover {
+    transform: scale(1.02);
+}
+
+/* ==================== 互动按钮 ==================== */
+.letter-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 15px;
+    padding-top: 12px;
+    border-top: 1px dotted #d4a574;
+}
+
+.letter-like-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 12px;
+    background: none;
+    border: 1px solid #d4a574;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    color: #8b7355;
+    transition: all 0.3s ease;
+}
+
+.letter-like-btn:hover {
+    background: rgba(212, 165, 116, 0.2);
+    color: #c0392b;
+    border-color: #c0392b;
+}
+
+.letter-like-btn.liked {
+    background: rgba(192, 57, 43, 0.1);
+    color: #c0392b;
+    border-color: #c0392b;
+}
+
+.letter-comment-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 12px;
+    background: none;
+    border: 1px solid #d4a574;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    color: #8b7355;
+    transition: all 0.3s ease;
+}
+
+.letter-comment-btn:hover {
+    background: rgba(212, 165, 116, 0.2);
+    color: #2c3e50;
+}
+
+/* ==================== 展开提示 ==================== */
+.expand-hint {
+    text-align: center;
+    padding: 10px;
+    color: #8b7355;
+    font-size: 0.8rem;
+    opacity: 0.7;
+    transition: opacity 0.3s ease;
+}
+
+.envelope-card:hover .expand-hint {
+    opacity: 1;
+}
+
+.expand-hint::before {
+    content: '▼ ';
+}
+
+.envelope-card.open .expand-hint::before {
+    content: '▲ ';
+}
+
+/* ==================== 入场动画 ==================== */
+@keyframes envelope-arrive {
+    0% {
+        opacity: 0;
+        transform: translateY(-50px) rotateX(20deg);
+    }
+    60% {
+        transform: translateY(10px) rotateX(-5deg);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0) rotateX(0deg);
+    }
+}
+
+.envelope-card {
+    animation: envelope-arrive 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
+}
+
+.envelope-card:nth-child(1) { animation-delay: 0.05s; }
+.envelope-card:nth-child(2) { animation-delay: 0.1s; }
+.envelope-card:nth-child(3) { animation-delay: 0.15s; }
+.envelope-card:nth-child(4) { animation-delay: 0.2s; }
+.envelope-card:nth-child(5) { animation-delay: 0.25s; }
+.envelope-card:nth-child(6) { animation-delay: 0.3s; }
+.envelope-card:nth-child(7) { animation-delay: 0.35s; }
+.envelope-card:nth-child(8) { animation-delay: 0.4s; }
+
+/* ==================== 移动端适配 ==================== */
+@media (max-width: 600px) {
+    .envelope-card {
+        width: calc(100% - 16px);
+        margin-left: 8px;
+        margin-right: 8px;
+        overflow: hidden;
+    }
+
+    .envelope-body {
+        padding: 18px 12px 12px 12px;
+        overflow: hidden;
+    }
+
+    .envelope-flap {
+        height: 30px;
+    }
+
+    .wax-seal {
+        width: 28px;
+        height: 28px;
+        top: -6px;
+    }
+
+    .wax-seal::after {
+        font-size: 11px;
+    }
+
+    .postmark {
+        width: 40px;
+        height: 40px;
+        top: 5px;
+        right: 8px;
+    }
+
+    .postmark-date {
+        font-size: 5px;
+    }
+
+    .postmark-year {
+        font-size: 8px;
+    }
+
+    .letter-content {
+        padding: 15px;
+    }
+
+    .letter-text {
+        font-size: 0.95rem;
+        line-height: 1.8;
+    }
+
+    .letter-text::before,
+    .letter-text::after {
+        font-size: 1.5rem;
+    }
+
+    .letter-avatar {
+        width: 35px;
+        height: 35px;
+    }
+
+    .letter-nickname {
+        font-size: 1rem;
+    }
+}
+
+/* ==================== 评论区样式 ==================== */
+.letter-comments {
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px dashed #d4a574;
+}
+
+.comment-item {
+    display: flex;
+    gap: 10px;
+    padding: 8px 0;
+}
+
+.comment-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 1px solid #d4a574;
+    object-fit: cover;
+    background: #f5e6d3;
+    flex-shrink: 0;
+}
+
+.comment-content {
+    flex: 1;
+}
+
+.comment-author {
+    font-weight: 500;
+    color: #2c3e50;
+    font-size: 0.85rem;
+}
+
+.comment-text {
+    font-size: 0.85rem;
+    color: #3d3d3d;
+    margin-top: 2px;
+}
+
+.comment-time {
+    font-size: 0.7rem;
+    color: #8b7355;
+    margin-top: 2px;
+}
+
+/* 评论输入区域 - 确保不被底部导航栏遮挡 */
+.comment-input-area {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+    padding-bottom: env(safe-area-inset-bottom, 10px);
+}
+
+.comment-input {
+    flex: 1;
+    padding: 8px 12px;
+    border: 1px solid #d4a574;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    min-width: 0;
+}
+
+.comment-submit-btn {
+    padding: 8px 16px;
+    background: var(--secondary);
+    color: white;
+    border: none;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+@media (max-width: 600px) {
+    .comment-input-area {
+        gap: 6px;
+    }
+
+    .comment-input {
+        padding: 8px 10px;
+        font-size: 0.8rem;
+    }
+
+    .comment-submit-btn {
+        padding: 8px 12px;
+        font-size: 0.8rem;
+    }
+
+    /* 确保评论区在移动端可见，不被底部导航遮挡 */
+    .letter-comments {
+        padding-bottom: 70px;
+    }
+}

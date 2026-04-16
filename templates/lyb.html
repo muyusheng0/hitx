@@ -1,16 +1,46 @@
 <!DOCTYPE html>
+<!-- Version: 2026-04-15-v3 | 权限控制修复 -->
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>留言板 - 吉大自动化八班</title>
+    <title>留言信件 - 吉大自动化八班</title>
     <link rel="stylesheet" href="/static/css/style.css">
     <link rel="stylesheet" href="/static/css/film-grain.css">
     <link rel="stylesheet" href="/static/css/stamp.css">
+    <link rel="stylesheet" href="/static/css/message-vintage.css">
+    <link rel="stylesheet" href="/static/css/ambient-bg.css">
+    <link rel="stylesheet" href="/static/css/special-effects.css">
+    <link rel="stylesheet" href="/static/css/interactions.css">
+    <link rel="stylesheet" href="/static/css/night-mode.css">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='80' font-size='80'>📖</text></svg>">
-<div class="film-grain-overlay"></div>
 </head>
 <body>
+    <!-- 胶片颗粒质感层 -->
+    <div class="film-grain-overlay"></div>
+
+    <!-- 氛围背景层 -->
+    <div class="ambient-bg-container">
+        <div class="starfield">
+            <div class="star small"></div><div class="star medium"></div><div class="star large"></div>
+            <div class="star small"></div><div class="star medium"></div><div class="star small"></div>
+            <div class="star large"></div><div class="star small"></div><div class="star medium"></div>
+            <div class="star small"></div><div class="star medium"></div><div class="star small"></div>
+            <div class="star medium"></div><div class="star large"></div><div class="star small"></div>
+        </div>
+        <div class="fireflies">
+            <div class="firefly"></div><div class="firefly"></div><div class="firefly"></div>
+            <div class="firefly"></div><div class="firefly"></div><div class="firefly"></div>
+            <div class="firefly"></div><div class="firefly"></div>
+        </div>
+        <div class="ambient-glow warm"></div>
+        <div class="ambient-glow cool"></div>
+        <div class="ambient-glow accent"></div>
+        <div class="clouds">
+            <div class="cloud"></div><div class="cloud"></div><div class="cloud"></div>
+            <div class="cloud"></div><div class="cloud"></div>
+        </div>
+    </div>
     <!-- 顶部标题栏 -->
     <header class="top-header">
         <h1 class="header-title">吉大<span>自动化</span>八班</h1>
@@ -21,7 +51,7 @@
     <main class="main-content">
         <div class="container">
             <div class="page-header">
-                <h1 class="page-title">💬 留言板</h1>
+                <h1 class="page-title">✉️ 留言信件</h1>
                 <p class="page-subtitle">留下你的足迹，分享你的故事</p>
             </div>
 
@@ -34,28 +64,46 @@
                         <span>🔑</span> 登录
                     </button>
                 </div>
-                <!-- 留言表单（登录后显示） -->
-                <form id="messageForm" onsubmit="submitMessage(event)" style="display: none;">
-                    <div class="input-group">
-                        <label>留言内容</label>
-                        <textarea id="msgContent" placeholder="想说点什么..." maxlength="500" required></textarea>
-                        <div class="char-count" id="charCount">0/500</div>
+                <!-- 留言表单（登录后显示）- 全新设计 -->
+                <div id="messageForm" class="msg-compose-card" style="display: none;">
+                    <div class="msg-compose-header">
+                        <div class="msg-compose-avatar" id="msgComposeAvatar">写</div>
+                        <textarea id="msgContent" class="msg-compose-textarea" placeholder="想说点什么..." maxlength="500"></textarea>
                     </div>
-                    <div class="input-group">
-                        <label>上传照片（选填）</label>
-                        <input type="file" id="msgImage" accept="image/*" onchange="previewMessageImage(this)">
-                        <img id="msgImagePreview" style="max-width: 200px; max-height: 200px; display: none; margin-top: 10px; border-radius: 8px;">
-                        <div id="msgImageUploadProgress" class="upload-progress" style="display: none; margin-top: 10px;">
-                            <div class="upload-progress-bar" style="width: 0%;"></div>
-                            <span class="upload-progress-text">0%</span>
+                    <div class="msg-compose-toolbar">
+                        <div class="msg-compose-tools">
+                            <label class="msg-tool-btn" title="上传照片">
+                                <input type="file" id="msgImage" accept="image/*" onchange="previewMessageImage(this)" style="display:none;">
+                                <span>📷</span>
+                            </label>
+                            <button class="msg-tool-btn" id="voiceToolBtn" onclick="showVoiceMessageBox()" title="语音留言">
+                                <span>🎤</span>
+                            </button>
+                            <button class="msg-tool-btn" id="aiToolBtn" onclick="toggleAiImageGen()" title="AI生成图片">
+                                <span>🎨</span>
+                            </button>
+                        </div>
+                        <div class="msg-compose-count">
+                            <span id="charCount">0</span>/500
                         </div>
                     </div>
-                    <button type="submit" class="submit-btn">
-                        <span>📤</span> 发送留言
+                    <img id="msgImagePreview" class="msg-compose-preview" style="display: none;">
+                    <div id="msgImageUploadProgress" class="upload-progress" style="display: none;">
+                        <div class="upload-progress-bar" style="width: 0%;"></div>
+                        <span class="upload-progress-text">0%</span>
+                    </div>
+                    <button type="button" class="msg-submit-btn" onclick="submitTextMessage()">
+                        <span>发送</span>
                     </button>
-                </form>
+                </div>
+
                 <!-- 语音留言 -->
                 <div class="voice-message-box" id="voiceMessageBox" style="display: none;">
+                    <div class="voice-back-bar">
+                        <button class="voice-back-btn" onclick="showTextMessageBox()">
+                            <span>←</span> 返回
+                        </button>
+                    </div>
                     <div class="voice-record-area">
                         <button type="button" class="voice-record-btn" id="voiceRecordBtn" onclick="toggleVoiceRecording()">
                             <span id="voiceRecordIcon">🎤</span>
@@ -63,74 +111,153 @@
                         </button>
                         <div id="voicePreviewArea" style="display: none; margin-top: 10px;">
                             <audio id="voicePreviewAudio" controls style="width: 100%;"></audio>
-                            <button type="button" class="submit-btn" onclick="submitVoiceMessage()" style="margin-top: 10px;">
-                                <span>📤</span> 发送语音留言
-                            </button>
-                            <button type="button" class="cancel-btn" onclick="cancelVoiceRecording()" style="margin-left: 10px;">
-                                取消
-                            </button>
+                            <div style="display: flex; gap: 10px; margin-top: 10px;">
+                                <button type="button" class="submit-btn" onclick="submitVoiceMessage()">发送</button>
+                                <button type="button" class="cancel-btn" onclick="cancelVoiceRecording()">取消</button>
+                            </div>
                         </div>
                     </div>
                     <div id="voiceRecordingStatus" style="text-align: center; margin-top: 10px; color: var(--secondary); display: none;"></div>
                 </div>
-                <div style="text-align: center; margin-top: 10px;" id="voiceToggleArea" style="display: none;">
-                    <button type="button" class="toggle-voice-btn" onclick="showVoiceMessageBox()" style="background: none; border: none; color: var(--secondary); cursor: pointer; font-size: 0.9rem;">
-                        🎤 切换到语音留言
-                    </button>
+
+                <!-- AI 图片生成 -->
+                <div id="aiImageGenBox" class="ai-gen-card" style="display: none;">
+                    <div class="ai-gen-header" onclick="toggleAiImageGen()">
+                        <span class="ai-gen-title">🎨 AI 创作</span>
+                        <span class="ai-gen-toggle" id="aiImageGenToggle">▼</span>
+                    </div>
+                    <div class="ai-gen-content" id="aiImageGenContent">
+                        <textarea id="aiImgPrompt" class="ai-gen-input" placeholder="描述你想生成的图片..."></textarea>
+                        <div class="ai-gen-row">
+                            <label class="ai-gen-upload">
+                                <input type="file" id="aiImgRef" accept="image/*" onchange="previewAiRefImage(this)" style="display:none;">
+                                <span>📷 参考图</span>
+                            </label>
+                            <img id="aiImgRefPreview" class="ai-gen-ref-preview" style="display: none;">
+                            <select id="aiImgAspect" class="ai-gen-select">
+                                <option value="1:1">1:1</option>
+                                <option value="16:9">16:9</option>
+                                <option value="4:3">4:3</option>
+                                <option value="9:16">9:16</option>
+                            </select>
+                        </div>
+                        <div class="ai-gen-progress" id="aiImgProgress" style="display: none;">
+                            <div class="ai-gen-progress-bar"><div id="aiImgProgressBar"></div></div>
+                            <p>AI 创作中...</p>
+                        </div>
+                        <div class="ai-gen-result" id="aiImgPreview" style="display: none;">
+                            <img id="aiImgPreviewImg">
+                            <button type="button" class="ai-gen-insert-btn" id="aiImgInsertBtn" onclick="insertAiImageToMsg()" disabled>插入留言</button>
+                        </div>
+                        <div class="ai-gen-actions">
+                            <button type="button" id="aiImgGenBtn" onclick="generateAiImage()">生成</button>
+                            <button type="button" onclick="cancelAiImage()">取消</button>
+                        </div>
+                    </div>
                 </div>
             </div>
 
             <!-- 留言列表 -->
+            {% if not logged_in %}
+            <!-- 未登录提示遮罩 -->
+            <div class="lyb-login-overlay">
+                <div class="lyb-login-card">
+                    <h3>打开信箱查看留言</h3>
+                    <p>登录后可阅读全部信件、点赞和评论</p>
+                    <button class="lyb-login-btn" onclick="window.location.href='/about'">
+                        <span>🔑</span> 立即登录
+                    </button>
+                </div>
+            </div>
+            {% else %}
             <div class="message-board">
                 <h2 class="section-title">全部留言</h2>
                 <div class="message-list" id="messageList">
                     {% for msg in messages %}
-                    <div class="message-stamp" id="msg-{{ msg.id }}" data-nickname="{{ msg.nickname }}" data-msg-id="{{ msg.id }}">
-                        <div class="message-header">
-                            <div class="message-nickname">{{ msg.nickname }}</div>
-                            <div class="message-time">{{ msg.time }}</div>
-                        </div>
-                        {% if msg.voice %}
-                        <div class="voice-message-player">
-                            <button class="voice-play-btn" onclick="toggleVoicePlay(this, '{{ msg.voice }}')">
-                                <span class="voice-play-icon">▶️</span>
-                            </button>
-                            <div class="voice-wave">
-                                <span></span><span></span><span></span><span></span><span></span>
+                    <div class="envelope-card" id="msg-{{ msg.id }}" data-nickname="{{ msg.nickname }}" data-msg-id="{{ msg.id }}" onclick="toggleEnvelope(this)">
+                        <div class="envelope-body">
+                            <!-- 信封封口 -->
+                            <div class="envelope-flap"></div>
+                            <!-- 蜡封 -->
+                            <div class="wax-seal"></div>
+                            <!-- 邮戳 -->
+                            <div class="postmark">
+                                <div class="postmark-date">{{ msg.time[:7] }}</div>
                             </div>
-                            <span class="voice-duration">8秒</span>
-                        </div>
-                        {% else %}
-                        <div class="message-content">{{ msg.content }}</div>
-                        {% endif %}
-                        {% if msg.image %}
-                        <img src="{{ msg.image }}" style="max-width: 200px; max-height: 200px; margin-top: 10px; border-radius: 8px; display: block; cursor: pointer;" onclick="showLightbox(this.src)">
-                        {% endif %}
-                        <div class="message-actions">
-                            <button class="like-btn" onclick="toggleLike({{ msg.id }})" data-liked="false">
-                                <span class="like-icon">🤍</span>
-                                <span class="like-count">0</span>
-                            </button>
-                            <button class="comment-toggle-btn" onclick="toggleComments({{ msg.id }})">
-                                <span>💬</span>
-                                <span class="comment-count">0</span>
-                            </button>
-                            <button class="delete-msg-btn" onclick="deleteMessage({{ msg.id }})" style="display: none;">🗑️ 删除</button>
-                        </div>
-                        <!-- 评论区域 -->
-                        <div class="comments-section" id="comments-{{ msg.id }}" style="display: block;">
-                            <div class="comments-list" id="comments-list-{{ msg.id }}"></div>
-                            <div class="comment-input-area" id="comment-input-{{ msg.id }}">
-                                <input type="text" class="comment-input" placeholder="写下你的评论..." onkeypress="handleCommentKeypress(event, {{ msg.id }})">
-                                <button class="comment-submit-btn" onclick="submitComment({{ msg.id }})">发送</button>
+
+                            <!-- 信纸内容 -->
+                            <div class="letter-content">
+                                <!-- 头部信息 -->
+                                <div class="letter-header">
+                                    {% if msg.avatar %}
+                                    <div class="letter-avatar" style="background-image: url('{{ msg.avatar }}'); background-size: cover; background-position: center;"></div>
+                                    {% else %}
+                                    <div class="letter-avatar" style="display: flex; align-items: center; justify-content: center; font-family: 'ZCOOL XiaoWei', serif; font-size: 1.2rem; color: var(--primary);">{{ msg.nickname[0] }}</div>
+                                    {% endif %}
+                                    <div class="letter-info">
+                                        <div class="letter-nickname">{{ msg.nickname }}</div>
+                                        <div class="letter-time">{{ msg.time }}</div>
+                                    </div>
+                                </div>
+
+                                <!-- 留言内容 -->
+                                {% if msg.voice %}
+                                <div class="voice-message-player" style="margin: 15px 0;">
+                                    <button class="voice-play-btn" onclick="event.stopPropagation(); toggleVoicePlay(this, '{{ msg.voice }}')">
+                                        <span class="voice-play-icon">▶️</span>
+                                    </button>
+                                    <div class="voice-wave">
+                                        <span></span><span></span><span></span><span></span><span></span>
+                                    </div>
+                                    <span class="voice-duration">8秒</span>
+                                </div>
+                                {% else %}
+                                <div class="letter-text">{{ msg.content }}</div>
+                                {% endif %}
+
+                                <!-- 留言图片 -->
+                                {% if msg.image %}
+                                <div class="letter-image">
+                                    <img src="{{ msg.image }}" onclick="event.stopPropagation(); showLightbox(this.src)">
+                                </div>
+                                {% endif %}
+
+                                <!-- 签名 -->
+                                <div class="letter-signature">{{ msg.nickname }}</div>
+
+                                <!-- 互动按钮 -->
+                                <div class="letter-actions">
+                                    <button class="letter-like-btn" onclick="event.stopPropagation(); toggleLike({{ msg.id }})" data-liked="false">
+                                        <span class="like-icon">🤍</span>
+                                        <span class="like-count">0</span>
+                                    </button>
+                                    <button class="letter-comment-btn" onclick="event.stopPropagation(); toggleComments({{ msg.id }})">
+                                        <span>💬</span>
+                                        <span class="comment-count">0</span>
+                                    </button>
+                                    <button class="delete-msg-btn" onclick="event.stopPropagation(); deleteMessage({{ msg.id }})" style="display: none; background: none; border: 1px solid #d4a574; border-radius: 20px; padding: 6px 12px; cursor: pointer;">🗑️</button>
+                                </div>
+
+                                <!-- 评论区 -->
+                                <div class="letter-comments" id="comments-{{ msg.id }}" style="display: block;">
+                                    <div class="comments-list" id="comments-list-{{ msg.id }}"></div>
+                                    <div class="comment-input-area" id="comment-input-{{ msg.id }}" style="display: flex; gap: 8px; margin-top: 10px;">
+                                        <input type="text" class="comment-input" placeholder="写下你的评论..." onkeypress="handleCommentKeypress(event, {{ msg.id }})" style="flex: 1; padding: 8px 12px; border: 1px solid #d4a574; border-radius: 20px; font-size: 0.85rem;">
+                                        <button class="comment-submit-btn" onclick="submitComment({{ msg.id }})" style="padding: 8px 16px; background: var(--secondary); color: white; border: none; border-radius: 20px; cursor: pointer; font-size: 0.85rem;">发送</button>
+                                    </div>
+                                </div>
                             </div>
+
+                            <!-- 展开提示 -->
+                            <div class="expand-hint">点击展开</div>
                         </div>
                     </div>
                     {% else %}
-                    <div class="empty-message">还没有留言，快来写下第一句吧~</div>
+                    <div class="empty-message" style="text-align: center; padding: 40px; color: var(--text-light);">还没有留言，快来写下第一句吧~</div>
                     {% endfor %}
                 </div>
             </div>
+            {% endif %}
         </div>
     </main>
 
@@ -146,7 +273,7 @@
         </a>
         <a href="/lyb" class="tab-item active">
             <span class="tab-icon">💬</span>
-            <span class="tab-label">留言板</span>
+            <span class="tab-label">留言信件</span>
         </a>
         <a href="/media" class="tab-item">
             <span class="tab-icon">📷</span>
@@ -206,7 +333,7 @@
                 .then(r => r.json())
                 .then(data => {
                     if (data.success) {
-                        const btn = document.querySelector(`#msg-${msgId} .like-btn`);
+                        const btn = document.querySelector(`#msg-${msgId} .letter-like-btn`);
                         if (btn) {
                             btn.querySelector('.like-count').textContent = data.count;
                             btn.dataset.liked = data.has_liked;
@@ -224,7 +351,7 @@
                 .then(r => r.json())
                 .then(data => {
                     if (data.success) {
-                        const btn = document.querySelector(`#msg-${msgId} .comment-toggle-btn`);
+                        const btn = document.querySelector(`#msg-${msgId} .letter-comment-btn`);
                         if (btn) {
                             btn.querySelector('.comment-count').textContent = data.comments.length;
                         }
@@ -232,12 +359,21 @@
                 });
         }
 
+        // 信封展开/收起
+        function toggleEnvelope(card) {
+            card.classList.toggle('open');
+            const hint = card.querySelector('.expand-hint');
+            if (hint) {
+                hint.textContent = card.classList.contains('open') ? '点击收起' : '点击展开';
+            }
+        }
+
         function toggleLike(msgId) {
             if (!window.currentUser) {
                 showVerifyModal();
                 return;
             }
-            const btn = document.querySelector(`#msg-${msgId} .like-btn`);
+            const btn = document.querySelector(`#msg-${msgId} .letter-like-btn`);
             const isLiked = btn.dataset.liked === 'true';
             const url = isLiked ? '/api/unlike_message' : '/api/like_message';
             fetch(url, {
@@ -351,7 +487,7 @@
                     input.value = '';
                     loadComments(msgId);
                     // 更新评论数
-                    const btn = document.querySelector(`#msg-${msgId} .comment-toggle-btn .comment-count`);
+                    const btn = document.querySelector(`#msg-${msgId} .letter-comment-btn .comment-count`);
                     const count = parseInt(btn.textContent) + 1;
                     btn.textContent = count;
                 }
@@ -404,13 +540,12 @@
         function showVoiceMessageBox() {
             document.getElementById('messageForm').style.display = 'none';
             document.getElementById('voiceMessageBox').style.display = 'block';
-            document.getElementById('voiceToggleArea').style.display = 'none';
+            document.getElementById('aiImageGenBox').style.display = 'none';
         }
 
         function showTextMessageBox() {
             document.getElementById('messageForm').style.display = 'block';
             document.getElementById('voiceMessageBox').style.display = 'none';
-            document.getElementById('voiceToggleArea').style.display = 'block';
         }
 
         function toggleVoiceRecording() {
@@ -555,5 +690,43 @@
         <button class="lightbox-close" onclick="closeLightbox()">✕</button>
         <img id="lightboxImg" src="" alt="">
     </div>
+
+    <!-- 夜间模式切换 -->
+    <button class="night-mode-toggle" id="nightModeToggle" onclick="toggleNightMode()" title="切换夜间模式"></button>
+    <!-- 季节装饰容器 -->
+    <div class="corner-decor top-right" id="seasonalDecor"></div>
+
+    <script>
+    function toggleNightMode() {
+        document.body.classList.toggle('night-mode');
+        localStorage.setItem('nightMode', document.body.classList.contains('night-mode'));
+    }
+    if (localStorage.getItem('nightMode') === 'true') {
+        document.body.classList.add('night-mode');
+    }
+    function loadSeasonalDecor() {
+        const decor = document.getElementById('seasonalDecor');
+        if (!decor) return;
+        const month = new Date().getMonth();
+        if (month === 11 || month === 0 || month === 1) {
+            decor.innerHTML = '<div class="snowflakes">' +
+                '<div class="snowflake">❄</div><div class="snowflake">❄</div>' +
+                '<div class="snowflake">❄</div><div class="snowflake">❄</div>' +
+                '<div class="snowflake">❄</div><div class="snowflake">❄</div>' +
+                '<div class="snowflake">❄</div><div class="snowflake">❄</div>' +
+                '<div class="snowflake">❄</div><div class="snowflake">❄</div>' +
+                '</div>';
+        } else if (month >= 1 && month <= 2) {
+            decor.innerHTML = '<div class="lantern-string">' +
+                '<div class="lantern"><div class="lantern-body"></div><div class="lantern-tassel"></div></div>' +
+                '<div class="lantern"><div class="lantern-body"></div><div class="lantern-tassel"></div></div>' +
+                '<div class="lantern"><div class="lantern-body"></div><div class="lantern-tassel"></div></div>' +
+                '<div class="lantern"><div class="lantern-body"></div><div class="lantern-tassel"></div></div>' +
+                '<div class="lantern"><div class="lantern-body"></div><div class="lantern-tassel"></div></div>' +
+                '</div>';
+        }
+    }
+    loadSeasonalDecor();
+    </script>
 </body>
 </html>

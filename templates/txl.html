@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- Version: 2026-04-15-v3 | 权限控制修复 -->
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -6,10 +7,39 @@
     <title>通讯录 - 吉大自动化八班</title>
     <link rel="stylesheet" href="/static/css/style.css">
     <link rel="stylesheet" href="/static/css/film-grain.css">
+    <link rel="stylesheet" href="/static/css/txl-flip.css">
+    <link rel="stylesheet" href="/static/css/ambient-bg.css">
+    <link rel="stylesheet" href="/static/css/special-effects.css">
+    <link rel="stylesheet" href="/static/css/interactions.css">
+    <link rel="stylesheet" href="/static/css/night-mode.css">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='80' font-size='80'>📖</text></svg>">
-<div class="film-grain-overlay"></div>
 </head>
 <body>
+    <!-- 胶片颗粒质感层 -->
+    <div class="film-grain-overlay"></div>
+
+    <!-- 氛围背景层 -->
+    <div class="ambient-bg-container">
+        <div class="starfield">
+            <div class="star small"></div><div class="star medium"></div><div class="star large"></div>
+            <div class="star small"></div><div class="star medium"></div><div class="star small"></div>
+            <div class="star large"></div><div class="star small"></div><div class="star medium"></div>
+            <div class="star small"></div><div class="star medium"></div><div class="star small"></div>
+            <div class="star medium"></div><div class="star large"></div><div class="star small"></div>
+        </div>
+        <div class="fireflies">
+            <div class="firefly"></div><div class="firefly"></div><div class="firefly"></div>
+            <div class="firefly"></div><div class="firefly"></div><div class="firefly"></div>
+            <div class="firefly"></div><div class="firefly"></div>
+        </div>
+        <div class="ambient-glow warm"></div>
+        <div class="ambient-glow cool"></div>
+        <div class="ambient-glow accent"></div>
+        <div class="clouds">
+            <div class="cloud"></div><div class="cloud"></div><div class="cloud"></div>
+            <div class="cloud"></div><div class="cloud"></div>
+        </div>
+    </div>
     <!-- 顶部标题栏 -->
     <header class="top-header">
         <h1 class="header-title">吉大<span>自动化</span>八班</h1>
@@ -24,10 +54,25 @@
                 <p class="page-subtitle">珍藏回忆，联络你我</p>
             </div>
 
+            <!-- 未登录提示 -->
+            {% if not logged_in %}
+            <div class="txl-login-prompt">
+                <div class="txl-login-card">
+                    <div class="txl-login-icon">🔒</div>
+                    <h3>登录后查看完整通讯录</h3>
+                    <p>登录后可查看同学电话、职位、公司等详细信息</p>
+                    <button class="txl-login-btn" onclick="window.location.href='/about'">立即登录</button>
+                </div>
+            </div>
+            {% endif %}
+
             <!-- 搜索框 -->
+            {% if logged_in %}
             <div class="search-box">
                 <input type="text" id="searchInput" placeholder="搜索同学姓名或籍贯...">
+                <button type="button" class="search-box-btn" onclick="scrollToMyCard()" title="定位到我的卡片">🎯 我的卡片</button>
             </div>
+            {% endif %}
 
             <!-- 离我最近的同学 -->
             {% if nearest_classmates %}
@@ -55,6 +100,7 @@
             {% endif %}
 
             <!-- 学生卡片网格 -->
+            {% if logged_in %}
             <div class="student-grid" id="studentGrid">
                 {% for student in students %}
                 <div class="student-card"
@@ -63,8 +109,8 @@
                      data-hometown="{{ student.hometown_name }}"
                      data-custom-intro="{{ student.custom_intro or '' }}"
                      data-hobby="{{ student.hobby or '' }}">
-                    <div style="text-align: center;">
-                        <div class="student-avatar {% if student.avatar %}avatar-has{% endif %} {% if student.avatar %}avatar-clickable{% endif %}" style="margin: 0 auto; {% if student.avatar %}cursor: pointer;{% endif %}" onclick="{% if student.avatar %}showAvatarLightbox('{{ student.avatar }}'){% endif %}">
+                    <div class="student-avatar-wrap">
+                        <div class="student-avatar {% if student.avatar %}avatar-has{% endif %} {% if student.avatar %}avatar-clickable{% endif %}" onclick="{% if student.avatar %}showAvatarLightbox('{{ student.avatar }}'){% endif %}">
                             {% if student.avatar %}
                             <img src="{{ student.avatar }}" alt="{{ student.name }}">
                             {% else %}
@@ -75,9 +121,12 @@
                         {% if student.custom_intro %}
                         <div class="student-custom-intro">"{{ student.custom_intro }}"</div>
                         {% endif %}
+                        {% if student.hometown_name %}
+                        <div class="student-location-tag">📍 {{ student.hometown_name }}{% if student.city %} {{ student.city }}{% endif %}</div>
+                        {% endif %}
                     </div>
+                    <div class="student-info-collapsed">
                     <div class="student-info">
-                        <span>📍 {{ student.hometown_name }} {% if student.city %}{{ student.city }}{% endif %} {% if student.district %}{{ student.district }}{% endif %}</span>
                         <span>📞 {{ student.phone if student.phone else '暂无' }} {% if student.phone %}<button type="button" class="copy-phone-btn" onclick="copyPhone('{{ student.phone }}')" title="复制号码">⧉</button>{% endif %}</span>
                         {% if student.position %}
                         <span>💼 {{ student.position }}</span>
@@ -101,6 +150,8 @@
                         <span>🔗 <a href="{{ student.xiaohongshu }}" target="_blank" style="color: var(--secondary); text-decoration: none;">小红书</a></span>
                         {% endif %}
                     </div>
+                    </div>
+                    <div class="expand-toggle">👆 点击查看详情</div>
 
                     <!-- 喊话区域 -->
                     <div class="voice-shout-section">
@@ -120,7 +171,7 @@
                                         <span class="voice-play-icon">▶️</span>
                                     </button>
                                 </div>
-                                {% if session.get('verified_student') and (session['verified_student']['name'] == shout.from_name or session['verified_student']['name'] == shout.to_name) %}
+                                {% if logged_in and (session['verified_student']['name'] == shout.from_name or session['verified_student']['name'] == shout.to_name) %}
                                 <button type="button" class="del-voice-btn" onclick="deleteVoice({{ shout.id }})" title="删除">🗑️</button>
                                 {% endif %}
                             </div>
@@ -134,6 +185,7 @@
                 <div class="empty-message">暂无同学信息</div>
                 {% endfor %}
             </div>
+            {% endif %}
         </div>
     </main>
 
@@ -149,7 +201,7 @@
         </a>
         <a href="/lyb" class="tab-item">
             <span class="tab-icon">💬</span>
-            <span class="tab-label">留言板</span>
+            <span class="tab-label">留言信件</span>
         </a>
         <a href="/media" class="tab-item">
             <span class="tab-icon">📷</span>
@@ -193,7 +245,7 @@
                 <button type="submit" class="verify-btn">验证身份</button>
             </form>
             <div style="margin-top: 1rem; text-align: center; font-size: 0.85rem; color: var(--text-light);">
-                登录后可访问留言板和媒体上传功能<br>编辑个人信息请到「我的」页面
+                登录后可访问留言信件和媒体上传功能<br>编辑个人信息请到「我的」页面
             </div>
         </div>
     </div>
@@ -430,6 +482,22 @@
             }
         }
 
+        function scrollToMyCard() {
+            const currentName = window.currentUser?.name;
+            if (!currentName) {
+                alert('请先登录');
+                return;
+            }
+            const targetEl = document.getElementById('student-' + currentName);
+            if (targetEl) {
+                targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                targetEl.classList.add('highlight');
+                setTimeout(() => targetEl.classList.remove('highlight'), 2000);
+            } else {
+                alert('未找到自己的卡片');
+            }
+        }
+
         function showAvatarLightbox(src) {
             const lightbox = document.getElementById('avatarLightbox');
             const img = document.getElementById('avatarLightboxImg');
@@ -474,5 +542,58 @@
     <button id="backToTopBtn" class="back-to-top" onclick="scrollToTop()">↑</button>
     <!-- 页面底部提示 -->
     <div id="pageEndMessage" class="page-end-message">已加载全部内容</div>
+
+    <!-- 夜间模式切换 -->
+    <button class="night-mode-toggle" id="nightModeToggle" onclick="toggleNightMode()" title="切换夜间模式"></button>
+    <!-- 季节装饰容器 -->
+    <div class="corner-decor top-right" id="seasonalDecor"></div>
+
+    <!-- 卡片展开功能 -->
+    <script>
+    // 卡片展开/收起
+    document.querySelectorAll('.student-card').forEach(card => {
+        card.addEventListener('click', function(e) {
+            // 如果点击的是链接或按钮，不触发展开
+            if (e.target.tagName === 'A' || e.target.tagName === 'BUTTON' || e.target.closest('button') || e.target.closest('a')) {
+                return;
+            }
+            this.classList.toggle('expanded');
+        });
+    });
+
+    // 夜间模式
+    function toggleNightMode() {
+        document.body.classList.toggle('night-mode');
+        localStorage.setItem('nightMode', document.body.classList.contains('night-mode'));
+    }
+    if (localStorage.getItem('nightMode') === 'true') {
+        document.body.classList.add('night-mode');
+    }
+
+    // 季节装饰
+    function loadSeasonalDecor() {
+        const decor = document.getElementById('seasonalDecor');
+        if (!decor) return;
+        const month = new Date().getMonth();
+        if (month === 11 || month === 0 || month === 1) {
+            decor.innerHTML = '<div class="snowflakes">' +
+                '<div class="snowflake">❄</div><div class="snowflake">❄</div>' +
+                '<div class="snowflake">❄</div><div class="snowflake">❄</div>' +
+                '<div class="snowflake">❄</div><div class="snowflake">❄</div>' +
+                '<div class="snowflake">❄</div><div class="snowflake">❄</div>' +
+                '<div class="snowflake">❄</div><div class="snowflake">❄</div>' +
+                '</div>';
+        } else if (month >= 1 && month <= 2) {
+            decor.innerHTML = '<div class="lantern-string">' +
+                '<div class="lantern"><div class="lantern-body"></div><div class="lantern-tassel"></div></div>' +
+                '<div class="lantern"><div class="lantern-body"></div><div class="lantern-tassel"></div></div>' +
+                '<div class="lantern"><div class="lantern-body"></div><div class="lantern-tassel"></div></div>' +
+                '<div class="lantern"><div class="lantern-body"></div><div class="lantern-tassel"></div></div>' +
+                '<div class="lantern"><div class="lantern-body"></div><div class="lantern-tassel"></div></div>' +
+                '</div>';
+        }
+    }
+    loadSeasonalDecor();
+    </script>
 </body>
 </html>

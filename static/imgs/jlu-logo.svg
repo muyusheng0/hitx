@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 吉林大学校徽 SVG - 根据官方描述绘制 -->
+<!-- 双圆套圆形徽标，中间JLU变形为天鹅飞翔图案 -->
+<svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- 背景圆 - 深蓝色底 -->
+  <circle cx="100" cy="100" r="96" fill="#1a237e"/>
+  
+  <!-- 外圆金边 -->
+  <circle cx="100" cy="100" r="96" fill="none" stroke="#c9a96e" stroke-width="3"/>
+  <circle cx="100" cy="100" r="88" fill="none" stroke="#c9a96e" stroke-width="1.5"/>
+  
+  <!-- 外环上方文字 - JILIN UNIVERSITY -->
+  <text x="100" y="35" text-anchor="middle" fill="#c9a96e" font-size="10" font-family="Arial, sans-serif" letter-spacing="3" font-weight="bold">
+    JILIN UNIVERSITY
+  </text>
+  
+  <!-- 建校年份 1946 -->
+  <text x="100" y="55" text-anchor="middle" fill="#ffffff" font-size="12" font-family="serif" font-weight="bold">
+    1946
+  </text>
+  
+  <!-- 中央天鹅图案 - JLU变形 -->
+  <g transform="translate(100, 95)">
+    <!-- 天鹅身体 - J -->
+    <path d="M-20,15 Q-15,0 -10,-15 Q0,-30 15,-20 Q20,-10 20,0 Q20,10 10,15" 
+          fill="none" stroke="#c9a96e" stroke-width="3" stroke-linecap="round"/>
+    
+    <!-- 天鹅翅膀 - L -->
+    <path d="M-15,-10 Q-5,-25 10,-30 Q15,-25 20,-15" 
+          fill="none" stroke="#c9a96e" stroke-width="2.5" stroke-linecap="round"/>
+    
+    <!-- 天鹅头部 - U -->
+    <ellipse cx="18" cy="-22" rx="6" ry="5" fill="#c9a96e"/>
+    
+    <!-- 翅膀羽毛纹理 -->
+    <path d="M-10,-20 L0,-25 M5,-28 L10,-22" 
+          fill="none" stroke="#c9a96e" stroke-width="1" opacity="0.7"/>
+  </g>
+  
+  <!-- 外环下方文字 - 吉林大学（郭沫若体风格） -->
+  <text x="100" y="175" text-anchor="middle" fill="#c9a96e" font-size="16" font-family="ZCOOL XiaoWei, Noto Serif SC, serif" font-weight="bold">
+    吉林大学
+  </text>
+  
+  <!-- 中国标识 -->
+  <text x="100" y="188" text-anchor="middle" fill="#c9a96e" font-size="8" font-family="Arial" opacity="0.7">
+    CHINA
+  </text>
+</svg>

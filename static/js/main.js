@@ -40,7 +40,7 @@ async function checkVerifyStatus() {
         if (data.verified) {
             state.verified = true;
             state.currentStudent = data.student;
-            window.currentUser = { name: data.student.name, student_id: data.student.id, is_admin: data.student.is_admin, is_super_admin: data.student.is_super_admin, login_password_set: data.student.login_password_set };
+            window.currentUser = data.student;  // 直接使用完整的学生对象，包含 avatar
             showEditButton();
             updateUserStatusUI(true, data.student);
             updateVerifyUI(true);
@@ -179,14 +179,37 @@ function updateVerifyUI(verified) {
 function updateMessageInputUI(verified) {
     const loginPrompt = document.getElementById('messageLoginPrompt');
     const messageForm = document.getElementById('messageForm');
+    const aiImageGenBox = document.getElementById('aiImageGenBox');
+    console.log('[updateMessageInputUI] called with:', verified);
+    console.log('[updateMessageInputUI] elements:', { loginPrompt, messageForm, aiImageGenBox });
     if (loginPrompt && messageForm) {
         if (verified) {
             loginPrompt.style.display = 'none';
-            messageForm.style.display = '';
+            messageForm.style.display = 'block';
+            if (aiImageGenBox) aiImageGenBox.style.display = 'block';
+            // 更新头像显示 - 使用真实头像
+            const avatar = document.getElementById('msgComposeAvatar');
+            if (avatar && window.currentUser) {
+                const avatarUrl = window.currentUser.avatar;
+                if (avatarUrl) {
+                    avatar.textContent = '';
+                    avatar.style.backgroundImage = `url(${avatarUrl})`;
+                    avatar.style.backgroundSize = 'cover';
+                    avatar.style.backgroundPosition = 'center';
+                } else {
+                    avatar.textContent = window.currentUser.name[0];
+                    avatar.style.backgroundImage = 'none';
+                }
+            }
+            console.log('[updateMessageInputUI] UI updated to logged in state');
         } else {
             loginPrompt.style.display = '';
             messageForm.style.display = 'none';
+            if (aiImageGenBox) aiImageGenBox.style.display = 'none';
+            console.log('[updateMessageInputUI] UI updated to logged out state');
         }
+    } else {
+        console.log('[updateMessageInputUI] elements not found on this page');
     }
 }
 
@@ -297,67 +320,62 @@ async function submitVerify(e) {
         const data = await res.json();
 
         if (data.success) {
-            console.log('登录API成功，开始处理...');
+            console.log('登录API成功，等待会话建立...');
+            // 先关闭登录弹窗
+            closeVerifyModal();
+            // 清除密码
+            if (document.getElementById('verifyLoginPassword')) {
+                document.getElementById('verifyLoginPassword').value = '';
+            }
+            if (passwordGroup) {
+                passwordGroup.style.display = 'none';
+            }
+            // 短暂延迟确保会话cookie已设置
+            await new Promise(r => setTimeout(r, 100));
             // 获取完整用户信息（包括is_admin）
-            fetch('/api/check_verify', { credentials: 'same-origin' })
-                .then(res => res.json())
-                .then(data => {
-                    console.log('check_verify返回:', data);
-                    if (data.verified) {
-                        console.log('验证成功，设置用户状态...');
-                        state.verified = true;
-                        state.currentStudent = data.student;
-                        window.currentUser = data.student;
-                        closeVerifyModal();
-                        // 清除密码
-                        if (document.getElementById('verifyLoginPassword')) {
-                            document.getElementById('verifyLoginPassword').value = '';
-                        }
-                        if (passwordGroup) {
-                            passwordGroup.style.display = 'none';
-                        }
-                        showEditButton();
-                        updateUserStatusUI(true, data.student);
-                        updateVerifyUI(true);
-                        updateMessageInputUI(true);
-                        // 触发登录成功事件
-                        console.log('[DEBUG-MAIN] 准备触发userLoginSuccess事件');
-                        window.dispatchEvent(new CustomEvent('userLoginSuccess', { detail: window.currentUser }));
-                        console.log('[DEBUG-MAIN] userLoginSuccess事件已触发');
-                        if (typeof loadStudentData === 'function') {
-                            console.log('[DEBUG-MAIN] 调用loadStudentData');
-                            loadStudentData();
-                        }
-                        // 直接调用loadNotifications加载通知
-                        console.log('[DEBUG-MAIN] 调用loadNotifications');
-                        if (typeof loadNotifications === 'function') {
-                            loadNotifications();
-                        }
-                        // 关闭登录弹窗
-                        closeVerifyModal();
-                        // 直接更新"我的"页面的 UI（不刷新页面）
-                        const unloggedView = document.getElementById('unloggedView');
-                        const loggedView = document.getElementById('loggedView');
-                        if (unloggedView) {
-                            unloggedView.style.display = 'none';
-                            console.log('隐藏unloggedView');
-                        }
-                        if (loggedView) {
-                            loggedView.style.display = 'block';
-                            console.log('显示loggedView');
-                            // 更新用户信息显示
-                            const nameEl = document.getElementById('profileName');
-                            const idEl = document.getElementById('profileId');
-                            const avatarEl = document.getElementById('profileAvatarInitial');
-                            if (nameEl && data.student) nameEl.textContent = data.student.name || '未设置';
-                            if (idEl && data.student) idEl.textContent = '学号：' + (data.student.id || '未设置');
-                            if (avatarEl && data.student) avatarEl.textContent = (data.student.name || '?')[0];
-                        }
-                        console.log('登录成功完成');
-                    } else {
-                        console.log('验证失败: data.verified is false');
+            try {
+                const verifyRes = await fetch('/api/check_verify', { credentials: 'same-origin' });
+                const verifyData = await verifyRes.json();
+                console.log('check_verify返回:', verifyData);
+                if (verifyData.verified) {
+                    console.log('验证成功，设置用户状态...');
+                    state.verified = true;
+                    state.currentStudent = verifyData.student;
+                    window.currentUser = verifyData.student;
+                    showEditButton();
+                    updateUserStatusUI(true, verifyData.student);
+                    updateVerifyUI(true);
+                    updateMessageInputUI(true);
+                    // 触发登录成功事件
+                    window.dispatchEvent(new CustomEvent('userLoginSuccess', { detail: window.currentUser }));
+                    if (typeof loadStudentData === 'function') {
+                        loadStudentData();
                     }
-                });
+                    if (typeof loadNotifications === 'function') {
+                        loadNotifications();
+                    }
+                    // 直接更新"我的"页面的 UI（不刷新页面）
+                    const unloggedView = document.getElementById('unloggedView');
+                    const loggedView = document.getElementById('loggedView');
+                    if (unloggedView) unloggedView.style.display = 'none';
+                    if (loggedView) {
+                        loggedView.style.display = 'block';
+                        const nameEl = document.getElementById('profileName');
+                        const idEl = document.getElementById('profileId');
+                        const avatarEl = document.getElementById('profileAvatarInitial');
+                        if (nameEl && verifyData.student) nameEl.textContent = verifyData.student.name || '未设置';
+                        if (idEl && verifyData.student) idEl.textContent = '学号：' + (verifyData.student.id || '未设置');
+                        if (avatarEl && verifyData.student) avatarEl.textContent = (verifyData.student.name || '?')[0];
+                    }
+                    console.log('登录成功完成');
+                } else {
+                    console.log('验证失败: verifyData.verified is false');
+                    alert('登录成功但获取用户信息失败，请刷新页面');
+                }
+            } catch (e) {
+                console.error('获取用户信息失败:', e);
+                alert('登录成功但获取用户信息失败，请刷新页面');
+            }
         } else if (data.prompt === '请输入登录密码') {
             // 需要显示密码输入框
             errorEl.textContent = '';
@@ -463,7 +481,7 @@ function updateDeleteButtonsVisibility() {
 
     const currentName = window.currentUser.name;
     const isAdmin = window.currentUser.is_admin;
-    document.querySelectorAll('.message-item[data-nickname]').forEach(item => {
+    document.querySelectorAll('.envelope-card[data-nickname]').forEach(item => {
         const author = item.dataset.nickname;
         if (author === currentName || isAdmin) {
             item.querySelector('.delete-msg-btn').style.display = 'block';
@@ -489,6 +507,11 @@ async function submitMessage(e) {
     const imageInput = document.getElementById('msgImage');
     let imageUrl = '';
     const submitBtn = e.target.querySelector('.submit-btn');
+
+    // 检查是否有AI生成的图片
+    if (e.target.dataset.aiImage) {
+        imageUrl = e.target.dataset.aiImage;
+    }
 
     console.log('Submitting message:', { nickname, content });
 
@@ -578,34 +601,49 @@ async function submitMessage(e) {
 
             const msgId = data.message.id;
             const newMsg = document.createElement('div');
-            newMsg.className = 'message-item slide-in';
+            newMsg.className = 'envelope-card open';
             newMsg.id = `msg-${msgId}`;
             newMsg.dataset.nickname = data.message.nickname;
             newMsg.dataset.msgId = msgId;
+            newMsg.onclick = function() { toggleEnvelope(this); };
             newMsg.innerHTML = `
-                <div class="message-header">
-                    <div class="message-nickname">${escapeHtml(data.message.nickname)}</div>
-                    <div class="message-time">${data.message.time}</div>
-                </div>
-                <div class="message-content">${escapeHtml(data.message.content)}</div>
-                ${data.message.image ? `<img src="${data.message.image}" style="max-width: 200px; margin-top: 10px; border-radius: 8px; display: block;">` : ''}
-                <div class="message-actions">
-                    <button class="like-btn" onclick="toggleLike(${msgId})" data-liked="false">
-                        <span class="like-icon">🤍</span>
-                        <span class="like-count">0</span>
-                    </button>
-                    <button class="comment-toggle-btn" onclick="toggleComments(${msgId})">
-                        <span>💬</span>
-                        <span class="comment-count">0</span>
-                    </button>
-                    <button class="delete-msg-btn" onclick="deleteMessage(${msgId})" style="display: none;">🗑️ 删除</button>
-                </div>
-                <div class="comments-section" id="comments-${msgId}" style="display: block;">
-                    <div class="comments-list" id="comments-list-${msgId}"></div>
-                    <div class="comment-input-area" id="comment-input-${msgId}">
-                        <input type="text" class="comment-input" placeholder="写下你的评论..." onkeypress="handleCommentKeypress(event, ${msgId})">
-                        <button class="comment-submit-btn" onclick="submitComment(${msgId})">发送</button>
+                <div class="envelope-body">
+                    <div class="envelope-flap"></div>
+                    <div class="wax-seal"></div>
+                    <div class="postmark">
+                        <div class="postmark-date">${data.message.time.substring(0, 7)}</div>
                     </div>
+                    <div class="letter-content">
+                        <div class="letter-header">
+                            <div class="letter-avatar" style="display: flex; align-items: center; justify-content: center; font-family: 'ZCOOL XiaoWei', serif; font-size: 1.2rem; color: var(--primary);">${escapeHtml(data.message.nickname[0])}</div>
+                            <div class="letter-info">
+                                <div class="letter-nickname">${escapeHtml(data.message.nickname)}</div>
+                                <div class="letter-time">${data.message.time}</div>
+                            </div>
+                        </div>
+                        <div class="letter-text">${escapeHtml(data.message.content)}</div>
+                        ${data.message.image ? `<div class="letter-image"><img src="${data.message.image}" onclick="showLightbox(this.src)"></div>` : ''}
+                        <div class="letter-signature">${escapeHtml(data.message.nickname)}</div>
+                        <div class="letter-actions">
+                            <button class="letter-like-btn" onclick="event.stopPropagation(); toggleLike(${msgId})" data-liked="false">
+                                <span class="like-icon">🤍</span>
+                                <span class="like-count">0</span>
+                            </button>
+                            <button class="letter-comment-btn" onclick="event.stopPropagation(); toggleComments(${msgId})">
+                                <span>💬</span>
+                                <span class="comment-count">0</span>
+                            </button>
+                            <button class="delete-msg-btn" onclick="event.stopPropagation(); deleteMessage(${msgId})" style="display: none; background: none; border: 1px solid #d4a574; border-radius: 20px; padding: 6px 12px; cursor: pointer;">🗑️</button>
+                        </div>
+                        <div class="letter-comments" id="comments-${msgId}" style="display: block;">
+                            <div class="comments-list" id="comments-list-${msgId}"></div>
+                            <div class="comment-input-area" id="comment-input-${msgId}" style="display: flex; gap: 8px; margin-top: 10px;">
+                                <input type="text" class="comment-input" placeholder="写下你的评论..." onkeypress="handleCommentKeypress(event, ${msgId})" style="flex: 1; padding: 8px 12px; border: 1px solid #d4a574; border-radius: 20px; font-size: 0.85rem;">
+                                <button class="comment-submit-btn" onclick="submitComment(${msgId})" style="padding: 8px 16px; background: var(--secondary); color: white; border: none; border-radius: 20px; cursor: pointer; font-size: 0.85rem;">发送</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="expand-hint">点击收起</div>
                 </div>
             `;
             container.insertBefore(newMsg, container.firstChild);
@@ -621,6 +659,175 @@ async function submitMessage(e) {
     }
 }
 
+async function submitTextMessage() {
+    if (!state.verified) {
+        showVerifyModal();
+        return;
+    }
+
+    const nickname = window.currentUser?.name || '匿名同学';
+    const content = document.getElementById('msgContent')?.value?.trim();
+    const imageInput = document.getElementById('msgImage');
+    let imageUrl = '';
+    const msgForm = document.getElementById('messageForm');
+    const submitBtn = document.querySelector('.msg-submit-btn');
+
+    // 检查是否有AI生成的图片
+    if (msgForm && msgForm.dataset.aiImage) {
+        imageUrl = msgForm.dataset.aiImage;
+    }
+
+    if (!content) {
+        alert('请输入留言内容');
+        return;
+    }
+
+    if (content.length > 500) {
+        alert('留言内容过长');
+        return;
+    }
+
+    // 如果有图片先上传（带进度）
+    if (!imageUrl && imageInput && imageInput.files[0]) {
+        const progressEl = document.getElementById('msgImageUploadProgress');
+        if (progressEl) {
+            progressEl.style.display = 'block';
+            showUploadProgress(progressEl, 0);
+        }
+
+        const formData = new FormData();
+        formData.append('file', imageInput.files[0]);
+
+        if (submitBtn) submitBtn.disabled = true;
+
+        try {
+            await new Promise((resolve, reject) => {
+                uploadWithProgress('/api/upload_image', formData,
+                    (percent) => {
+                        if (progressEl) showUploadProgress(progressEl, percent);
+                    },
+                    (uploadData) => {
+                        if (uploadData.success) {
+                            imageUrl = uploadData.url;
+                            resolve();
+                        } else {
+                            reject(new Error(uploadData.message || '上传失败'));
+                        }
+                    },
+                    (err) => {
+                        reject(new Error(err));
+                    }
+                );
+            });
+        } catch (uploadErr) {
+            if (progressEl) progressEl.style.display = 'none';
+            if (submitBtn) submitBtn.disabled = false;
+            if (uploadErr.message === '请先验证身份') {
+                alert('登录已过期，请重新登录');
+                showVerifyModal();
+            } else {
+                alert('图片上传失败: ' + uploadErr.message);
+            }
+            return;
+        }
+    }
+
+    try {
+        const res = await fetch('/api/add_message', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify({ nickname, content, image: imageUrl })
+        });
+
+        const data = await res.json();
+
+        if (data.success) {
+            document.getElementById('msgContent').value = '';
+            document.getElementById('charCount').textContent = '0';
+            document.getElementById('msgImage').value = '';
+            document.getElementById('msgImagePreview').style.display = 'none';
+            document.getElementById('msgImageUploadProgress').style.display = 'none';
+            msgForm.dataset.aiImage = '';
+
+            const container = document.getElementById('messageList');
+            if (container.querySelector('.empty-message')) {
+                container.querySelector('.empty-message').remove();
+            }
+
+            const msgId = data.message.id;
+            const newMsg = document.createElement('div');
+            newMsg.className = 'envelope-card open';
+            newMsg.id = `msg-${msgId}`;
+            newMsg.dataset.nickname = data.message.nickname;
+            newMsg.dataset.msgId = msgId;
+            newMsg.onclick = function() { toggleEnvelope(this); };
+            newMsg.innerHTML = `
+                <div class="envelope-body">
+                    <div class="envelope-flap"></div>
+                    <div class="wax-seal"></div>
+                    <div class="postmark">
+                        <div class="postmark-date">${data.message.time.substring(0, 7)}</div>
+                    </div>
+                    <div class="letter-content">
+                        <div class="letter-header">
+                            <div class="letter-avatar" style="display: flex; align-items: center; justify-content: center; font-family: 'ZCOOL XiaoWei', serif; font-size: 1.2rem; color: var(--primary);">${escapeHtml(data.message.nickname[0])}</div>
+                            <div class="letter-info">
+                                <div class="letter-nickname">${escapeHtml(data.message.nickname)}</div>
+                                <div class="letter-time">${data.message.time}</div>
+                            </div>
+                        </div>
+                        <div class="letter-text">${escapeHtml(data.message.content)}</div>
+                        ${data.message.image ? `<div class="letter-image"><img src="${data.message.image}" onclick="showLightbox(this.src)"></div>` : ''}
+                        <div class="letter-signature">${escapeHtml(data.message.nickname)}</div>
+                        <div class="letter-actions">
+                            <button class="letter-like-btn" onclick="event.stopPropagation(); toggleLike(${msgId})" data-liked="false">
+                                <span class="like-icon">🤍</span>
+                                <span class="like-count">0</span>
+                            </button>
+                            <button class="letter-comment-btn" onclick="event.stopPropagation(); toggleComments(${msgId})">
+                                <span>💬</span>
+                                <span class="comment-count">0</span>
+                            </button>
+                            <button class="delete-msg-btn" onclick="event.stopPropagation(); deleteMessage(${msgId})" style="display: none; background: none; border: 1px solid #d4a574; border-radius: 20px; padding: 6px 12px; cursor: pointer;">🗑️</button>
+                        </div>
+                        <div class="letter-comments" id="comments-${msgId}" style="display: block;">
+                            <div class="comments-list" id="comments-list-${msgId}"></div>
+                            <div class="comment-input-area" id="comment-input-${msgId}" style="display: flex; gap: 8px; margin-top: 10px;">
+                                <input type="text" class="comment-input" placeholder="写下你的评论..." onkeypress="handleCommentKeypress(event, ${msgId})" style="flex: 1; padding: 8px 12px; border: 1px solid #d4a574; border-radius: 20px; font-size: 0.85rem;">
+                                <button class="comment-submit-btn" onclick="submitComment(${msgId})" style="padding: 8px 16px; background: var(--secondary); color: white; border: none; border-radius: 20px; cursor: pointer; font-size: 0.85rem;">发送</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="expand-hint">点击收起</div>
+                </div>
+            `;
+            container.insertBefore(newMsg, container.firstChild);
+            updateDeleteButtonsVisibility();
+        } else {
+            alert(data.message || '提交失败，请稍后重试');
+        }
+    } catch (e) {
+        console.error('Submit message error:', e);
+        alert('提交失败，请稍后重试');
+    } finally {
+        if (submitBtn) submitBtn.disabled = false;
+    }
+}
+
+// 监听留言内容字数变化
+document.addEventListener('DOMContentLoaded', function() {
+    const msgContent = document.getElementById('msgContent');
+    if (msgContent) {
+        msgContent.addEventListener('input', function() {
+            const charCount = document.getElementById('charCount');
+            if (charCount) {
+                charCount.textContent = this.value.length;
+            }
+        });
+    }
+});
+
 function previewMessageImage(input) {
     const preview = document.getElementById('msgImagePreview');
     if (input.files && input.files[0]) {
@@ -633,6 +840,126 @@ function previewMessageImage(input) {
     } else {
         preview.style.display = 'none';
     }
+}
+
+// ==================== AI 图片生成 ====================
+let aiGeneratedImageUrl = null;
+let aiRefImageBase64 = null;
+
+function toggleAiImageGen() {
+    const content = document.getElementById('aiImageGenContent');
+    const toggle = document.getElementById('aiImageGenToggle');
+    if (content.style.display === 'none') {
+        content.style.display = 'block';
+        toggle.textContent = '▲';
+    } else {
+        content.style.display = 'none';
+        toggle.textContent = '▼';
+    }
+}
+
+function previewAiRefImage(input) {
+    const preview = document.getElementById('aiImgRefPreview');
+    aiRefImageBase64 = null;
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            preview.src = e.target.result;
+            preview.style.display = 'block';
+            // 保存base64用于API调用
+            aiRefImageBase64 = e.target.result.split(',')[1];
+        };
+        reader.readAsDataURL(input.files[0]);
+    } else {
+        preview.style.display = 'none';
+    }
+}
+
+async function generateAiImage() {
+    const prompt = document.getElementById('aiImgPrompt').value.trim();
+    if (!prompt) {
+        alert('请输入图片描述');
+        return;
+    }
+
+    const btn = document.getElementById('aiImgGenBtn');
+    const progress = document.getElementById('aiImgProgress');
+    const preview = document.getElementById('aiImgPreview');
+
+    btn.disabled = true;
+    progress.style.display = 'block';
+    preview.style.display = 'none';
+
+    // 模拟进度
+    let progressValue = 0;
+    const progressBar = document.getElementById('aiImgProgressBar');
+    const progressInterval = setInterval(() => {
+        progressValue += Math.random() * 15;
+        if (progressValue > 90) progressValue = 90;
+        progressBar.style.width = progressValue + '%';
+    }, 500);
+
+    try {
+        const res = await fetch('/api/ai_image/generate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify({
+                prompt: prompt,
+                ref_image: aiRefImageBase64 || '',
+                aspect_ratio: document.getElementById('aiImgAspect').value
+            })
+        });
+        const data = await res.json();
+
+        clearInterval(progressInterval);
+        progressBar.style.width = '100%';
+
+        if (data.success) {
+            aiGeneratedImageUrl = data.url;
+            document.getElementById('aiImgPreviewImg').src = aiGeneratedImageUrl;
+            preview.style.display = 'block';
+            document.getElementById('aiImgInsertBtn').disabled = false;
+        } else {
+            alert(data.message || '生成失败');
+        }
+    } catch (e) {
+        clearInterval(progressInterval);
+        alert('生成失败，请稍后重试');
+        console.error(e);
+    } finally {
+        btn.disabled = false;
+        setTimeout(() => {
+            progress.style.display = 'none';
+            progressBar.style.width = '0%';
+        }, 1000);
+    }
+}
+
+function insertAiImageToMsg() {
+    if (!aiGeneratedImageUrl) return;
+    // 将AI生成的图片URL设置到留言表单的图片输入
+    const imgPreview = document.getElementById('msgImagePreview');
+    imgPreview.src = aiGeneratedImageUrl;
+    imgPreview.style.display = 'block';
+    // 标记这是AI生成的图片，提交时特殊处理
+    const msgForm = document.getElementById('messageForm');
+    msgForm.dataset.aiImage = aiGeneratedImageUrl;
+    // 清空AI生成区域
+    cancelAiImage();
+    alert('图片已插入留言，请补充留言内容后发送');
+}
+
+function cancelAiImage() {
+    aiGeneratedImageUrl = null;
+    aiRefImageBase64 = null;
+    document.getElementById('aiImgPrompt').value = '';
+    document.getElementById('aiImgRef').value = '';
+    document.getElementById('aiImgRefPreview').style.display = 'none';
+    document.getElementById('aiImgPreview').style.display = 'none';
+    document.getElementById('aiImgInsertBtn').disabled = true;
+    document.getElementById('aiImgProgress').style.display = 'none';
+    document.getElementById('aiImgProgressBar').style.width = '0%';
 }
 
 // ==================== 省份城市联动 ====================

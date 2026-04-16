@@ -1,0 +1,598 @@
+/**
+ * 通讯录「珍藏卡」样式
+ * 每张同学卡片像一张精心设计的珍藏卡，有悬浮感和光影效果
+ */
+
+/* ==================== 卡片网格 ==================== */
+.student-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 24px;
+    padding: 24px 0;
+}
+
+/* ==================== 珍藏卡片 ==================== */
+.student-card {
+    position: relative;
+    background: linear-gradient(145deg, #fff 0%, #faf8f5 100%);
+    border-radius: 20px;
+    padding: 24px;
+    box-shadow:
+        0 4px 20px rgba(0, 0, 0, 0.08),
+        0 0 0 1px rgba(212, 165, 116, 0.15);
+    transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    cursor: pointer;
+    overflow: hidden;
+}
+
+/* 卡片顶部彩虹装饰 */
+.student-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #e74c3c, #f39c12, #2ecc71, #3498db, #9b59b6);
+    background-size: 200% 100%;
+    animation: rainbow-slide 3s linear infinite;
+    opacity: 0.8;
+}
+
+@keyframes rainbow-slide {
+    0% { background-position: 0% 50%; }
+    100% { background-position: 200% 50%; }
+}
+
+/* 悬浮效果 */
+.student-card:hover {
+    transform: translateY(-10px) scale(1.02);
+    box-shadow:
+        0 20px 40px rgba(0, 0, 0, 0.15),
+        0 0 0 1px rgba(212, 165, 116, 0.25),
+        0 0 30px rgba(243, 156, 18, 0.1);
+}
+
+/* 头像区域 */
+.student-avatar-wrap {
+    text-align: center;
+    margin-bottom: 16px;
+}
+
+.student-avatar {
+    width: 90px;
+    height: 90px;
+    border-radius: 50%;
+    border: 3px solid var(--accent);
+    object-fit: cover;
+    background: linear-gradient(135deg, #f5e6d3, #e8d5c4);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'ZCOOL XiaoWei', serif;
+    font-size: 2.2rem;
+    color: var(--primary);
+    box-shadow:
+        0 4px 15px rgba(0, 0, 0, 0.15),
+        inset 0 -2px 5px rgba(0, 0, 0, 0.05);
+    transition: all 0.3s ease;
+}
+
+.student-card:hover .student-avatar {
+    transform: scale(1.08);
+    border-color: var(--secondary);
+    box-shadow:
+        0 8px 25px rgba(0, 0, 0, 0.2),
+        0 0 0 4px rgba(231, 76, 60, 0.1);
+}
+
+/* 名字 */
+.student-name {
+    font-family: 'ZCOOL XiaoWei', 'Noto Serif SC', serif;
+    font-size: 1.3rem;
+    color: var(--primary);
+    text-align: center;
+    margin-bottom: 4px;
+}
+
+/* 签名语 */
+.student-custom-intro {
+    font-size: 0.85rem;
+    color: var(--text-light);
+    text-align: center;
+    font-style: italic;
+    margin-bottom: 12px;
+    padding: 0 10px;
+}
+
+/* 地区标签 */
+.student-location-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: linear-gradient(135deg, rgba(212, 165, 116, 0.15), rgba(243, 156, 18, 0.1));
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    color: var(--primary);
+    margin-bottom: 16px;
+}
+
+/* 详细信息 - 折叠态 */
+.student-info-collapsed {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.4s ease, opacity 0.3s ease;
+    opacity: 0;
+}
+
+.student-card.expanded .student-info-collapsed {
+    max-height: 300px;
+    opacity: 1;
+}
+
+/* 详细信息 */
+.student-info {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-top: 12px;
+    border-top: 1px dashed rgba(212, 165, 116, 0.3);
+}
+
+.student-info span {
+    font-size: 0.85rem;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.student-info span a {
+    color: var(--secondary);
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+.student-info span a:hover {
+    color: var(--accent);
+    text-decoration: underline;
+}
+
+/* 展开/收起提示 */
+.expand-toggle {
+    text-align: center;
+    padding-top: 12px;
+    font-size: 0.75rem;
+    color: var(--text-light);
+    opacity: 0.7;
+    transition: opacity 0.3s ease;
+}
+
+.student-card:hover .expand-toggle {
+    opacity: 1;
+}
+
+.student-card.expanded .expand-toggle::after {
+    content: ' (点击收起)';
+}
+
+/* 喊话区域 */
+.voice-shout-section {
+    margin-top: 16px;
+    padding-top: 12px;
+    border-top: 1px dashed rgba(212, 165, 116, 0.3);
+}
+
+.voice-shout-btn {
+    width: 100%;
+    padding: 10px;
+    background: linear-gradient(135deg, var(--secondary), #c0392b);
+    color: white;
+    border: none;
+    border-radius: 25px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 3px 10px rgba(231, 76, 60, 0.3);
+}
+
+.voice-shout-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(231, 76, 60, 0.4);
+}
+
+.voice-shout-btn:active {
+    transform: translateY(0);
+}
+
+/* 喊话列表 */
+.voice-shout-list {
+    margin-bottom: 10px;
+}
+
+.voice-shout-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px;
+    background: rgba(212, 165, 116, 0.1);
+    border-radius: 10px;
+    margin-bottom: 8px;
+}
+
+/* 入场动画 */
+@keyframes card-arrive {
+    0% {
+        opacity: 0;
+        transform: translateY(40px) scale(0.9);
+    }
+    60% {
+        transform: translateY(-5px) scale(1.02);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.student-card {
+    animation: card-arrive 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
+}
+
+.student-card:nth-child(1) { animation-delay: 0.03s; }
+.student-card:nth-child(2) { animation-delay: 0.06s; }
+.student-card:nth-child(3) { animation-delay: 0.09s; }
+.student-card:nth-child(4) { animation-delay: 0.12s; }
+.student-card:nth-child(5) { animation-delay: 0.15s; }
+.student-card:nth-child(6) { animation-delay: 0.18s; }
+.student-card:nth-child(7) { animation-delay: 0.21s; }
+.student-card:nth-child(8) { animation-delay: 0.24s; }
+.student-card:nth-child(9) { animation-delay: 0.27s; }
+.student-card:nth-child(10) { animation-delay: 0.30s; }
+.student-card:nth-child(11) { animation-delay: 0.33s; }
+.student-card:nth-child(12) { animation-delay: 0.36s; }
+
+/* ==================== 移动端适配 ==================== */
+@media (max-width: 768px) {
+    .student-grid {
+        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+        gap: 16px;
+        padding: 16px 10px;
+    }
+
+    .student-card {
+        padding: 16px;
+    }
+
+    .student-avatar {
+        width: 70px;
+        height: 70px;
+        font-size: 1.8rem;
+    }
+
+    .student-name {
+        font-size: 1.1rem;
+    }
+
+    .student-info span {
+        font-size: 0.8rem;
+    }
+}
+
+/* ==================== 管理员编辑按钮 ==================== */
+.edit-card-btn {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--secondary);
+    border: none;
+    color: white;
+    font-size: 0.9rem;
+    cursor: pointer;
+    opacity: 0;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+}
+
+.student-card:hover .edit-card-btn {
+    opacity: 1;
+}
+
+.edit-card-btn:hover {
+    transform: scale(1.1);
+    background: var(--accent);
+}
+
+/* ==================== 搜索高亮 ==================== */
+.student-card.search-highlight {
+    animation: search-pulse 0.6s ease;
+}
+
+@keyframes search-pulse {
+    0%, 100% { box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08); }
+    50% { box-shadow: 0 4px 30px rgba(243, 156, 18, 0.4), 0 0 0 4px rgba(243, 156, 18, 0.2); }
+}
+
+/* 未登录提示 */
+.txl-login-prompt {
+    margin-bottom: 2rem;
+}
+
+.txl-login-card {
+    background: rgba(255, 255, 255, 0.06);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    padding: 2.5rem 2rem;
+    text-align: center;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}
+
+.txl-login-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.3));
+}
+
+.txl-login-card h3 {
+    font-family: 'ZCOOL XiaoWei', 'Noto Serif SC', serif;
+    font-size: 1.3rem;
+    color: #fff;
+    margin-bottom: 0.5rem;
+    letter-spacing: 2px;
+}
+
+.txl-login-card p {
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.6);
+    margin-bottom: 1.5rem;
+    line-height: 1.6;
+}
+
+.txl-login-btn {
+    display: inline-block;
+    padding: 0.8rem 2.5rem;
+    background: linear-gradient(135deg, #c9a96e, #d4af37);
+    color: #1a1a2e;
+    border: none;
+    border-radius: 25px;
+    font-size: 1rem;
+    font-weight: bold;
+    letter-spacing: 2px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(201, 169, 110, 0.3);
+}
+
+.txl-login-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(201, 169, 110, 0.4);
+}
+
+@media (max-width: 768px) {
+    .txl-login-card {
+        padding: 2rem 1.5rem;
+    }
+    .txl-login-icon {
+        font-size: 2.5rem;
+    }
+    .txl-login-card h3 {
+        font-size: 1.1rem;
+    }
+    .txl-login-card p {
+        font-size: 0.85rem;
+    }
+}
+
+/* 留言板登录遮罩样式 - 信件风格 */
+.lyb-login-overlay {
+    position: relative;
+    margin: 3rem auto;
+    max-width: 400px;
+}
+
+.lyb-login-card {
+    background: linear-gradient(145deg, rgba(255,248,240,0.95), rgba(255,240,225,0.9));
+    border: 2px solid rgba(212, 165, 116, 0.35);
+    border-radius: 20px;
+    padding: 3rem 2.5rem;
+    text-align: center;
+    box-shadow: 
+        0 10px 40px rgba(139, 90, 43, 0.12),
+        inset 0 2px 0 rgba(255,255,255,0.7);
+    position: relative;
+}
+
+/* 信封装饰线 */
+.lyb-login-card::before {
+    content: '';
+    position: absolute;
+    top: 15px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 60%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(212, 165, 116, 0.4), transparent);
+}
+
+.lyb-login-card::after {
+    content: '✉️';
+    position: absolute;
+    top: -15px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 2rem;
+    background: rgba(255,248,240,0.95);
+    padding: 5px 15px;
+    border-radius: 0 0 15px 15px;
+    box-shadow: 0 2px 8px rgba(139, 90, 43, 0.15);
+}
+
+.lyb-login-card h3 {
+    font-family: 'ZCOOL XiaoWei', 'Noto Serif SC', serif;
+    font-size: 1.35rem;
+    color: #5d4037;
+    margin-bottom: 0.7rem;
+    letter-spacing: 2px;
+    margin-top: 1rem;
+}
+
+.lyb-login-card p {
+    font-size: 0.9rem;
+    color: #8d6e63;
+    margin-bottom: 1.5rem;
+    line-height: 1.6;
+}
+
+.lyb-login-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0.85rem 2.5rem;
+    background: linear-gradient(135deg, #d4a574, #c9a96e);
+    color: #fff;
+    border: none;
+    border-radius: 30px;
+    font-size: 1rem;
+    font-weight: 500;
+    letter-spacing: 2px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 5px 18px rgba(212, 165, 116, 0.3);
+}
+
+.lyb-login-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 7px 22px rgba(212, 165, 116, 0.4);
+}
+
+@media (max-width: 768px) {
+    .lyb-login-overlay {
+        margin: 2rem 0.5rem;
+    }
+    .lyb-login-card {
+        padding: 2.5rem 2rem;
+    }
+}
+
+/* 媒体页面登录遮罩样式 */
+/* 媒体页面登录提示 - 复古相册风格 */
+.media-login-overlay {
+    position: relative;
+    margin: 3rem auto;
+    max-width: 400px;
+}
+
+.media-login-card {
+    background: linear-gradient(145deg, rgba(255,245,230,0.95), rgba(255,235,210,0.9));
+    border: 2px solid rgba(212, 165, 116, 0.3);
+    border-radius: 24px;
+    padding: 3rem 2.5rem;
+    text-align: center;
+    box-shadow: 
+        0 10px 40px rgba(139, 90, 43, 0.15),
+        inset 0 2px 0 rgba(255,255,255,0.6);
+    position: relative;
+    overflow: hidden;
+}
+
+/* 相框装饰 */
+.media-login-card::before {
+    content: '';
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+    border: 1px solid rgba(212, 165, 116, 0.2);
+    border-radius: 18px;
+    pointer-events: none;
+}
+
+.media-login-icon {
+    font-size: 3.5rem;
+    margin-bottom: 1.2rem;
+    display: inline-block;
+    filter: drop-shadow(0 3px 8px rgba(212, 165, 116, 0.4));
+    animation: gentle-float 3s ease-in-out infinite;
+}
+
+@keyframes gentle-float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-5px); }
+}
+
+.media-login-card h3 {
+    font-family: 'ZCOOL XiaoWei', 'Noto Serif SC', serif;
+    font-size: 1.4rem;
+    color: #5d4037;
+    margin-bottom: 0.8rem;
+    letter-spacing: 3px;
+    font-weight: normal;
+}
+
+.media-login-card p {
+    font-size: 0.95rem;
+    color: #8d6e63;
+    margin-bottom: 1.8rem;
+    line-height: 1.7;
+}
+
+.media-login-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0.9rem 2.8rem;
+    background: linear-gradient(135deg, #d4a574, #c9a96e);
+    color: #fff;
+    border: none;
+    border-radius: 30px;
+    font-size: 1rem;
+    font-weight: 500;
+    letter-spacing: 2px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 6px 20px rgba(212, 165, 116, 0.35);
+}
+
+.media-login-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(212, 165, 116, 0.45);
+    background: linear-gradient(135deg, #e0b584, #d4af37);
+}
+
+/* 装饰元素 */
+.media-login-card .deco-corner {
+    position: absolute;
+    width: 30px;
+    height: 30px;
+    border-color: rgba(212, 165, 116, 0.3);
+    border-style: solid;
+}
+.media-login-card .deco-corner.tl { top: 20px; left: 20px; border-width: 2px 0 0 2px; }
+.media-login-card .deco-corner.tr { top: 20px; right: 20px; border-width: 2px 2px 0 0; }
+.media-login-card .deco-corner.bl { bottom: 20px; left: 20px; border-width: 0 0 2px 2px; }
+.media-login-card .deco-corner.br { bottom: 20px; right: 20px; border-width: 0 2px 2px 0; }
+
+@media (max-width: 768px) {
+    .media-login-overlay {
+        margin: 2rem 1rem;
+    }
+    .media-login-card {
+        padding: 2.5rem 2rem;
+    }
+    .media-login-icon {
+        font-size: 2.8rem;
+    }
+    .media-login-card h3 {
+        font-size: 1.2rem;
+    }
+}

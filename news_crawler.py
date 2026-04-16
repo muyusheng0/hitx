@@ -41,59 +41,63 @@ def fetch_jlu_news(keywords=None):
     print("\n[1] 抓取吉大新闻网...")
     results.extend(_fetch_jlu_homepage())
 
-    # 2. 抓取南岭校区东区事务办公室新闻（dqswb.jlu.edu.cn）
-    print("\n[2] 抓取南岭校区新闻...")
+    # 2. Tavily搜索（吉林大学和校友会相关新闻）
+    print("\n[2] 搜索 Tavily 新闻...")
+    results.extend(_fetch_tavily_news())
+
+    # 3. 抓取南岭校区东区事务办公室新闻（dqswb.jlu.edu.cn）
+    print("\n[3] 抓取南岭校区新闻...")
     results.extend(_fetch_nanling_news())
 
-    # 3. 抓取汽车工程学院
-    print("\n[3] 抓取汽车学院...")
-    results.extend(_fetch_college_news('https://auto.jlu.edu.cn', '汽车学院'))
+    # 4. 抓取南岭校区所有学院新闻
+    print("\n[4] 抓取南岭校区各学院新闻...")
+    results.extend(_fetch_all_college_news())
 
-    # 去重
+    # 去重（同时考虑标题和URL）
     seen = set()
     unique = []
     for r in results:
-        key = r['title'][:30]
-        if key not in seen:
-            seen.add(key)
+        title_key = r['title'][:30]
+        url_key = r.get('source_url', '')[:50] if r.get('source_url') else ''
+        # 使用标题+URL组合去重
+        dedup_key = f"{title_key}|{url_key}"
+        if dedup_key not in seen:
+            seen.add(dedup_key)
             unique.append(r)
     results = unique
 
-    # 按关键词匹配度打分并排序
-    def keyword_score(news):
-        """计算新闻与关键词的匹配度分数"""
-        text = (news.get('title', '') + ' ' + news.get('content', '')).lower()
-        score = 0
-        for kw in keywords:
-            kw_lower = kw.lower()
-            # 标题中匹配权重更高
-            if kw_lower in news.get('title', '').lower():
-                score += 10
-            # 正文中匹配
-            if kw_lower in text:
-                score += 1
-        return score
-
-    # 按分数降序排序
-    results.sort(key=keyword_score, reverse=True)
-
-    # 补充图片
+    # 先补充图片（确保排序时能判断是否有图片）
     for r in results:
         if not r.get('image_url'):
             r['image_url'] = get_jlu_image()
+
+    # 按日期+图片排序（最新优先，有图片的放前面）
+    def news_sort_key(news):
+        pub_time = news.get('published_time', '')
+        if pub_time:
+            try:
+                date = datetime.strptime(pub_time[:10], '%Y-%m-%d')
+            except:
+                date = datetime.min
+        else:
+            date = datetime.min
+        has_image = 1 if news.get('image_url') else 0
+        return (date, has_image)
+
+    results.sort(key=news_sort_key, reverse=True)
 
     # 兜底
     if len(results) == 0:
         print("\n[4] 使用示例新闻...")
         results = _generate_samples(keywords)
     else:
-        print(f"\n共获取 {len(results)} 条新闻（已按关键词匹配度排序）")
+        print(f"\n共获取 {len(results)} 条新闻（已按日期排序，最新优先，有图片的在前）")
 
     return results[:20]
 
 
 def _fetch_jlu_homepage():
-    """抓取吉大新闻网首页及其详情页内容"""
+    """抓取吉大新闻网新闻列表页及其详情页内容"""
     import urllib.request
 
     results = []
@@ -104,55 +108,68 @@ def _fetch_jlu_homepage():
     }
 
     try:
-        url = 'https://news.jlu.edu.cn/'
-        req = urllib.request.Request(url, headers=headers)
+        # 改用新闻列表页，而不是首页（首页都是置顶旧闻）
+        list_url = 'https://news.jlu.edu.cn/jdxw/jdxw.htm'
+        req = urllib.request.Request(list_url, headers=headers)
         with urllib.request.urlopen(req, timeout=15) as resp:
             html = resp.read().decode('utf-8', errors='ignore')
 
-        # 提取新闻链接和标题
-        pattern = r'<a[^>]+href="([^"]+\.htm[^"]*)"[^>]*>([^<]{5,100})</a>'
-        matches = re.findall(pattern, html)
+        # 从列表页提取新闻条目
+        # 页面格式: <a href="../info/1306/60905.htm" target="_blank">新闻标题</a>
+        # 同时有日期信息: <span>2026-04-14</span>
+        base_news_url = 'https://news.jlu.edu.cn/'
 
-        base_url = 'https://news.jlu.edu.cn/'
+        # 提取所有新闻条目（链接+标题+日期）
+        # 先找到所有包含日期和链接的条目
+        article_pattern = r'<a[^>]+href="(\.\./info/\d+/\d+\.htm)"[^>]*>([^<]{5,100})</a>'
+        date_pattern = r'<span>(\d{4}-\d{2}-\d{2})</span>'
+
+        # 解析日期（在链接附近的<span>标签中）
+        # 简化处理：先提取所有链接，再在整段HTML中找对应日期
+        link_matches = list(re.finditer(article_pattern, html))
+
         news_items = []
+        for match in link_matches[:20]:
+            link = match.group(1)
+            title = _clean_text(match.group(2).strip())
 
-        for link, title in matches[:15]:
-            title = _clean_text(title.strip())
-
-            # 过滤无效链接
             if len(title) < 5:
                 continue
 
-            # 完整URL
-            if link.startswith('/'):
-                full_url = 'https://news.jlu.edu.cn' + link
-            elif link.startswith('http'):
-                full_url = link
-            else:
-                full_url = base_url + link
+            # 转换相对路径为完整URL: ../info/1306/60905.htm -> https://news.jlu.edu.cn/info/1306/60905.htm
+            full_url = base_news_url + link.replace('../', '')
+
+            # 尝试从链接附近提取日期
+            # 查找该链接位置前后500字符内的日期
+            start_pos = max(0, match.start() - 200)
+            end_pos = min(len(html), match.end() + 200)
+            nearby_html = html[start_pos:end_pos]
+            date_match = re.search(date_pattern, nearby_html)
+            pub_date = date_match.group(1) if date_match else datetime.now().strftime('%Y-%m-%d')
 
             # 关键词匹配（宽松）
             title_lower = title.lower()
             if any(kw.lower() in title_lower or kw.lower() in link.lower()
-                   for kw in ['吉大', '南岭', '自动化', '学院', '大学', '校园', '学生', '教学', '科研', '杏花']):
+                   for kw in ['吉大', '南岭', '自动化', '学院', '大学', '校园', '学生', '教学', '科研', '杏花', '校', '体育', '比赛', '活动']):
                 news_items.append({
                     'title': title[:200],
                     'source_url': full_url,
-                    'published_time': datetime.now().strftime('%Y-%m-%d'),
+                    'published_time': pub_date,
                 })
 
-        # 抓取详情页获取内容和图片（限制并发，最多5个）
-        for i, item in enumerate(news_items[:5]):
+        # 抓取详情页获取内容和图片（限制最多8个）
+        for i, item in enumerate(news_items[:8]):
             try:
                 detail = _fetch_news_detail(item['source_url'])
                 item['content'] = detail.get('content', '来源：吉大新闻网')
                 item['image_url'] = detail.get('image_url', '')
-                item['published_time'] = detail.get('published_time', datetime.now().strftime('%Y-%m-%d'))
-                print(f"  ✓ {item['title'][:40]}...")
+                # 如果详情页也没有日期，用列表页的日期
+                if not detail.get('published_time'):
+                    detail['published_time'] = item['published_time']
+                print(f"  ✓ {item['title'][:40]}... [{item['published_time']}]")
             except Exception as e:
                 item['content'] = '来源：吉大新闻网'
                 item['image_url'] = ''
-                item['published_time'] = datetime.now().strftime('%Y-%m-%d')
                 print(f"  ✓ {item['title'][:40]}... (详情获取失败)")
 
         results = news_items
@@ -211,6 +228,37 @@ def _fetch_college_news(base_url, college_name):
         print(f"  ✗ {college_name}失败: {e}")
 
     return results
+
+
+def _fetch_all_college_news():
+    """抓取南岭校区所有学院的新闻"""
+    # 南岭校区学院列表
+    colleges = [
+        ('https://auto.jlu.edu.cn', '汽车工程学院'),
+        ('https://jtxy.jlu.edu.cn', '交通学院'),
+        ('https://jxhk.jlu.edu.cn', '机械与航空航天工程学院'),
+        ('https://swny.jlu.edu.cn', '生物与农业工程学院'),
+        ('https://clxy.jlu.edu.cn', '材料科学与工程学院'),
+        ('https://txgcxy.jlu.edu.cn', '通信工程学院'),
+        ('https://dzgcxy.jlu.edu.cn', '电子科学与工程学院'),
+        ('https://ccst.jlu.edu.cn', '计算机科学与技术学院'),
+        ('https://math.jlu.edu.cn', '数学学院'),
+        ('https://physics.jlu.edu.cn', '物理学院'),
+        ('https://chem.jlu.edu.cn', '化学学院'),
+        ('https://skxy.jlu.edu.cn', '生命科学学院'),
+    ]
+
+    all_results = []
+    for url, name in colleges:
+        try:
+            results = _fetch_college_news(url, name)
+            all_results.extend(results)
+            print(f"  ✓ {name}: 抓取到 {len(results)} 条")
+        except Exception as e:
+            print(f"  ✗ {name}失败: {e}")
+            continue
+
+    return all_results
 
 
 def _fetch_nanling_news():
@@ -318,6 +366,99 @@ def _fetch_nanling_news():
 
         except Exception as e:
             print(f"  ✗ 抓取失败 {url}: {e}")
+
+    return results
+
+
+def _fetch_tavily_news():
+    """通过 Tavily API 搜索吉林大学和校友会相关新闻"""
+    import urllib.request
+    import json
+    import database
+
+    results = []
+    api_key = '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'
+
+    # 搜索关键词
+    search_queries = [
+        '吉林大学',
+        '吉林大学 新闻',
+        '吉林大学 南岭校区',
+        '吉林大学南岭校区 新闻',
+        '吉林大学 活动',
+        '吉林大学校友会',
+        '吉林大学北京校友会',
+        '吉林大学上海校友会',
+        '吉林大学深圳校友会',
+        '吉林大学广州校友会',
+        '吉林大学成都校友会',
+        '吉林大学武汉校友会',
+        '吉林大学北美校友会',
+        '吉林大学杏花节',
+    ]
+
+    # 追加管理员设置的关键词
+    db_keywords = database.get_news_keywords()
+    for kw in db_keywords:
+        if kw not in search_queries:
+            search_queries.append(kw)
+
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'application/json',
+        'Accept-Language': 'zh-CN,zh;q=0.9',
+    }
+
+    for query in search_queries[:5]:  # 限制搜索次数
+        try:
+            # Tavily Search API
+            search_url = 'https://api.tavily.com/search'
+            payload = json.dumps({
+                'api_key': api_key,
+                'query': query,
+                'search_depth': 'basic',
+                'max_results': 3,
+                'include_answer': False,
+                'include_raw_content': False,
+            })
+
+            req = urllib.request.Request(
+                search_url,
+                data=payload.encode('utf-8'),
+                headers={**headers, 'Content-Type': 'application/json'},
+                method='POST'
+            )
+
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                data = json.loads(resp.read().decode('utf-8'))
+
+            results_list = data.get('results', [])
+            for item in results_list[:3]:
+                title = _clean_text(item.get('title', ''))
+                if len(title) < 5:
+                    continue
+
+                content = _clean_text(item.get('content', ''))[:300] if item.get('content') else '来源：Tavily搜索'
+                source_url = item.get('url', '')
+                pub_date = item.get('published_date', '')
+                if not pub_date:
+                    pub_date = datetime.now().strftime('%Y-%m-%d')
+
+                # 尝试从URL提取图片（如果有的话）
+                img_url = ''
+
+                results.append({
+                    'title': title[:200],
+                    'content': content,
+                    'source_url': source_url,
+                    'image_url': img_url,
+                    'published_time': pub_date,
+                })
+                print(f"  ✓ Tavily: {title[:40]}...")
+
+        except Exception as e:
+            print(f"  ✗ Tavily 搜索失败 ({query}): {e}")
+            continue
 
     return results
 

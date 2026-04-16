@@ -1,0 +1,267 @@
+/**
+ * 交互反馈增强
+ * 按钮、卡片、链接的hover/active效果
+ */
+
+/* ==================== 按钮涟漪效果 ==================== */
+.btn-ripple {
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-ripple .ripple {
+    position: absolute;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.4);
+    transform: scale(0);
+    animation: ripple-effect 0.6s linear;
+    pointer-events: none;
+}
+
+@keyframes ripple-effect {
+    to {
+        transform: scale(4);
+        opacity: 0;
+    }
+}
+
+/* ==================== 卡片悬停效果 ==================== */
+.card-lift {
+    transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.card-lift:hover {
+    transform: translateY(-8px) rotate(0.5deg);
+    box-shadow:
+        0 20px 40px rgba(0, 0, 0, 0.15),
+        0 0 0 1px rgba(231, 76, 60, 0.1);
+}
+
+/* ==================== 卡片边框光效 ==================== */
+.card-glow-border {
+    position: relative;
+}
+
+.card-glow-border::before {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    background: linear-gradient(
+        135deg,
+        transparent 40%,
+        var(--accent) 50%,
+        transparent 60%
+    );
+    background-size: 300% 300%;
+    border-radius: inherit;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    z-index: -1;
+    animation: border-shine 3s ease-in-out infinite;
+}
+
+@keyframes border-shine {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+}
+
+.card-glow-border:hover::before {
+    opacity: 0.6;
+}
+
+/* ==================== 链接下划线动画 ==================== */
+.link-draw {
+    text-decoration: none;
+    background: linear-gradient(var(--secondary), var(--secondary)) no-repeat left bottom;
+    background-size: 0% 2px;
+    transition: background-size 0.3s ease;
+}
+
+.link-draw:hover {
+    background-size: 100% 2px;
+}
+
+/* ==================== Tab标签效果 ==================== */
+.tab-nostalgic {
+    position: relative;
+    padding: 0.5rem 1rem;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: inherit;
+    color: inherit;
+}
+
+.tab-nostalgic::before {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    width: 0;
+    height: 2px;
+    background: var(--secondary);
+    transition: all 0.3s ease;
+    transform: translateX(-50%);
+}
+
+.tab-nostalgic:hover::before,
+.tab-nostalgic.active::before {
+    width: 100%;
+}
+
+.tab-nostalgic.active {
+    color: var(--secondary);
+}
+
+/* ==================== 模态框动画 ==================== */
+.modal {
+    animation: modal-pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes modal-pop {
+    from {
+        opacity: 0;
+        transform: scale(0.9) translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+.modal-overlay {
+    animation: modal-overlay-fade 0.3s ease;
+}
+
+@keyframes modal-overlay-fade {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* ==================== 底部导航增强 ==================== */
+.tab-item {
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.tab-item::after {
+    content: '';
+    position: absolute;
+    bottom: -4px;
+    left: 50%;
+    width: 0;
+    height: 3px;
+    background: var(--secondary);
+    border-radius: 2px;
+    transform: translateX(-50%);
+    transition: width 0.3s ease;
+}
+
+.tab-item:hover::after,
+.tab-item.active::after {
+    width: 60%;
+}
+
+.tab-item.active {
+    color: var(--secondary);
+}
+
+.tab-item.active .tab-icon {
+    transform: scale(1.1);
+    transition: transform 0.3s ease;
+}
+
+.tab-icon {
+    display: inline-block;
+    transition: transform 0.3s ease;
+}
+
+/* ==================== 输入框聚焦效果 ==================== */
+.input-nostalgic {
+    border: 2px solid transparent;
+    background: linear-gradient(var(--bg), var(--bg)) padding-box,
+                linear-gradient(135deg, var(--bg-dark), var(--bg), var(--bg-dark)) border-box;
+    transition: all 0.3s ease;
+}
+
+.input-nostalgic:focus {
+    outline: none;
+    border-color: var(--secondary);
+    box-shadow: 0 0 0 3px rgba(231, 76, 60, 0.1);
+}
+
+/* ==================== 滚动条样式 ==================== */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--bg-dark);
+}
+
+::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, var(--accent), var(--secondary));
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, var(--secondary), var(--accent));
+}
+
+/* ==================== Section入场动画 ==================== */
+.section-animated {
+    opacity: 0;
+    animation: section-enter 0.5s ease-out forwards;
+}
+
+.section-animated:nth-child(1) { animation-delay: 0.1s; }
+.section-animated:nth-child(2) { animation-delay: 0.2s; }
+.section-animated:nth-child(3) { animation-delay: 0.3s; }
+.section-animated:nth-child(4) { animation-delay: 0.4s; }
+
+@keyframes section-enter {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ==================== 点赞动画 ==================== */
+.like-btn {
+    transition: transform 0.2s ease;
+}
+
+.like-btn:active {
+    transform: scale(1.3);
+}
+
+.like-animation {
+    animation: like-pop 0.4s ease;
+}
+
+@keyframes like-pop {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.4); }
+    100% { transform: scale(1); }
+}
+
+/* ==================== 页面淡入效果 ==================== */
+.page-content-fade {
+    animation: content-fade-in 0.6s ease-out;
+}
+
+@keyframes content-fade-in {
+    from {
+        opacity: 0;
+        transform: translateY(15px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}

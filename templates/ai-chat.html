@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 助手 - 吉大自动化八班</title>
+    <link rel="stylesheet" href="/static/css/style.css?v=20260415">
+    <link rel="stylesheet" href="/static/css/film-grain.css">
+    <link rel="stylesheet" href="/static/css/ambient-bg.css">
+    <link rel="stylesheet" href="/static/css/special-effects.css">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            font-family: 'Noto Sans SC', sans-serif;
+        }
+        .chat-container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .chat-header {
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            padding: 15px 20px;
+            border-radius: 20px 20px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            color: white;
+        }
+        .chat-header h1 {
+            margin: 0;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .header-buttons {
+            display: flex;
+            gap: 8px;
+        }
+        .back-btn, .history-btn {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            padding: 8px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            text-decoration: none;
+            font-size: 0.85rem;
+            white-space: nowrap;
+        }
+        .back-btn:hover, .history-btn:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        .history-btn.active {
+            background: rgba(255,255,255,0.4);
+        }
+        .queue-status {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(255,255,255,0.1);
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            color: rgba(255,255,255,0.8);
+        }
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #888;
+        }
+        .queue-status.idle .status-dot {
+            background: #4ade80;
+        }
+        .queue-status.busy .status-dot {
+            background: #facc15;
+            animation: pulse 1s infinite;
+        }
+        .queue-status.error .status-dot {
+            background: #ef4444;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            background: rgba(255,255,255,0.05);
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .message {
+            display: flex;
+            gap: 12px;
+            animation: fadeIn 0.3s ease;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .message.user {
+            flex-direction: row-reverse;
+        }
+        .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            flex-shrink: 0;
+        }
+        .message.ai .avatar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .message.user .avatar {
+            background: linear-gradient(135deg, #e74c3c 0%, #f39c12 100%);
+        }
+        .bubble {
+            max-width: 70%;
+            padding: 14px 18px;
+            border-radius: 18px;
+            font-size: 0.95rem;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+        .message.ai .bubble {
+            background: rgba(255,255,255,0.1);
+            color: #e0e0e0;
+            border-top-left-radius: 4px;
+        }
+        .message.user .bubble {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-top-right-radius: 4px;
+        }
+        .chat-input-area {
+            padding: 12px 15px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 0 0 20px 20px;
+            display: flex;
+            gap: 10px;
+            align-items: flex-end;
+        }
+        .chat-input-area textarea {
+            flex: 1;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 20px;
+            padding: 12px 16px;
+            color: white;
+            font-size: 0.9rem;
+            resize: none;
+            font-family: inherit;
+            outline: none;
+            min-height: 44px;
+            max-height: 120px;
+        }
+        .chat-input-area textarea::placeholder {
+            color: rgba(255,255,255,0.5);
+        }
+        .chat-input-area textarea:focus {
+            border-color: rgba(102, 126, 234, 0.6);
+        }
+        .send-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        .send-btn:hover:not(:disabled) {
+            opacity: 0.9;
+            transform: scale(1.02);
+        }
+        .send-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .loading {
+            padding: 12px 15px;
+            background: rgba(0,0,0,0.2);
+            text-align: center;
+            color: rgba(255,255,255,0.7);
+            font-size: 0.85rem;
+            border-radius: 0 0 20px 20px;
+            display: none;
+        }
+        .loading-detail {
+            display: block;
+            font-size: 0.75rem;
+            color: rgba(255,255,255,0.5);
+            margin-top: 4px;
+        }
+        .ai-status-bar {
+            padding: 8px 15px;
+            background: rgba(0,0,0,0.3);
+            text-align: center;
+            color: rgba(255,255,255,0.7);
+            font-size: 0.8rem;
+            border-radius: 0 0 20px 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+        }
+        .ai-status-bar.error {
+            background: rgba(239, 68, 68, 0.2);
+            color: #fca5a5;
+        }
+        .ai-status-bar.ok {
+            background: rgba(34, 197, 94, 0.2);
+            color: #86efac;
+        }
+        .ai-status-bar.connecting {
+            background: rgba(251, 191, 36, 0.2);
+            color: #fde68a;
+        }
+        .chat-input-area textarea:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .send-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .connect-area {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 20px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 0 0 20px 20px;
+        }
+        .connect-btn {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            font-size: 2.5rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 20px rgba(102, 126, 234, 0.4);
+        }
+        .connect-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 30px rgba(102, 126, 234, 0.6);
+        }
+        .connect-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .connect-hint {
+            margin-top: 15px;
+            color: rgba(255,255,255,0.6);
+            font-size: 0.9rem;
+        }
+        .disconnect-btn {
+            background: rgba(239, 68, 68, 0.3);
+            border: 1px solid rgba(239, 68, 68, 0.5);
+            color: #fca5a5;
+            padding: 4px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.75rem;
+        }
+        .disconnect-btn:hover {
+            background: rgba(239, 68, 68, 0.5);
+        }
+        .unauthorized {
+            text-align: center;
+            padding: 60px 20px;
+            color: rgba(255,255,255,0.7);
+        }
+        .unauthorized h2 {
+            color: #e74c3c;
+            margin-bottom: 20px;
+        }
+        /* 滚动条 */
+        .chat-messages::-webkit-scrollbar {
+            width: 6px;
+        }
+        .chat-messages::-webkit-scrollbar-track {
+            background: rgba(255,255,255,0.05);
+        }
+        .chat-messages::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.2);
+            border-radius: 3px;
+        }
+        /* 历史记录面板 */
+        .history-panel {
+            display: none;
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            background: rgba(255,255,255,0.05);
+        }
+        .history-panel.active {
+            display: block;
+        }
+        .history-empty {
+            text-align: center;
+            color: rgba(255,255,255,0.5);
+            padding: 40px 20px;
+        }
+        .history-filter {
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .history-filter select {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 10px;
+            padding: 8px 15px;
+            color: white;
+            font-size: 0.9rem;
+        }
+        .history-filter select option {
+            background: #1a1a2e;
+        }
+        .history-item {
+            background: rgba(255,255,255,0.05);
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        .history-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .history-user {
+            color: #667eea;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+        .history-time {
+            color: rgba(255,255,255,0.4);
+            font-size: 0.8rem;
+        }
+        .history-messages {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .history-msg {
+            padding: 10px 14px;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+        .history-msg.user {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            margin-left: 20px;
+        }
+        .history-msg.ai {
+            background: rgba(255,255,255,0.1);
+            color: #e0e0e0;
+            margin-right: 20px;
+        }
+        .history-msg-label {
+            font-size: 0.75rem;
+            opacity: 0.6;
+            margin-bottom: 4px;
+        }
+        .history-pagination {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+        .history-pagination button {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: white;
+            padding: 8px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.85rem;
+        }
+        .history-pagination button.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-color: transparent;
+        }
+        .history-pagination button:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+        .super-admin-badge {
+            background: #e74c3c;
+            color: white;
+            font-size: 0.7rem;
+            padding: 2px 8px;
+            border-radius: 10px;
+            margin-left: 8px;
+        }
+        /* 响应式适配 */
+        @media (max-width: 600px) {
+            .chat-container {
+                padding: 10px;
+            }
+            .chat-header {
+                padding: 12px 15px;
+            }
+            .chat-header h1 {
+                font-size: 1rem;
+            }
+            .header-buttons {
+                width: 100%;
+                justify-content: flex-end;
+            }
+            .back-btn, .history-btn {
+                padding: 6px 12px;
+                font-size: 0.8rem;
+            }
+            .bubble {
+                max-width: 85%;
+                padding: 10px 14px;
+                font-size: 0.9rem;
+            }
+            .avatar {
+                width: 32px;
+                height: 32px;
+                font-size: 1rem;
+            }
+            .chat-input-area {
+                padding: 10px 12px;
+            }
+            .send-btn {
+                padding: 10px 16px;
+                font-size: 0.85rem;
+            }
+            .history-item {
+                padding: 12px;
+            }
+            .history-msg {
+                padding: 8px 12px;
+                font-size: 0.85rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="film-grain-overlay"></div>
+
+    <div class="chat-container" id="chatContainer">
+        <div class="chat-header">
+            <h1>🦞 AI 网站优化助手</h1>
+            <div class="header-buttons">
+                <span class="queue-status" id="queueStatus">
+                    <span class="status-dot"></span>
+                    <span class="status-text">检测中...</span>
+                </span>
+                <button class="history-btn" id="historyBtn" onclick="toggleHistory()">📜 历史记录</button>
+                <a href="/about" class="back-btn">← 返回</a>
+            </div>
+        </div>
+
+        <div class="chat-messages" id="chatMessages">
+            <div class="message ai">
+                <div class="avatar">🦞</div>
+                <div class="bubble">👋 你好！我是吉大同学录网站的 AI 网站自主设计助手！
+
+🎯 我的使命：帮你把想法变成现实
+
+💡 你只需要管提想法和建议，比如：
+   "我想给留言板加个表情包功能"
+   "首页看起来有点单调，能更活泼一点吗？"
+   "我想加一个投票功能"
+
+⚡ 剩下的交给我——我会帮你分析、实现、测试，直到效果出来！
+
+有什么想法，尽管说！ 🚀</div>
+            </div>
+        </div>
+
+        <div class="loading" id="loadingIndicator">
+            <span>🦞 AI 正在思考中...</span>
+            <span class="loading-detail" id="loadingDetail"></span>
+        </div>
+
+        <!-- 历史记录面板 -->
+        <div class="history-panel" id="historyPanel">
+            <div class="history-filter" id="historyFilter" style="display: none;">
+                <select id="historyUserFilter">
+                    <option value="">全部用户</option>
+                </select>
+            </div>
+            <div id="historyContent">
+                <div class="history-empty">加载中...</div>
+            </div>
+            <div class="history-pagination" id="historyPagination"></div>
+        </div>
+
+        <div class="chat-connect-area" id="connectArea">
+            <button class="connect-btn" id="connectBtn" onclick="connectAi()">🦞</button>
+            <div class="connect-hint" id="connectHint">点击连接AI助手</div>
+        </div>
+        <div class="chat-input-area" id="inputArea" style="display: none;">
+            <textarea id="messageInput" placeholder="输入你的问题或需求..." rows="2" maxlength="2000" onkeydown="handleKeydown(event)"></textarea>
+            <button class="send-btn" id="sendBtn" onclick="sendMessage()">发送</button>
+        </div>
+        <div class="ai-status-bar" id="aiStatusBar">
+            <span class="ai-status-text" id="aiStatusText">未连接</span>
+            <button class="disconnect-btn" id="disconnectBtn" onclick="disconnectAi()" style="display: none;">断开</button>
+        </div>
+    </div>
+
+    <script>
+        let isLoading = false;
+        let isAdmin = false;
+        let isSuperAdmin = false;
+        let currentUserName = '';
+        let historyPage = 1;
+        let historyTotalPages = 1;
+        let historyShowing = false;
+        let isConnected = false;
+        let connectionId = 0;  // 用于追踪连接请求是否过期
+
+        // 页面离开时自动断开连接
+        window.addEventListener('beforeunload', async () => {
+            if (isConnected) {
+                navigator.sendBeacon('/api/openclaw/mark_disconnected', '{}');
+            }
+        });
+
+        // 检查管理员权限
+        async function checkAdmin() {
+            try {
+                const res = await fetch('/api/check_verify', { credentials: 'same-origin' });
+                const data = await res.json();
+                if (!data.verified || !data.student) {
+                    showUnauthorized();
+                    return;
+                }
+                isAdmin = data.student.is_admin || data.student.is_super_admin;
+                isSuperAdmin = data.student.is_super_admin;
+                currentUserName = data.student.name;
+                if (!isAdmin) {
+                    showUnauthorized();
+                    return;
+                }
+                // 管理员验证通过，显示连接按钮
+                showConnectButton();
+            } catch (e) {
+                showUnauthorized();
+            }
+        }
+
+        function showConnectButton() {
+            const connectArea = document.getElementById('connectArea');
+            const inputArea = document.getElementById('inputArea');
+            const statusBar = document.getElementById('aiStatusBar');
+            const disconnectBtn = document.getElementById('disconnectBtn');
+            const connectBtn = document.getElementById('connectBtn');
+            const connectHint = document.getElementById('connectHint');
+
+            connectArea.style.display = 'flex';
+            inputArea.style.display = 'none';
+            disconnectBtn.style.display = 'none';
+            connectBtn.disabled = false;
+            connectHint.textContent = '点击连接AI助手';
+            setAiStatus('', '点击下方按钮连接AI助手');
+        }
+
+        // 连接AI
+        async function connectAi() {
+            const currentConnectionId = ++connectionId;  // 记录本次连接请求的ID
+
+            const connectBtn = document.getElementById('connectBtn');
+            const connectHint = document.getElementById('connectHint');
+            const statusBar = document.getElementById('aiStatusBar');
+            const statusText = document.getElementById('aiStatusText');
+            const disconnectBtn = document.getElementById('disconnectBtn');
+            const inputArea = document.getElementById('inputArea');
+            const input = document.getElementById('messageInput');
+            const sendBtn = document.getElementById('sendBtn');
+
+            // 显示连接中状态
+            connectBtn.disabled = true;
+            connectHint.textContent = '正在连接...';
+            setAiStatus('connecting', '正在检查AI状态...');
+
+            try {
+                // 先检查AI状态
+                const res = await fetch('/api/openclaw/queue_status', {
+                    credentials: 'same-origin'
+                });
+
+                // 检查是否已断开
+                if (connectionId !== currentConnectionId) return;
+
+                const data = await res.json();
+
+                if (data.code !== 0 || !data.data) {
+                    setAiStatus('error', 'AI状态检测失败');
+                    connectBtn.disabled = false;
+                    connectHint.textContent = '点击重试';
+                    return;
+                }
+
+                const status = data.data;
+
+                if (status.error) {
+                    setAiStatus('error', 'AI服务异常，请稍后重试');
+                    connectBtn.disabled = false;
+                    connectHint.textContent = '点击重试';
+                    return;
+                }
+
+                if (status.other_connected) {
+                    setAiStatus('error', `${status.other_connected}正在使用AI聊天，请稍后再试`);
+                    connectBtn.disabled = false;
+                    connectHint.textContent = '点击重试';
+                    return;
+                }
+
+                // CPU过高优先检查
+                if (status.cpu_too_high) {
+                    setAiStatus('error', `服务器CPU占用过高(${status.cpu_usage.toFixed(1)}%)，请稍后再试`);
+                    connectBtn.disabled = false;
+                    connectHint.textContent = '点击重试';
+                    return;
+                }
+
+                // OpenClaw Gateway状态检查
+                if (!status.gateway_healthy) {
+                    setAiStatus('error', `AI服务异常(${status.gateway_message})，请稍后再试`);
+                    connectBtn.disabled = false;
+                    connectHint.textContent = '点击重试';
+                    return;
+                }
+
+                if (status.is_busy) {
+                    const mins = Math.floor(status.last_updated_seconds_ago / 60);
+                    const busyBy = status.other_connected || '管理员';
+                    setAiStatus('error', `${busyBy}正在使用AI聊天，请稍后再试`);
+                    connectBtn.disabled = false;
+                    connectHint.textContent = '点击重试';
+                    return;
+                }
+
+                // AI空闲，标记为已连接
+                const markRes = await fetch('/api/openclaw/mark_connected', {
+                    method: 'POST',
+                    credentials: 'same-origin'
+                });
+                const markData = await markRes.json();
+
+                // 检查是否被其他管理员抢先连接
+                if (markData.code !== 0) {
+                    setAiStatus('error', markData.message || '连接失败');
+                    connectBtn.disabled = false;
+                    connectHint.textContent = '点击重试';
+                    return;
+                }
+
+                // 连接成功，显示输入框
+                isConnected = true;
+                connectArea.style.display = 'none';
+                inputArea.style.display = 'flex';
+                disconnectBtn.style.display = 'inline-block';
+                setAiStatus('ok', '已连接');
+                input.disabled = false;
+                sendBtn.disabled = false;
+                input.focus();
+
+            } catch (e) {
+                setAiStatus('error', '连接失败，请重试');
+                connectBtn.disabled = false;
+                connectHint.textContent = '点击重试';
+            }
+        }
+
+        // 断开AI连接
+        async function disconnectAi() {
+            isConnected = false;
+            connectionId++;  // 使任何正在进行的连接请求失效
+            try {
+                await fetch('/api/openclaw/mark_disconnected', {
+                    method: 'POST',
+                    credentials: 'same-origin'
+                });
+            } catch (e) {
+                console.error('Failed to mark disconnected:', e);
+            }
+
+            // 恢复连接按钮
+            showConnectButton();
+        }
+
+        function setAiStatus(status, text) {
+            const statusBar = document.getElementById('aiStatusBar');
+            const statusText = document.getElementById('aiStatusText');
+            statusBar.className = 'ai-status-bar ' + status;
+            statusText.textContent = text;
+        }
+
+        function showUnauthorized() {
+            document.getElementById('chatContainer').innerHTML = `
+                <div class="unauthorized">
+                    <h2>⚠️ 权限不足</h2>
+                    <p>仅管理员可以使用 AI 助手功能</p>
+                    <a href="/about" class="back-btn" style="display:inline-block; margin-top:20px;">返回个人中心</a>
+                </div>
+            `;
+        }
+
+        function handleKeydown(event) {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                sendMessage();
+            }
+        }
+
+        async function sendMessage() {
+            if (isLoading) return;
+
+            const input = document.getElementById('messageInput');
+            const sendBtn = document.getElementById('sendBtn');
+            const messages = document.getElementById('chatMessages');
+            const loading = document.getElementById('loadingIndicator');
+            const loadingDetail = document.getElementById('loadingDetail');
+
+            const message = input.value.trim();
+            if (!message) return;
+
+            // 添加用户消息
+            const userDiv = document.createElement('div');
+            userDiv.className = 'message user';
+            userDiv.innerHTML = `
+                <div class="avatar">👤</div>
+                <div class="bubble">${escapeHtml(message)}</div>
+            `;
+            messages.appendChild(userDiv);
+            messages.scrollTop = messages.scrollHeight;
+
+            // 清空输入
+            input.value = '';
+            sendBtn.disabled = true;
+            isLoading = true;
+            loading.style.display = 'block';
+            loadingDetail.textContent = '正在加入队列...';
+
+            // 检查队列状态
+            let queueInfo = '';
+            try {
+                const queueRes = await fetch('/api/openclaw/queue_status', {credentials: 'same-origin'});
+                const queueData = await queueRes.json();
+                if (queueData.code === 0 && queueData.data) {
+                    if (queueData.data.is_busy) {
+                        const mins = Math.floor(queueData.data.last_updated_seconds_ago / 60);
+                        queueInfo = `当前有任务处理中，预计等待 ${mins > 0 ? mins + '分钟+' : '不到1分钟'}`;
+                    } else {
+                        queueInfo = '队列空闲';
+                    }
+                }
+            } catch (e) {}
+            loadingDetail.textContent = queueInfo;
+
+            try {
+                const res = await fetch('/api/openclaw/chat', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    credentials: 'same-origin',
+                    body: JSON.stringify({message: message})
+                });
+                const data = await res.json();
+
+                // 添加 AI 回复
+                const aiDiv = document.createElement('div');
+                aiDiv.className = 'message ai';
+                const reply = data.code === 0 ? data.data.reply : data.message;
+                aiDiv.innerHTML = `
+                    <div class="avatar">🦞</div>
+                    <div class="bubble">${escapeHtml(reply)}</div>
+                `;
+                messages.appendChild(aiDiv);
+                messages.scrollTop = messages.scrollHeight;
+            } catch (e) {
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'message ai';
+                errorDiv.innerHTML = `
+                    <div class="avatar">🦞</div>
+                    <div class="bubble">发送失败，请检查网络连接后重试</div>
+                `;
+                messages.appendChild(errorDiv);
+                messages.scrollTop = messages.scrollHeight;
+            }
+
+            sendBtn.disabled = false;
+            isLoading = false;
+            loading.style.display = 'none';
+            loadingDetail.textContent = '';
+            // 重新检查AI状态
+            await checkAiStatus();
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // 切换历史记录面板
+        function toggleHistory() {
+            const historyPanel = document.getElementById('historyPanel');
+            const historyBtn = document.getElementById('historyBtn');
+            const chatMessages = document.getElementById('chatMessages');
+            const chatInput = document.querySelector('.chat-input-area');
+            const loading = document.getElementById('loadingIndicator');
+
+            historyShowing = !historyShowing;
+
+            if (historyShowing) {
+                historyPanel.classList.add('active');
+                historyBtn.classList.add('active');
+                chatMessages.style.display = 'none';
+                chatInput.style.display = 'none';
+                loading.style.display = 'none';
+                loadHistory(1);
+            } else {
+                historyPanel.classList.remove('active');
+                historyBtn.classList.remove('active');
+                chatMessages.style.display = 'flex';
+                chatInput.style.display = 'flex';
+            }
+        }
+
+        // 加载历史记录
+        async function loadHistory(page) {
+            historyPage = page;
+            const content = document.getElementById('historyContent');
+            const pagination = document.getElementById('historyPagination');
+            const filter = document.getElementById('historyFilter');
+
+            content.innerHTML = '<div class="history-empty">加载中...</div>';
+
+            try {
+                const res = await fetch(`/api/openclaw/history?page=${page}&limit=10`, {
+                    credentials: 'same-origin'
+                });
+                const data = await res.json();
+
+                if (data.code !== 0 || !data.data.history.length) {
+                    content.innerHTML = '<div class="history-empty">暂无历史记录</div>';
+                    pagination.innerHTML = '';
+                    return;
+                }
+
+                // 显示超级管理员筛选器
+                if (isSuperAdmin && page === 1) {
+                    filter.style.display = 'flex';
+                    // 填充用户列表
+                    const users = [...new Set(data.data.history.map(h => h.user_name))];
+                    const select = document.getElementById('historyUserFilter');
+                    select.innerHTML = '<option value="">全部用户</option>' +
+                        users.map(u => `<option value="${u}">${u}</option>`).join('');
+                }
+
+                // 渲染历史记录
+                let html = '';
+                data.data.history.forEach(item => {
+                    html += `
+                        <div class="history-item">
+                            <div class="history-item-header">
+                                <span class="history-user">
+                                    ${escapeHtml(item.user_name)}
+                                    ${item.user_name === currentUserName ? '' : '<span class="super-admin-badge">其他用户</span>'}
+                                </span>
+                                <span class="history-time">${item.created_time}</span>
+                            </div>
+                            <div class="history-messages">
+                                <div class="history-msg user">
+                                    <div class="history-msg-label">👤 用户</div>
+                                    ${escapeHtml(item.user_message)}
+                                </div>
+                                <div class="history-msg ai">
+                                    <div class="history-msg-label">🦞 AI</div>
+                                    ${escapeHtml(item.ai_reply)}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+                content.innerHTML = html;
+
+                // 渲染分页
+                historyTotalPages = data.data.pages;
+                if (historyTotalPages > 1) {
+                    let pageHtml = '';
+                    for (let i = 1; i <= historyTotalPages; i++) {
+                        pageHtml += `<button onclick="loadHistory(${i})" ${i === page ? 'class="active"' : ''}>${i}</button>`;
+                    }
+                    pagination.innerHTML = pageHtml;
+                } else {
+                    pagination.innerHTML = '';
+                }
+            } catch (e) {
+                content.innerHTML = '<div class="history-empty">加载失败，请重试</div>';
+            }
+        }
+
+        // 初始化
+        checkAdmin();
+    </script>
+</body>
+</html>

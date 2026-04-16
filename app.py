@@ -5,6 +5,7 @@ Flask Web Application
 
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for
 import csv
+import json
 import os
 import uuid
 import re
@@ -22,17 +23,57 @@ app.secret_key = 'jlu_tongxin_8_class_2024_secret_key'
 app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # 100MB max for video uploads
 app.config['UPLOAD_FOLDER'] = 'static/imgs/avatars'
 app.config['ALLOWED_EXTENSIONS'] = {'png', 'jpg', 'jpeg', 'gif'}
-# Session 配置
-app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
-app.config['SESSION_COOKIE_SECURE'] = False  # HTTP only for local development
+# Session 配置 - 兼容微信浏览器
+app.config['SESSION_COOKIE_SAMESITE'] = 'None'  # 兼容微信内置浏览器
+app.config['SESSION_COOKIE_SECURE'] = True  # HTTPS 环境
 app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_NAME'] = 'jlu_session'  # 自定义 cookie 名称
+
+# 新闻和校友会数据缓存(5分钟)
+_news_cache = {'data': None, 'timestamp': None}
+_alumni_cache = {'data': None, 'timestamp': None}
+_CACHE_TTL = 300  # 5分钟缓存
+
+def _get_cached_news():
+    """获取缓存的新闻数据"""
+    now = datetime.now().timestamp()
+    if _news_cache['data'] and _news_cache['timestamp']:
+        if now - _news_cache['timestamp'] < _CACHE_TTL:
+            return _news_cache['data']
+    return None
+
+def _set_cached_news(data):
+    """设置缓存的新闻数据"""
+    _news_cache['data'] = data
+    _news_cache['timestamp'] = datetime.now().timestamp()
+
+def _get_cached_alumni():
+    """获取缓存的校友会数据"""
+    now = datetime.now().timestamp()
+    if _alumni_cache['data'] and _alumni_cache['timestamp']:
+        if now - _alumni_cache['timestamp'] < _CACHE_TTL:
+            return _alumni_cache['data']
+    return None
+
+def _set_cached_alumni(data):
+    """设置缓存的校友会数据"""
+    _alumni_cache['data'] = data
+    _alumni_cache['timestamp'] = datetime.now().timestamp()
 
 # 禁用页面缓存
 @app.after_request
 def add_no_cache_headers(response):
-    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate, max-age=0'
-    response.headers['Pragma'] = 'no-cache'
-    response.headers['Expires'] = '0'
+    # 静态文件缓存1小时，动态页面不缓存
+    if request.path.startswith('/static/'): 
+        response.headers['Cache-Control'] = 'public, max-age=3600'
+    else:
+        # 更强的缓存控制 - 特别针对微信浏览器
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate, max-age=0, private'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+        response.headers['X-Content-Type-Options'] = 'nosniff'
+        # 微信浏览器需要这个 header
+        response.headers['Surrogate-Control'] = 'no-store'
     return response
 
 AVATAR_MAX_SIZE = 500 * 1024  # 500KB for avatars
@@ -45,7 +86,7 @@ def request_entity_too_large(e):
 _ip_location_cache = {}
 
 def get_ip_location(ip_address):
-    """获取IP归属地"""
+    """获取IP归属地（中文）"""
     if not ip_address:
         return ''
 
@@ -53,18 +94,65 @@ def get_ip_location(ip_address):
     if ip_address in ('127.0.0.1', 'localhost', '0.0.0.0') or ip_address.startswith('192.168.') or ip_address.startswith('10.'):
         return '本地网络'
 
-    # 检查缓存（缓存1小时）
+    # 检查缓存(缓存1小时)
     if ip_address in _ip_location_cache:
         cached_time, cached_location = _ip_location_cache[ip_address]
         if (datetime.now() - cached_time).seconds < 3600:
             return cached_location
+
+    # 中英文映射表
+    country_map = {
+        'China': '中国', 'United States': '美国', 'Japan': '日本',
+        'South Korea': '韩国', 'Germany': '德国', 'France': '法国',
+        'United Kingdom': '英国', 'Russia': '俄罗斯', 'Canada': '加拿大',
+        'Australia': '澳大利亚', 'Singapore': '新加坡', 'India': '印度',
+        'Brazil': '巴西', 'Netherlands': '荷兰', 'Italy': '意大利',
+        'Spain': '西班牙', 'Mexico': '墨西哥', 'Indonesia': '印尼',
+        'Thailand': '泰国', 'Vietnam': '越南', 'Malaysia': '马来西亚',
+        'Philippines': '菲律宾', 'Pakistan': '巴基斯坦', 'Bangladesh': '孟加拉国',
+        'Turkey': '土耳其', 'Saudi Arabia': '沙特阿拉伯', 'United Arab Emirates': '阿联酋',
+        'Nigeria': '尼日利亚', 'Egypt': '埃及', 'South Africa': '南非',
+        'Kenya': '肯尼亚', 'Morocco': '摩洛哥', 'Ghana': '加纳',
+        'Tanzania': '坦桑尼亚', 'Ethiopia': '埃塞俄比亚', 'Uganda': '乌干达',
+        'Argentina': '阿根廷', 'Colombia': '哥伦比亚', 'Peru': '秘鲁',
+        'Chile': '智利', 'Venezuela': '委内瑞拉', 'Ecuador': '厄瓜多尔',
+        'Cuba': '古巴', 'Dominican Republic': '多米尼加', 'Guatemala': '危地马拉',
+        'Portugal': '葡萄牙', 'Poland': '波兰', 'Netherlands': '荷兰',
+        'Belgium': '比利时', 'Sweden': '瑞典', 'Norway': '挪威',
+        'Denmark': '丹麦', 'Finland': '芬兰', 'Austria': '奥地利',
+        'Switzerland': '瑞士', 'Czech Republic': '捷克', 'Greece': '希腊',
+        'Hungary': '匈牙利', 'Romania': '罗马尼亚', 'Bulgaria': '保加利亚',
+        'Ukraine': '乌克兰', 'Israel': '以色列', 'Jordan': '约旦',
+        'Lebanon': '黎巴嫩', 'Iraq': '伊拉克', 'Iran': '伊朗',
+        'Afghanistan': '阿富汗', 'Kazakhstan': '哈萨克斯坦', 'Uzbekistan': '乌兹别克斯坦',
+        'Mongolia': '蒙古', 'North Korea': '朝鲜', 'Taiwan': '台湾',
+        'Hong Kong': '香港', 'Macau': '澳门',
+    }
+
+    region_map = {
+        'Beijing': '北京', 'Shanghai': '上海', 'Guangdong': '广东', 'Zhejiang': '浙江',
+        'Jiangsu': '江苏', 'Shandong': '山东', 'Sichuan': '四川', 'Henan': '河南',
+        'Hubei': '湖北', 'Shaanxi': '陕西', 'Fujian': '福建', 'Liaoning': '辽宁',
+        'Tianjin': '天津', 'Chongqing': '重庆', 'Jilin': '吉林', 'Heilongjiang': '黑龙江',
+        'Inner Mongolia': '内蒙古', 'Guangxi': '广西', 'Yunnan': '云南', 'Guizhou': '贵州',
+        'Xinjiang': '新疆', 'Tibet': '西藏', 'Ningxia': '宁夏', 'Qinghai': '青海',
+        'Gansu': '甘肃', 'Hainan': '海南', 'Hunan': '湖南', 'Anhui': '安徽',
+        'Jiangxi': '江西', 'Shanxi': '山西', 'Hebei': '河北', 'Taiwan': '台湾',
+        'Hong Kong': '香港', 'Macau': '澳门',
+        'California': '加利福尼亚', 'New York': '纽约', 'Texas': '得克萨斯',
+        'Florida': '佛罗里达', 'Illinois': '伊利诺伊', 'Pennsylvania': '宾夕法尼亚',
+        'Ohio': '俄亥俄', 'Georgia': '乔治亚', 'Michigan': '密歇根', 'Arizona': '亚利桑那',
+    }
 
     try:
         import requests
         resp = requests.get(f'http://ip-api.com/json/{ip_address}?fields=status,country,regionName,city', timeout=3)
         data = resp.json()
         if data.get('status') == 'success':
-            location = f"{data.get('country', '')} {data.get('regionName', '')} {data.get('city', '')}"
+            country = country_map.get(data.get('country', ''), data.get('country', ''))
+            region = region_map.get(data.get('regionName', ''), data.get('regionName', ''))
+            city = data.get('city', '')
+            location = f"{country} {region} {city}".strip()
             _ip_location_cache[ip_address] = (datetime.now(), location)
             return location
     except:
@@ -74,7 +162,7 @@ def get_ip_location(ip_address):
 
 
 def get_real_ip():
-    """获取真实客户端IP（支持代理）"""
+    """获取真实客户端IP(支持代理)"""
     # 优先从代理头获取
     if request.headers.get('X-Forwarded-For'):
         ip = request.headers.get('X-Forwarded-For').split(',')[0].strip()
@@ -119,7 +207,7 @@ def is_password_verified():
 
 
 def compress_avatar(file, filepath, max_size=AVATAR_MAX_SIZE):
-    """压缩头像图片，确保不超过max_size"""
+    """压缩头像图片,确保不超过max_size"""
     try:
         # 先尝试保存原始图片
         file.save(filepath)
@@ -127,7 +215,7 @@ def compress_avatar(file, filepath, max_size=AVATAR_MAX_SIZE):
         # 获取文件大小
         file_size = os.path.getsize(filepath)
 
-        # 如果小于限制，直接返回True
+        # 如果小于限制,直接返回True
         if file_size <= max_size:
             return True
 
@@ -141,7 +229,7 @@ def compress_avatar(file, filepath, max_size=AVATAR_MAX_SIZE):
             file_size = os.path.getsize(filepath)
             quality -= 10
 
-        # 如果还是太大，缩小图片尺寸
+        # 如果还是太大,缩小图片尺寸
         if file_size > max_size:
             width, height = img.size
             while file_size > max_size and width > 100:
@@ -152,7 +240,7 @@ def compress_avatar(file, filepath, max_size=AVATAR_MAX_SIZE):
                 file_size = os.path.getsize(filepath)
     except Exception as e:
         app.logger.error(f"Avatar compression error: {e}")
-        # 如果压缩失败，尝试删除可能创建的文件
+        # 如果压缩失败,尝试删除可能创建的文件
         try:
             if os.path.exists(filepath):
                 os.remove(filepath)
@@ -171,7 +259,7 @@ THUMBNAIL_SIZE = (800, 800)  # 缩略图最大尺寸
 
 
 def compress_image(input_path, max_size=IMAGE_MAX_SIZE):
-    """压缩图片，确保文件大小不超过max_size"""
+    """压缩图片,确保文件大小不超过max_size"""
     try:
         img = Image.open(input_path)
 
@@ -186,7 +274,7 @@ def compress_image(input_path, max_size=IMAGE_MAX_SIZE):
             elif orientation == 8:
                 img = img.rotate(90, expand=True)
 
-        # 转换为 RGB（如果是 RGBA 或其他模式）
+        # 转换为 RGB(如果是 RGBA 或其他模式)
         if img.mode in ('RGBA', 'P', 'LA'):
             rgb_img = Image.new('RGB', img.size, (255, 255, 255))
             rgb_img.paste(img, mask=img.split()[-1] if img.mode == 'RGBA' else None)
@@ -195,7 +283,7 @@ def compress_image(input_path, max_size=IMAGE_MAX_SIZE):
         # 获取文件大小
         file_size = os.path.getsize(input_path)
 
-        # 如果小于限制，直接返回
+        # 如果小于限制,直接返回
         if file_size <= max_size:
             # 但确保质量为85
             img.save(input_path, quality=IMAGE_QUALITY, optimize=True)
@@ -208,7 +296,7 @@ def compress_image(input_path, max_size=IMAGE_MAX_SIZE):
             file_size = os.path.getsize(input_path)
             quality -= 10
 
-        # 如果还是太大，缩小图片尺寸
+        # 如果还是太大,缩小图片尺寸
         if file_size > max_size:
             width, height = img.size
             scale = 1
@@ -248,7 +336,7 @@ def create_thumbnail(input_path, output_path, size=THUMBNAIL_SIZE):
             rgb_img.paste(img, mask=img.split()[-1] if img.mode == 'RGBA' else None)
             img = rgb_img
 
-        # 生成缩略图（保持宽高比）
+        # 生成缩略图(保持宽高比)
         img.thumbnail(size, Image.LANCZOS)
 
         # 保存缩略图
@@ -276,7 +364,7 @@ database.add_wx_openid_column()
 # 文件上传错误处理
 @app.errorhandler(413)
 def request_entity_too_large(e):
-    return jsonify({'success': False, 'message': '文件过大，请选择小于20MB的图片'}), 413
+    return jsonify({'success': False, 'message': '文件过大,请选择小于20MB的图片'}), 413
 database.migrate_add_gps_coords()
 
 # 省份拼音到汉字映射
@@ -317,7 +405,7 @@ PROVINCE_MAP = {
     'aomen': '澳门'
 }
 
-# 省份坐标（用于地图展示，简化版中国地图）
+# 省份坐标(用于地图展示,简化版中国地图)
 PROVINCE_COORDS = {
     '北京': (60, 35),
     '上海': (85, 50),
@@ -428,13 +516,13 @@ def index():
                       if datetime.strptime(m['time'], '%Y-%m-%d %H:%M:%S') > one_week_ago]
     week_message_count = len(week_messages)
 
-    # 按时间倒序获取最新留言（最多12条）
+    # 按时间倒序获取最新留言(最多12条)
     sorted_messages = sorted(messages, key=lambda x: x['time'], reverse=True)
-    recent_messages = sorted_messages[:3]
+    recent_messages = sorted_messages[:1]  # 只显示一条最新留言
 
     activities = get_activities()
 
-    # 获取照片，按年份分组，每年最多3张
+    # 获取照片,按年份分组,每年最多3张
     img_files = get_gallery_images()
     photos_by_year = {}
     for img in img_files:
@@ -460,14 +548,15 @@ def index():
                            week_message_count=week_message_count,
                            activities=activities[:9],  # 传递最新9条动态
                            photos_by_year=photos_by_year,
-                           province_stats=province_stats)
+                           province_stats=province_stats,
+                           logged_in='verified_student' in session)
 
 
 def get_activities():
-    """获取最新动态（去重：同一人连续同类型动态只保留最新一条）"""
+    """获取最新动态(去重:同一人连续同类型动态只保留最新一条)"""
     activities = []
 
-    # 检查生日动态（提前5天开始显示）
+    # 检查生日动态(提前5天开始显示)
     today = datetime.now()
     students = database.read_txl()
     for student in students:
@@ -478,7 +567,7 @@ def get_activities():
                 birthday_day = int(birthday_str[8:10])
                 # 构建今年的生日日期
                 this_year_birthday = datetime(today.year, birthday_month, birthday_day)
-                # 如果今年的生日已过但还没到，看明年的
+                # 如果今年的生日已过但还没到,看明年的
                 if this_year_birthday < today and (today - this_year_birthday).days > 5:
                     this_year_birthday = datetime(today.year + 1, birthday_month, birthday_day)
                 # 检查是否在5天内
@@ -486,9 +575,9 @@ def get_activities():
                 if 0 <= days_until <= 5:
                     pronoun = '他' if student.get('gender', '') == '男' else '她'
                     if days_until == 0:
-                        content = f'🎂 今天{student["name"]}生日！祝{pronoun}生日快乐！'
+                        content = f'🎂 今天{student["name"]}生日!祝{pronoun}生日快乐!'
                     else:
-                        content = f'🎂 {student["name"]} {birthday_month}月{birthday_day}日生日，还有{days_until}天，提前祝{pronoun}生日快乐！'
+                        content = f'🎂 {student["name"]} {birthday_month}月{birthday_day}日生日,还有{days_until}天,提前祝{pronoun}生日快乐!'
                     activities.append({
                         'type': 'birthday',
                         'actor': student['name'],
@@ -500,7 +589,7 @@ def get_activities():
 
     messages = database.read_lyb()
 
-    # 留言动态（取最新10条留言）
+    # 留言动态(取最新10条留言)
     for msg in sorted(messages, key=lambda x: x['time'], reverse=True)[:10]:
         has_voice = bool(msg.get('voice'))
         has_image = bool(msg.get('image'))
@@ -512,7 +601,7 @@ def get_activities():
             content = '发表了语音留言'
             msg_type = 'voice'
         elif has_image:
-            content = '发表了新留言，并附带图片'
+            content = '发表了新留言,并附带图片'
             msg_type = 'image'
         else:
             content = '发表了新留言'
@@ -529,7 +618,7 @@ def get_activities():
             'has_voice': has_voice
         })
 
-    # 从活动日志读取（profile_update、photo、video等）
+    # 从活动日志读取(profile_update、photo、video等)
     activity_logs = database.read_activities()
     for log in activity_logs[:20]:
         activity = {
@@ -538,20 +627,20 @@ def get_activities():
             'content': log['content'],
             'time': log['time']
         }
-        # 照片活动：从内容中提取文件名
+        # 照片活动:从内容中提取文件名
         if log['type'] == 'photo':
             import re
             match = re.search(r'《(.+?)》', log['content'])
             if match:
                 activity['img_name'] = match.group(1)
                 activity['img_url'] = f'/static/imgs/messages/{match.group(1)}'
-        # 视频活动：从内容中提取标题
+        # 视频活动:从内容中提取标题
         if log['type'] == 'video':
             import re
             match = re.search(r'《(.+?)》', log['content'])
             if match:
                 activity['video_title'] = match.group(1)
-        # 喊话活动：从内容中提取目标人名
+        # 喊话活动:从内容中提取目标人名
         if log['type'] == 'voice_shout':
             import re
             match = re.search(r'对(.+?)喊', log['content'])
@@ -562,7 +651,7 @@ def get_activities():
     # 按时间排序
     activities.sort(key=lambda x: x['time'], reverse=True)
 
-    # 合并统计：同一人同类动态合并显示数量
+    # 合并统计:同一人同类动态合并显示数量
     deduplicated = []
     for activity in activities:
         if not deduplicated:
@@ -571,7 +660,7 @@ def get_activities():
             deduplicated.append(activity)
         else:
             last = deduplicated[-1]
-            # 如果当前条目和上一个条目的actor和type都相同，累加计数
+            # 如果当前条目和上一个条目的actor和type都相同,累加计数
             if activity['actor'] == last['actor'] and activity['type'] == last['type']:
                 last['count'] = last.get('count', 1) + 1
                 # 更新原始内容为最新一条的内容
@@ -598,7 +687,7 @@ def get_activities():
 
 
 def get_gallery_images():
-    """获取相册图片（按最新上传时间排序），排除已删除的照片"""
+    """获取相册图片(按最新上传时间排序),排除已删除的照片"""
     photos = database.read_photos()
     deleted_items = database.read_deleted()
     # 获取已删除的文件名集合
@@ -606,7 +695,7 @@ def get_gallery_images():
     deleted_filenames = set()
     for item in deleted_items:
         if item.get('type') == 'photo':
-            # 对于照片，filename可能在content或extra字段中
+            # 对于照片,filename可能在content或extra字段中
             fn = item.get('content', '')
             if fn and fn not in deleted_filenames:
                 deleted_filenames.add(fn)
@@ -618,14 +707,14 @@ def get_gallery_images():
     avatars_dir = os.path.join(DATA_DIR, 'static/imgs/avatars')
     upload_dir = os.path.join(DATA_DIR, 'static/imgs')
 
-    # 已知照片（从photos.csv）
+    # 已知照片(从photos.csv)
     known_filenames = set()
     messages_dir = os.path.join(DATA_DIR, 'static/imgs/messages')
     for p in photos:
         # 跳过已删除的照片
         if p['filename'] in deleted_filenames:
             continue
-        # 跳过留言板图片（没有年份或年份为0或年份为2020的视为留言板图片）
+        # 跳过留言板图片(没有年份或年份为0或年份为2020的视为留言板图片)
         year = p.get('year')
         if not year or year == '' or year == 0 or year == 2020:
             continue
@@ -654,7 +743,7 @@ def get_gallery_images():
                 })
                 known_filenames.add(p['filename'])
 
-    # 扫描文件系统（static/imgs/下的图片，排除avatars子文件夹）
+    # 扫描文件系统(static/imgs/下的图片,排除avatars子文件夹)
     if os.path.exists(upload_dir):
         for f in os.listdir(upload_dir):
             if f.lower().endswith(('.jpg', '.jpeg', '.png', '.gif')):
@@ -662,7 +751,7 @@ def get_gallery_images():
                 if f in deleted_filenames:
                     continue
                 filepath = os.path.join(upload_dir, f)
-                # 跳过子文件夹（如avatars）
+                # 跳过子文件夹(如avatars)
                 if os.path.isdir(filepath):
                     continue
                 if f not in known_filenames:
@@ -674,7 +763,7 @@ def get_gallery_images():
                         'time': datetime.fromtimestamp(mtime).strftime('%Y-%m-%d %H:%M:%S')
                     })
 
-    # 按上传时间倒序（最新在前）
+    # 按上传时间倒序(最新在前)
     img_files.sort(key=lambda x: x['time'], reverse=True)
     return img_files
 
@@ -682,9 +771,15 @@ def get_gallery_images():
 @app.route('/txl')
 def txl():
     """通讯录页面"""
-    students = database.read_txl()
+    is_logged = 'verified_student' in session
 
-    # 为没有坐标的学生填充坐标（根据城市名和区）
+    # 未登录用户:不能查看同学通讯录
+    if not is_logged:
+        students = []
+    else:
+        students = database.read_txl()
+
+    # 为没有坐标的学生填充坐标(根据城市名和区)
     for s in students:
         if not s.get('coords'):
             city = s.get('city', '') or s.get('hometown_name', '')
@@ -696,16 +791,16 @@ def txl():
 
     voice_shouts = database.read_voice_shouts()
 
-    # 计算离我最近的同学
+    # 计算离我最近的同学(仅登录用户)
     nearest_classmates = []
-    if 'verified_student' in session:
+    if is_logged:
         current_user = session['verified_student']
-        # 优先使用GPS坐标，其次使用session中的城市坐标，最后根据当前用户的城市查找
+        # 优先使用GPS坐标,其次使用session中的城市坐标,最后根据当前用户的城市查找
         current_coords = current_user.get('coords', '')
         current_name = current_user.get('name', '')
         current_id = current_user.get('id', '')
 
-        # 查找当前用户的GPS坐标（优先使用）
+        # 查找当前用户的GPS坐标(优先使用)
         for s in students:
             if s.get('name') == current_name and s.get('id') == current_id:
                 gps = s.get('gps_coords', '')
@@ -713,7 +808,7 @@ def txl():
                     current_coords = gps
                 break
 
-        # 如果没有GPS坐标也没有session坐标，根据城市获取
+        # 如果没有GPS坐标也没有session坐标,根据城市获取
         if not current_coords:
             for s in students:
                 if s.get('name') == current_name and s.get('id') == current_id:
@@ -727,7 +822,7 @@ def txl():
                 for s in students:
                     if s.get('name') == current_name:
                         continue
-                    # 优先使用同学的GPS坐标，其次使用城市坐标
+                    # 优先使用同学的GPS坐标,其次使用城市坐标
                     s_coords = s.get('gps_coords', '') or s.get('coords', '')
                     if s_coords:
                         try:
@@ -741,13 +836,13 @@ def txl():
             except:
                 pass
 
-    return render_template('txl.html', students=students, voice_shouts=voice_shouts, nearest_classmates=nearest_classmates)
+    return render_template('txl.html', students=students, voice_shouts=voice_shouts, nearest_classmates=nearest_classmates, logged_in=is_logged)
 
 
 def haversine_distance(lat1, lon1, lat2, lon2):
-    """计算两点之间的直线距离（公里）"""
+    """计算两点之间的直线距离(公里)"""
     import math
-    R = 6371  # 地球半径（公里）
+    R = 6371  # 地球半径(公里)
     lat1_rad = math.radians(lat1)
     lat2_rad = math.radians(lat2)
     delta_lat = math.radians(lat2 - lat1)
@@ -761,7 +856,7 @@ def haversine_distance(lat1, lon1, lat2, lon2):
 
 @app.route('/api/update_coords', methods=['POST'])
 def update_coords():
-    """批量更新所有学生的坐标（根据城市名）"""
+    """批量更新所有学生的坐标(根据城市名)"""
     if 'verified_student' not in session:
         return jsonify({'success': False, 'message': '请先登录'})
 
@@ -824,9 +919,18 @@ def update_gps_coords():
 @app.route('/lyb')
 def lyb():
     """留言板页面"""
+    logged_in = 'verified_student' in session
     messages = database.read_lyb()
     messages.reverse()
-    return render_template('lyb.html', messages=messages)
+    # 为每条留言添加头像信息
+    students = database.read_txl()
+    for msg in messages:
+        msg['avatar'] = ''
+        for s in students:
+            if s.get('name') == msg.get('nickname'):
+                msg['avatar'] = s.get('avatar', '')
+                break
+    return render_template('lyb.html', messages=messages, logged_in=logged_in)
 
 
 @app.route('/api/add_comment', methods=['POST'])
@@ -854,7 +958,7 @@ def add_comment():
                     sender=nickname,
                     notif_type='comment',
                     ref_id=message_id,
-                    content=f'{nickname}评论了你的留言：{content_preview}'
+                    content=f'{nickname}评论了你的留言:{content_preview}'
                 )
             break
 
@@ -894,7 +998,7 @@ def delete_comment():
     if not comment:
         return jsonify({'success': False, 'message': '评论不存在'})
 
-    # 检查权限：评论人或楼主可以删除，管理员可以删除任何评论
+    # 检查权限:评论人或楼主可以删除,管理员可以删除任何评论
     if not is_admin(current_name) and comment['nickname'] != current_name:
         # 获取留言信息检查是否是楼主
         messages = database.read_lyb()
@@ -938,7 +1042,7 @@ def like_message():
     success = database.like_message(message_id, nickname)
     count = database.get_message_likes(message_id)
 
-    # 发送通知（仅当点赞成功且不是给自己点赞）
+    # 发送通知(仅当点赞成功且不是给自己点赞)
     if success:
         messages = database.read_lyb()
         for msg in messages:
@@ -998,26 +1102,40 @@ def video_page():
 @app.route('/media')
 def media():
     """媒体中心 - 相册和视频合并页面"""
+    from datetime import datetime
+
+    # 检查登录状态
+    logged_in = 'verified_student' in session
+
     img_files = get_gallery_images()
     videos = get_videos()
-    news = database.get_news(50)
-    # 过滤掉旧新闻，只展示今年的新闻
-    from datetime import datetime
+    news = database.get_news(100)
+
+    # 过滤掉旧新闻,只展示今年的新闻
     current_year = datetime.now().year
     news = [n for n in news if int(n['published_time'][:4]) >= current_year]
-    # 按内容类型排序：学生/活动/比赛优先，领导相关内容靠后
-    def news_priority(n):
-        text = (n.get('title', '') + ' ' + n.get('content', '')).lower()
-        score = 0
-        for kw in ['学生', '同学', '比赛', '活动', '运动会', '晚会', '讲座', '论坛',
-                   '教学', '科研', '创新', '实践', '志愿者', '社团', '杏花节', '校庆']:
-            if kw in text:
-                score += 5
-        for kw in ['领导', '校长', '书记', '部长', '主任', '会谈', '调研', '视察', '考察', '出访']:
-            if kw in text:
-                score -= 8
-        return score
-    news.sort(key=news_priority, reverse=True)
+
+    # 只排除校友会相关内容(留给校友会tab展示)
+    alumni_keywords = ['校友会', '校友总会', '北京校友会', '上海校友会', '深圳校友会', '广州校友会',
+                       '成都校友会', '武汉校友会', '北美校友会', '校友大会', '校友联谊', '校友活动',
+                       '校友交流', '校友企业', '校友返校']
+    news = [n for n in news if not any(kw in (n.get('title', '') + ' ' + n.get('content', '')).lower() for kw in alumni_keywords)]
+
+    # 按日期+图片排序(最新优先,有图片的放前面)
+    def news_sort_key(n):
+        pub_time = n.get('published_time', '')
+        if pub_time:
+            try:
+                date = datetime.strptime(pub_time[:10], '%Y-%m-%d')
+            except:
+                date = datetime.min
+        else:
+            date = datetime.min
+        has_image = 1 if n.get('image_url') else 0
+        # 日期降序(最新优先),图片优先(有图片=1 > 无图片=0)
+        return (date, has_image)
+    news.sort(key=news_sort_key, reverse=True)
+    news = news[:20]  # 最多渲染20条新闻
 
     # 检查当前用户是否是管理员
     is_admin_user = False
@@ -1025,11 +1143,11 @@ def media():
         current_name = session['verified_student']['name']
         is_admin_user = is_admin(current_name)
 
-    return render_template('media.html', images=img_files, videos=videos, news=news, is_admin_user=is_admin_user)
+    return render_template('media.html', images=img_files, videos=videos, news=news, is_admin_user=is_admin_user, logged_in=logged_in)
 
 
 def get_videos():
-    """获取视频列表，排除已删除的视频"""
+    """获取视频列表,排除已删除的视频"""
     videos = database.read_videos()
     deleted_items = database.read_deleted()
 
@@ -1048,7 +1166,7 @@ def get_videos():
     for v in videos:
         url = v.get('url', '')
         title = v.get('title', '')
-        # 跳过已删除的视频（通过URL或标题匹配）
+        # 跳过已删除的视频(通过URL或标题匹配)
         if url in deleted_video_urls or title in deleted_video_titles:
             continue
         filtered.append(v)
@@ -1133,6 +1251,12 @@ def about():
     return render_template('about.html')
 
 
+@app.route('/ai-chat')
+def ai_chat():
+    """AI 聊天助手页面（仅管理员）"""
+    return render_template('ai-chat.html')
+
+
 # ==================== API接口 ====================
 
 @app.route('/api/captcha')
@@ -1149,7 +1273,7 @@ def generate_captcha():
 
 @app.route('/api/verify', methods=['POST'])
 def verify_student():
-    """验证同学身份（姓名+学号+验证码+登录密码）"""
+    """验证同学身份(姓名+学号+验证码+登录密码)"""
     data = request.get_json()
     name = sanitize_input(data.get('name', ''))
     student_id = sanitize_input(data.get('student_id', ''))
@@ -1161,7 +1285,7 @@ def verify_student():
         return jsonify({'success': False, 'message': '请先获取验证码'})
     captcha_time = datetime.fromisoformat(session['captcha_time'])
     if datetime.now() - captcha_time > timedelta(minutes=5):
-        return jsonify({'success': False, 'message': '验证码已过期，请刷新'})
+        return jsonify({'success': False, 'message': '验证码已过期,请刷新'})
     if captcha != session['captcha']:
         return jsonify({'success': False, 'message': '验证码不正确'})
 
@@ -1198,7 +1322,7 @@ def verify_student():
 
 @app.route('/api/txl/list')
 def txl_list():
-    """获取通讯录列表（仅已验证用户）"""
+    """获取通讯录列表(仅已验证用户)"""
     if 'verified_student' not in session:
         return jsonify({'success': False, 'message': '请先登录'})
     students = database.read_txl()
@@ -1212,6 +1336,19 @@ def txl_list():
     return jsonify({'success': True, 'students': result})
 
 
+@app.route('/api/stats')
+def public_stats():
+    """获取公开统计数据"""
+    students = database.read_txl()
+    messages = database.read_lyb()
+    photos = database.read_photos()
+    return jsonify({
+        'students': len(students),
+        'messages': len(messages),
+        'photos': len(photos)
+    })
+
+
 @app.route('/api/check_verify')
 def check_verify():
     """检查是否已验证"""
@@ -1222,11 +1359,12 @@ def check_verify():
             student = session['verified_student'].copy()
             student['is_admin'] = is_admin(current_name)
             student['is_super_admin'] = is_super_admin(current_name)
-            # 检查用户密码状态
+            # 检查用户密码状态和头像
             students = database.read_txl()
             for s in students:
                 if s['name'] == current_name:
                     student['login_password_set'] = bool(s.get('login_password', ''))
+                    student['avatar'] = s.get('avatar', '')  # 添加头像
                     break
             return jsonify({'verified': True, 'student': student})
     return jsonify({'verified': False})
@@ -1334,7 +1472,7 @@ def set_password_prompt():
 
 @app.route('/api/super_admin/set_admin', methods=['POST'])
 def set_admin():
-    """设置用户为管理员（仅超级管理员可操作）"""
+    """设置用户为管理员(仅超级管理员可操作)"""
     if 'verified_student' not in session:
         return jsonify({'success': False, 'message': '请先登录'})
     current_name = session['verified_student']['name']
@@ -1367,12 +1505,12 @@ def get_unread_activity_count():
 
 @app.route('/api/get_activities')
 def api_get_activities():
-    """获取所有动态（用于管理，分页）"""
+    """获取所有动态(用于管理,分页)"""
     if 'verified_student' not in session:
         return jsonify({'success': False, 'message': '请先登录'})
 
     page = int(request.args.get('page', 1))
-    per_page = 5
+    per_page = 3
     max_items = 30  # 最多显示30条
     activities = get_activities()[:max_items]
 
@@ -1454,7 +1592,7 @@ def update_profile():
     verify_time = datetime.fromisoformat(session['verify_time'])
     if datetime.now() - verify_time >= timedelta(minutes=30):
         session.pop('verified_student', None)
-        return jsonify({'success': False, 'message': '验证已过期，请重新验证'})
+        return jsonify({'success': False, 'message': '验证已过期,请重新验证'})
 
     data = request.get_json()
     current_name = session['verified_student']['name']
@@ -1521,7 +1659,7 @@ def add_message():
     content = sanitize_input(data.get('content', ''))
     image = data.get('image', '')
 
-    # 优先使用真实姓名（已登录），否则使用昵称
+    # 优先使用真实姓名(已登录),否则使用昵称
     if 'verified_student' in session:
         nickname = session['verified_student']['name']
     else:
@@ -1661,10 +1799,10 @@ def upload_avatar_pc():
             os.makedirs(avatars_dir, exist_ok=True)
             filepath = os.path.join(avatars_dir, filename)
 
-            # 压缩头像，如果失败则删除文件并返回错误
+            # 压缩头像,如果失败则删除文件并返回错误
             result = compress_avatar(file, filepath)
             if result is False:
-                return jsonify({'success': False, 'message': '图片处理失败，请尝试其他图片'})
+                return jsonify({'success': False, 'message': '图片处理失败,请尝试其他图片'})
 
             avatar_url = f'/static/imgs/avatars/{filename}'
 
@@ -1713,7 +1851,7 @@ def update_profile_pc():
                     value = sanitize_input(request.form[field]) if field != 'avatar' else request.form[field]
                     s[field] = value
 
-            # 单独处理hometown,city,district（需要特殊转换）
+            # 单独处理hometown,city,district(需要特殊转换)
             if 'hometown' in request.form:
                 s['hometown'] = sanitize_input(request.form['hometown'])
                 s['hometown_name'] = get_province_name(s['hometown'])
@@ -1781,7 +1919,7 @@ def upload_image():
         thumb_filepath = os.path.join(thumbs_dir, thumb_filename)
         create_thumbnail(filepath, thumb_filepath)
 
-        # 如果提供了有效年份（不是2020），则添加到相册数据库
+        # 如果提供了有效年份(不是2020),则添加到相册数据库
         if year and year != 2020:
             nickname = session['verified_student']['name']
             photos = database.read_photos()
@@ -1849,7 +1987,7 @@ def upload_voice_shout():
         sender=from_name,
         notif_type='voice_shout',
         ref_id=shout_id,
-        content=f'{from_name}对你喊了一段话，快去听听吧！',
+        content=f'{from_name}对你喊了一段话,快去听听吧!',
         target_name=to_name
     )
 
@@ -2043,7 +2181,7 @@ def delete_message():
     current_name = session['verified_student']['name']
     messages = database.read_lyb()
 
-    # 找到留言并检查是否是本人（管理员可以删除任何留言）
+    # 找到留言并检查是否是本人(管理员可以删除任何留言)
     for i, msg in enumerate(messages):
         if str(msg['id']) == str(msg_id):
             if not is_admin(current_name) and msg['nickname'] != current_name:
@@ -2088,7 +2226,7 @@ def delete_video():
     current_name = session['verified_student']['name']
     videos = database.read_videos()
 
-    # 找到视频并检查是否是本人（管理员可以删除任何视频，但需要验证密码）
+    # 找到视频并检查是否是本人(管理员可以删除任何视频,但需要验证密码)
     for i, video in enumerate(videos):
         if str(video['id']) == str(video_id):
             video_owner = video.get('owner', '')
@@ -2118,7 +2256,7 @@ def delete_video():
 
 @app.route('/api/delete_photo', methods=['POST'])
 def delete_photo():
-    """删除照片（只从列表移除，不删除源文件）"""
+    """删除照片(只从列表移除,不删除源文件)"""
     if 'verified_student' not in session:
         return jsonify({'success': False, 'message': '请先登录'})
 
@@ -2129,7 +2267,7 @@ def delete_photo():
     current_name = session['verified_student']['name']
     photos = database.read_photos()
 
-    # 如果有ID，从photos.csv中查找并删除记录
+    # 如果有ID,从photos.csv中查找并删除记录
     if photo_id:
         for i, photo in enumerate(photos):
             if str(photo['id']) == str(photo_id):
@@ -2155,7 +2293,7 @@ def delete_photo():
 
         return jsonify({'success': False, 'message': '照片不存在'})
 
-    # 如果没有ID（旧照片），只有管理员可以删除，并记录到已删除列表
+    # 如果没有ID(旧照片),只有管理员可以删除,并记录到已删除列表
     elif filename:
         if not is_admin(current_name):
             return jsonify({'success': False, 'message': '只能删除自己上传的照片'})
@@ -2182,7 +2320,7 @@ def delete_photo():
 
 @app.route('/api/get_deleted')
 def get_deleted():
-    """获取当前用户的已删除项目，管理员可以看到所有删除记录"""
+    """获取当前用户的已删除项目,管理员可以看到所有删除记录"""
     if 'verified_student' not in session:
         return jsonify({'success': False, 'message': '请先登录'})
 
@@ -2190,7 +2328,7 @@ def get_deleted():
     is_admin_user = is_admin(current_name)
 
     deleted_items = database.read_deleted()
-    # 管理员可以看到所有删除记录，其他人只能看到自己的
+    # 管理员可以看到所有删除记录,其他人只能看到自己的
     if is_admin_user:
         user_items = deleted_items
     else:
@@ -2199,9 +2337,9 @@ def get_deleted():
     # 按删除时间倒序
     user_items.sort(key=lambda x: x['deleted_time'], reverse=True)
 
-    # 分页：每页5条
+    # 分页:每页3条
     page = request.args.get('page', 1, type=int)
-    per_page = 5
+    per_page = 3
     total = len(user_items)
     start = (page - 1) * per_page
     end = start + per_page
@@ -2320,7 +2458,7 @@ def permanent_delete():
 
 @app.route('/api/delete_activity', methods=['POST'])
 def delete_activity():
-    """删除动态（仅管理员）"""
+    """删除动态(仅管理员)"""
     if 'verified_student' not in session:
         return jsonify({'success': False, 'message': '请先登录'})
 
@@ -2340,7 +2478,7 @@ def delete_activity():
         return jsonify({'success': False, 'message': '参数不完整'})
 
     try:
-        # 如果是留言动态，同时删除messages表中的记录
+        # 如果是留言动态,同时删除messages表中的记录
         if activity_type == 'message':
             database.delete_message_by_time_nickname(activity_time, activity_actor)
         database.delete_activity(activity_time, activity_actor, activity_content)
@@ -2351,23 +2489,23 @@ def delete_activity():
 
 @app.route('/api/get_login_logs')
 def get_login_logs():
-    """获取登录日志（仅管理员，分页）"""
+    """获取登录日志(仅超级管理员,分页)"""
     if 'verified_student' not in session:
         return jsonify({'success': False, 'message': '请先登录'})
 
     current_name = session['verified_student']['name']
 
-    # 只有管理员可以查看登录日志
-    if not is_admin(current_name):
+    # 只有超级管理员可以查看登录日志
+    if not is_super_admin(current_name):
         return jsonify({'success': False, 'message': '无权限查看'})
 
     page = int(request.args.get('page', 1))
-    per_page = 5
+    per_page = 3
     max_logs = 30  # 最多显示30条
 
     all_logs = database.read_login_logs(limit=1000)
 
-    # 计算最近一周的统计（全量）
+    # 计算最近一周的统计(全量)
     one_week_ago = datetime.now() - timedelta(days=7)
     weekly_logs = []
     for log in all_logs:
@@ -2406,7 +2544,7 @@ def get_login_logs():
 
 @app.route('/api/admin/login_logs/delete', methods=['POST'])
 def delete_login_logs():
-    """删除指定用户的登录日志（仅超级管理员）"""
+    """删除指定用户的登录日志(仅超级管理员)"""
     if 'verified_student' not in session:
         return jsonify({'success': False, 'message': '请先登录'})
 
@@ -2428,33 +2566,189 @@ def delete_login_logs():
 
 @app.route('/api/news')
 def get_news():
-    """获取新闻列表"""
-    news = database.get_news(50)
-    # 过滤掉旧新闻，只展示今年的新闻
+    """获取新闻列表(只排除校友会内容,按日期排序)"""
+    # 检查缓存
+    cached = _get_cached_news()
+    if cached is not None:
+        return jsonify({'success': True, 'news': cached})
+
     from datetime import datetime
+
+    news = database.get_news(100)
+
+    # 过滤掉旧新闻,只展示今年的新闻
     current_year = datetime.now().year
     news = [n for n in news if int(n['published_time'][:4]) >= current_year]
-    # 按内容类型排序：学生/活动/比赛优先，领导相关内容靠后
-    def news_priority(n):
+
+    # 只排除校友会相关内容(留给校友会tab展示)
+    alumni_keywords = ['校友会', '校友总会', '北京校友会', '上海校友会', '深圳校友会', '广州校友会',
+                      '成都校友会', '武汉校友会', '杭州校友会', '北美校友会', '欧洲校友会', '澳大利亚校友会',
+                      '校友大会', '校友联谊', '校友活动', '校友交流', '校友企业', '校友返校']
+
+    news = [n for n in news if not any(kw in (n.get('title', '') + ' ' + n.get('content', '')).lower() for kw in alumni_keywords)]
+
+    # 按日期+图片排序(最新优先,有图片的放前面)
+    def news_sort_key(n):
+        pub_time = n.get('published_time', '')
+        if pub_time:
+            try:
+                date = datetime.strptime(pub_time[:10], '%Y-%m-%d')
+            except:
+                date = datetime.min
+        else:
+            date = datetime.min
+        has_image = 1 if n.get('image_url') else 0
+        return (date, has_image)
+
+    news.sort(key=news_sort_key, reverse=True)
+    news = news[:50]  # 最多返回50条
+
+    # 缓存结果
+    _set_cached_news(news)
+
+    return jsonify({'success': True, 'news': news})
+
+
+@app.route('/api/alumni')
+def get_alumni():
+    """获取校友会信息和相关新闻"""
+    # 检查缓存
+    cached = _get_cached_alumni()
+    if cached is not None:
+        return jsonify({'success': True, 'alumni': cached})
+
+    # 预定义各地校友会基本信息
+    alumni_associations = [
+        {
+            'name': '吉林大学校友总会',
+            'location': '长春',
+            'contact': '0431-85166001',
+            'wechat': 'JLU_alumni',
+            'email': 'xyh@jlu.edu.cn',
+            'join_method': '联系校友总会咨询',
+            'description': '吉林大学官方校友组织,统筹各地校友会工作',
+            'type': 'association'
+        },
+        {
+            'name': '吉林大学北京校友会',
+            'location': '北京',
+            'contact': '微信群:BJ_JLUers',
+            'wechat': 'jlu_bj',
+            'email': 'jlu_bj@126.com',
+            'join_method': '扫码加入北京校友群',
+            'description': '京城吉大人的温馨家园,定期举办联谊活动',
+            'type': 'association'
+        },
+        {
+            'name': '吉林大学上海校友会',
+            'location': '上海',
+            'contact': '联系人:王师兄',
+            'wechat': 'sh_jlu',
+            'email': 'shjlu@163.com',
+            'join_method': '联系负责人邀请入群',
+            'description': '海纳百川,沪上吉大人交流合作的平台',
+            'type': 'association'
+        },
+        {
+            'name': '吉林大学深圳校友会',
+            'location': '深圳',
+            'contact': '联系人:李师兄',
+            'wechat': 'sz_jlu8',
+            'email': 'jlu_sz@qq.com',
+            'join_method': '扫码加入深圳校友群',
+            'description': '创新之城,吉大人共谋发展的桥梁',
+            'type': 'association'
+        },
+        {
+            'name': '吉林大学广州校友会',
+            'location': '广州',
+            'contact': '联系人:张师姐',
+            'wechat': 'gz_jlu',
+            'join_method': '联系负责人邀请入群',
+            'description': '花城吉大人,资源共享事业互助',
+            'type': 'association'
+        },
+        {
+            'name': '吉林大学北美校友会',
+            'location': '海外',
+            'contact': '联系人:刘师兄',
+            'wechat': 'namerica_jlu',
+            'email': 'jlu.us@gmail.com',
+            'join_method': '邮件联系或微信群',
+            'description': '跨越重洋,海外学子的精神家园',
+            'type': 'association'
+        },
+        {
+            'name': '吉林大学成都校友会',
+            'location': '成都',
+            'contact': '联系人:赵师兄',
+            'wechat': 'cd_jlu',
+            'join_method': '扫码加入成都校友群',
+            'description': '天府之国,吉大人的巴蜀情缘',
+            'type': 'association'
+        },
+        {
+            'name': '吉林大学武汉校友会',
+            'location': '武汉',
+            'contact': '联系人:陈师兄',
+            'wechat': 'wh_jlu',
+            'email': 'jlu_wh@126.com',
+            'join_method': '联系负责人邀请入群',
+            'description': '江城吉大人,九省通衢共发展',
+            'type': 'association'
+        },
+    ]
+
+    # 获取校友会相关新闻
+    news = database.get_news(100)
+    alumni_keywords = ['校友', '校友会', '校友活动', '校友交流', '校友企业', '校友返校']
+    alumni_news = []
+    for n in news:
+        title = n.get('title', '').lower()
+        content = n.get('content', '').lower()
+        text = title + ' ' + content
+        if any(kw in text for kw in alumni_keywords):
+            n['type'] = 'news'
+            alumni_news.append(n)
+
+    # 按内容类型排序
+    def alumni_priority(n):
         text = (n.get('title', '') + ' ' + n.get('content', '')).lower()
         score = 0
-        # 学生/活动/比赛相关内容加分
-        for kw in ['学生', '同学', '比赛', '活动', '运动会', '晚会', '讲座', '论坛',
-                   '教学', '科研', '创新', '实践', '志愿者', '社团', '杏花节', '校庆']:
+        for kw in ['北京校友会', '上海校友会', '深圳校友会', '广州校友会', '北美校友会', '成都校友会', '武汉校友会', '欧洲校友会', '澳大利亚校友会']:
+            if kw in text:
+                score += 10
+        for kw in ['校友大会', '校友联谊', '校友讲座', '校友走访', '校友活动', '校友交流', '校友企业']:
             if kw in text:
                 score += 5
-        # 领导相关内容降分
-        for kw in ['领导', '校长', '书记', '部长', '主任', '会谈', '调研', '视察', '考察', '出访']:
-            if kw in text:
-                score -= 8
         return score
-    news.sort(key=news_priority, reverse=True)
-    return jsonify({'success': True, 'news': news})
+    alumni_news.sort(key=alumni_priority, reverse=True)
+
+    # 提取地点信息
+    def extract_location(n):
+        title = n.get('title', '')
+        content = n.get('content', '')[:200]
+        locations = ['北京', '上海', '深圳', '广州', '成都', '武汉', '杭州', '南京', '西安', '天津', '大连', '青岛', '厦门', '长沙', '郑州', '济南', '合肥', '昆明', '重庆', '哈尔滨', '长春', '沈阳', '北美', '欧洲', '澳大利亚', '海外']
+        for loc in locations:
+            if loc in title or loc in content:
+                return loc
+        return ''
+
+    for n in alumni_news:
+        n['location'] = extract_location(n)
+
+    # 合并:校友会信息 + 新闻
+    result = alumni_associations + alumni_news[:15]
+
+    # 缓存结果
+    _set_cached_alumni(result)
+
+    return jsonify({'success': True, 'alumni': result})
 
 
 @app.route('/api/admin/news/crawl', methods=['POST'])
 def crawl_news():
-    """手动爬取新闻（仅管理员）"""
+    """手动爬取新闻(仅管理员)"""
     if 'verified_student' not in session:
         return jsonify({'success': False, 'message': '请先登录'})
 
@@ -2487,7 +2781,13 @@ def crawl_news():
                 image_count += 1
 
         # 保存日志
-        database.set_news_crawl_log(executed_at, 'success', len(news_list), f'手动爬取成功，下载 {image_count} 张图片')
+        database.set_news_crawl_log(executed_at, 'success', len(news_list), f'手动爬取成功,下载 {image_count} 张图片')
+
+        # 清除缓存
+        _news_cache['data'] = None
+        _news_cache['timestamp'] = None
+        _alumni_cache['data'] = None
+        _alumni_cache['timestamp'] = None
 
         return jsonify({'success': True, 'message': f'成功爬取{len(news_list)}条新闻'})
     except Exception as e:
@@ -2497,7 +2797,7 @@ def crawl_news():
 
 @app.route('/api/admin/news/schedule', methods=['POST'])
 def set_news_schedule():
-    """设置新闻爬取时间（仅超级管理员）"""
+    """设置新闻爬取时间(仅超级管理员)"""
     if 'verified_student' not in session:
         return jsonify({'success': False, 'message': '请先登录'})
 
@@ -2520,7 +2820,7 @@ def set_news_schedule():
 
 @app.route('/api/admin/news/schedule', methods=['GET'])
 def get_news_schedule():
-    """获取新闻爬取时间（管理员可查看）"""
+    """获取新闻爬取时间(管理员可查看)"""
     if 'verified_student' not in session:
         return jsonify({'success': False, 'message': '请先登录'})
 
@@ -2542,9 +2842,393 @@ def get_news_schedule():
     })
 
 
+# ==================== OpenClaw 聊天模块 ====================
+
+import subprocess
+
+@app.route('/api/openclaw/chat', methods=['POST'])
+def openclaw_chat():
+    """与 OpenClaw AI 对话（仅管理员可用）"""
+    if 'verified_student' not in session:
+        return jsonify({'code': 401, 'message': '需要先登录', 'data': None})
+
+    current_name = session['verified_student']['name']
+    if not is_admin(current_name):
+        return jsonify({'code': 403, 'message': '仅管理员可以使用此功能', 'data': None})
+
+    data = request.json
+    message = data.get('message', '').strip()
+    if not message:
+        return jsonify({'code': 1, 'message': '消息不能为空', 'data': None})
+
+    if len(message) > 2000:
+        return jsonify({'code': 1, 'message': '消息过长', 'data': None})
+
+    # 文件锁防止并发冲突
+    import fcntl
+    lock_file = '/tmp/openclaw_chat.lock'
+    lock_fd = open(lock_file, 'w')
+
+    try:
+        # 非阻塞获取锁，如果被占用则直接返回繁忙提示
+        try:
+            fcntl.flock(lock_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except IOError:
+            lock_fd.close()
+            return jsonify({'code': 1, 'message': 'AI正在处理其他请求，请稍后再试', 'data': None})
+
+        result = subprocess.run(
+            ['openclaw', 'agent', '--agent', 'web-agent', '--message', message, '--json'],
+            capture_output=True, text=True, timeout=120
+        )
+
+        # 释放锁
+        fcntl.flock(lock_fd, fcntl.LOCK_UN)
+        lock_fd.close()
+
+        output = json.loads(result.stdout)
+        reply = output.get('result', {}).get('payloads', [{}])[0].get('text', '')
+        if not reply:
+            reply = '抱歉，AI 没有返回有效回复'
+
+        # 保存聊天记录
+        database.save_ai_chat(current_name, message, reply)
+
+        return jsonify({'code': 0, 'message': 'success', 'data': {'reply': reply}})
+    except subprocess.TimeoutExpired:
+        try:
+            fcntl.flock(lock_fd, fcntl.LOCK_UN)
+        except:
+            pass
+        lock_fd.close()
+        return jsonify({'code': 1, 'message': '请求超时，请稍后重试', 'data': None})
+    except json.JSONDecodeError:
+        try:
+            fcntl.flock(lock_fd, fcntl.LOCK_UN)
+        except:
+            pass
+        lock_fd.close()
+        return jsonify({'code': 1, 'message': 'AI 响应解析失败', 'data': None})
+    except Exception as e:
+        try:
+            fcntl.flock(lock_fd, fcntl.LOCK_UN)
+        except:
+            pass
+        lock_fd.close()
+        return jsonify({'code': 1, 'message': f'错误: {str(e)}', 'data': None})
+
+
+def get_cpu_usage():
+    """获取CPU使用率 (0-100)"""
+    try:
+        import psutil
+        return psutil.cpu_percent(interval=1)
+    except:
+        # 如果没有psutil，使用/proc/stat
+        try:
+            with open('/proc/stat', 'r') as f:
+                line = f.readline()
+                fields = line.split()
+                # cpu  user nice system idle iowait irq softirq
+                idle = int(fields[4])
+                total = sum(int(x) for x in fields[1:8])
+                return 100 - (idle * 100.0 / total) if total > 0 else 0
+        except:
+            return 0
+
+
+def check_openclaw_gateway():
+    """检查 OpenClaw Gateway 状态，返回 (is_healthy, message)"""
+    import subprocess
+    import urllib.request
+    import urllib.error
+
+    # 方法1：直接检查Gateway HTTP端口是否可达（最快）
+    gateway_url = 'http://127.0.0.1:18789'
+    try:
+        req = urllib.request.Request(gateway_url + '/', method='GET')
+        req.add_header('User-Agent', 'OpenClaw-Check/1.0')
+        with urllib.request.urlopen(req, timeout=3) as response:
+            if response.status == 200:
+                return True, 'ok'
+    except (urllib.error.URLError, urllib.error.HTTPError) as e:
+        return False, f'Gateway HTTP错误: {e.code}'
+    except Exception as e:
+        pass
+
+    # 方法2：检查Gateway进程是否在运行
+    try:
+        result = subprocess.run(
+            ['systemctl', '--user', 'is-active', 'openclaw-gateway'],
+            capture_output=True,
+            text=True,
+            timeout=5
+        )
+        if result.returncode == 0 and 'active' in result.stdout:
+            return False, 'Gateway进程运行中但HTTP无响应'
+        else:
+            return False, 'Gateway服务未运行'
+    except Exception as e:
+        return False, f'检查异常: {str(e)}'
+
+    return False, 'Gateway服务未启动或无响应'
+
+
+@app.route('/api/openclaw/queue_status', methods=['GET'])
+def get_openclaw_queue_status():
+    """获取 AI 队列状态"""
+    if 'verified_student' not in session:
+        return jsonify({'code': 401, 'message': '需要先登录', 'data': None})
+
+    current_name = session['verified_student']['name']
+    if not is_admin(current_name):
+        return jsonify({'code': 403, 'message': '仅管理员可以使用此功能', 'data': None})
+
+    import time
+    import json as json_module
+
+    # 检查 CPU 使用率
+    cpu_usage = get_cpu_usage()
+    cpu_too_high = cpu_usage > 80  # CPU > 80% 认为过高
+
+    # 检查 OpenClaw Gateway 状态
+    gateway_healthy, gateway_message = check_openclaw_gateway()
+    gateway_unhealthy = not gateway_healthy
+
+    # 检查断开冷却期（30秒内刚断开，允许立即重新连接）
+    cooldown_file = '/tmp/openclaw_disconnect_cooldown.json'
+    in_cooldown = False
+    try:
+        if os.path.exists(cooldown_file):
+            with open(cooldown_file, 'r') as f:
+                cooldown_data = json_module.load(f)
+            cooldown_elapsed = time.time() - cooldown_data.get('time', 0)
+            if cooldown_elapsed < 30:
+                in_cooldown = True
+            else:
+                os.remove(cooldown_file)
+    except:
+        pass
+
+    # 检查是否有其他管理员连接
+    conn_file = '/tmp/openclaw_connection.json'
+    other_connected = None
+    try:
+        if os.path.exists(conn_file):
+            with open(conn_file, 'r') as f:
+                conn_data = json_module.load(f)
+            # 如果是其他管理员连接且在5分钟内
+            if conn_data.get('name') and conn_data.get('name') != current_name:
+                elapsed = time.time() - conn_data.get('time', 0)
+                if elapsed < 300:
+                    other_connected = conn_data['name']
+    except:
+        pass
+
+    # 读取 web-agent 会话文件获取最后更新时间
+    sessions_file = '/root/.openclaw/agents/web-agent/sessions/sessions.json'
+    try:
+        with open(sessions_file, 'r') as f:
+            sessions_data = json_module.load(f)
+
+        # 获取 web-agent:main 会话的最后更新时间
+        web_agent_session = sessions_data.get('agent:web-agent:main', {})
+        last_updated = web_agent_session.get('updatedAt', 0)
+        last_updated_seconds_ago = (int(time.time() * 1000) - last_updated) / 1000
+
+        # 如果最后更新在5分钟内，认为可能正在处理中
+        # 但如果在冷却期内（刚断开），允许绕过忙碌状态
+        is_busy = last_updated_seconds_ago < 300 if not in_cooldown else False
+
+        # 如果其他管理员连接中，也标记为忙
+        if other_connected:
+            is_busy = True
+
+        # 如果CPU过高，也标记为忙
+        if cpu_too_high:
+            is_busy = True
+
+        # 如果Gateway不健康，也标记为忙
+        if gateway_unhealthy:
+            is_busy = True
+
+        return jsonify({
+            'code': 0,
+            'message': 'success',
+            'data': {
+                'is_busy': is_busy,
+                'last_updated_seconds_ago': int(last_updated_seconds_ago),
+                'other_connected': other_connected,
+                'in_cooldown': in_cooldown,
+                'cpu_usage': cpu_usage,
+                'cpu_too_high': cpu_too_high,
+                'gateway_healthy': gateway_healthy,
+                'gateway_message': gateway_message
+            }
+        })
+    except FileNotFoundError:
+        return jsonify({'code': 0, 'message': 'success', 'data': {
+            'is_busy': False,
+            'last_updated_seconds_ago': 0,
+            'other_connected': other_connected,
+            'in_cooldown': in_cooldown,
+            'cpu_usage': cpu_usage,
+            'cpu_too_high': cpu_too_high,
+            'gateway_healthy': gateway_healthy,
+            'gateway_message': gateway_message
+        }})
+    except Exception as e:
+        return jsonify({'code': 0, 'message': 'success', 'data': {
+            'is_busy': False,
+            'last_updated_seconds_ago': 0,
+            'error': str(e)
+        }})
+
+
+@app.route('/api/openclaw/mark_connected', methods=['POST'])
+def mark_connected():
+    """标记当前管理员已连接AI"""
+    if 'verified_student' not in session:
+        return jsonify({'code': 401, 'message': '需要先登录', 'data': None})
+
+    current_name = session['verified_student']['name']
+    if not is_admin(current_name):
+        return jsonify({'code': 403, 'message': '仅管理员可以使用此功能', 'data': None})
+
+    import json
+    import time
+
+    conn_file = '/tmp/openclaw_connection.json'
+
+    # 检查是否已有其他人连接
+    try:
+        if os.path.exists(conn_file):
+            with open(conn_file, 'r') as f:
+                conn_data = json.load(f)
+
+            # 如果有其他管理员连接（超过5分钟未更新则忽略）
+            if conn_data.get('name') and conn_data.get('name') != current_name:
+                elapsed = time.time() - conn_data.get('time', 0)
+                if elapsed < 300:  # 5分钟内
+                    return jsonify({
+                        'code': 1,
+                        'message': f'{conn_data["name"]}正在使用AI聊天，请稍后再试',
+                        'data': {'busy': True, 'by': conn_data.get('name')}
+                    })
+    except:
+        pass
+
+    # 写入连接状态
+    with open(conn_file, 'w') as f:
+        json.dump({
+            'name': current_name,
+            'time': time.time()
+        }, f)
+
+    # 清除冷却期文件
+    cooldown_file = '/tmp/openclaw_disconnect_cooldown.json'
+    try:
+        if os.path.exists(cooldown_file):
+            os.remove(cooldown_file)
+    except:
+        pass
+
+    return jsonify({'code': 0, 'message': 'success', 'data': None})
+
+
+@app.route('/api/openclaw/mark_disconnected', methods=['POST'])
+def mark_disconnected():
+    """标记当前管理员已断开AI连接"""
+    if 'verified_student' not in session:
+        return jsonify({'code': 401, 'message': '需要先登录', 'data': None})
+
+    current_name = session['verified_student']['name']
+    if not is_admin(current_name):
+        return jsonify({'code': 403, 'message': '仅管理员可以使用此功能', 'data': None})
+
+    import json
+    conn_file = '/tmp/openclaw_connection.json'
+    cooldown_file = '/tmp/openclaw_disconnect_cooldown.json'
+
+    try:
+        if os.path.exists(conn_file):
+            with open(conn_file, 'r') as f:
+                conn_data = json.load(f)
+
+            # 只删除自己的连接
+            if conn_data.get('name') == current_name:
+                os.remove(conn_file)
+                # 创建断开冷却文件，允许立即重新连接（30秒内）
+                with open(cooldown_file, 'w') as f:
+                    json.dump({'time': time.time()}, f)
+    except:
+        pass
+
+    return jsonify({'code': 0, 'message': 'success', 'data': None})
+
+
+@app.route('/api/openclaw/history', methods=['GET'])
+def get_openclaw_history():
+    """获取 AI 聊天记录
+
+    - 超级管理员：可以查看所有人的记录
+    - 普通管理员：只能查看自己的记录
+    """
+    if 'verified_student' not in session:
+        return jsonify({'code': 401, 'message': '需要先登录', 'data': None})
+
+    current_name = session['verified_student']['name']
+    is_super = is_super_admin(current_name)
+
+    # 获取分页参数
+    page = request.args.get('page', 1, type=int)
+    limit = request.args.get('limit', 20, type=int)
+    offset = (page - 1) * limit
+
+    # 普通管理员只能看自己的记录
+    if is_super:
+        history = database.get_ai_chat_history(user_name=None, limit=limit, offset=offset)
+        total = database.get_ai_chat_history_count()
+    else:
+        history = database.get_ai_chat_history(user_name=current_name, limit=limit, offset=offset)
+        total = database.get_ai_chat_history_count(user_name=current_name)
+
+    return jsonify({
+        'code': 0,
+        'message': 'success',
+        'data': {
+            'history': history,
+            'total': total,
+            'page': page,
+            'limit': limit,
+            'pages': (total + limit - 1) // limit if limit > 0 else 0,
+            'is_super_admin': is_super
+        }
+    })
+
+
+@app.route('/api/openclaw/history', methods=['DELETE'])
+def delete_openclaw_history():
+    """删除聊天记录（仅超级管理员）"""
+    if 'verified_student' not in session:
+        return jsonify({'code': 401, 'message': '需要先登录', 'data': None})
+
+    current_name = session['verified_student']['name']
+    if not is_super_admin(current_name):
+        return jsonify({'code': 403, 'message': '仅超级管理员可以删除聊天记录', 'data': None})
+
+    data = request.json
+    user_name = data.get('user_name')
+    if not user_name:
+        return jsonify({'code': 1, 'message': '用户名不能为空', 'data': None})
+
+    deleted = database.delete_ai_chat_history(user_name)
+    return jsonify({'code': 0, 'message': 'success', 'data': {'deleted': deleted}})
+
+
 @app.route('/api/admin/news/keywords', methods=['GET'])
 def get_news_keywords():
-    """获取新闻爬取关键词（管理员可查看）"""
+    """获取新闻爬取关键词(管理员可查看)"""
     if 'verified_student' not in session:
         return jsonify({'success': False, 'message': '请先登录'})
 
@@ -2558,7 +3242,7 @@ def get_news_keywords():
 
 @app.route('/api/admin/news/keywords', methods=['POST'])
 def set_news_keywords():
-    """设置新闻爬取关键词（仅超级管理员），设置后触发爬虫"""
+    """设置新闻爬取关键词(仅超级管理员),设置后触发爬虫"""
     if 'verified_student' not in session:
         return jsonify({'success': False, 'message': '请先登录'})
 
@@ -2607,8 +3291,381 @@ def set_news_keywords():
     })
 
 
+@app.route('/api/admin/music/generate', methods=['POST'])
+def generate_music():
+    """AI生成背景音乐(管理员)"""
+    if 'verified_student' not in session:
+        return jsonify({'success': False, 'message': '请先登录'})
+
+    current_name = session['verified_student']['name']
+    if not is_admin(current_name) and not is_super_admin(current_name):
+        return jsonify({'success': False, 'message': '管理员才能生成音乐'})
+
+    data = request.get_json()
+    prompt = data.get('prompt', '')
+    lyrics = data.get('lyrics', '')
+    title = data.get('title', '背景音乐')
+
+    if not prompt:
+        return jsonify({'success': False, 'message': '请输入音乐描述'})
+
+    import os
+    api_key = database.get_config('minimax_api_key', '')
+    if not api_key:
+        return jsonify({'success': False, 'message': '请先在设置中配置MiniMax API Key'})
+
+    import requests
+    url = 'https://api.minimaxi.com/v1/music_generation'
+    headers = {
+        'Content-Type': 'application/json',
+        'Authorization': f'Bearer {api_key}'
+    }
+    payload = {
+        'model': 'music-2.6',
+        'prompt': prompt,
+        'lyrics': lyrics if lyrics else '[Inst]\n(纯音乐)',
+        'audio_setting': {
+            'sample_rate': 44100,
+            'bitrate': 256000,
+            'format': 'mp3'
+        },
+        'output_format': 'url'
+    }
+
+    try:
+        response = requests.post(url, headers=headers, json=payload, timeout=120)
+        result = response.json()
+
+        if result.get('base_resp', {}).get('status_code') == 0:
+            music_data = result.get('data', {})
+            audio_url = music_data.get('audio') or music_data.get('audio_url', '')
+            if audio_url:
+                # 下载音频文件
+                music_dir = '/home/ubuntu/jlu8/static/music'
+                os.makedirs(music_dir, exist_ok=True)
+
+                filename = f'bg-music-{datetime.now().strftime("%Y%m%d%H%M%S")}.mp3'
+                filepath = os.path.join(music_dir, filename)
+
+                audio_response = requests.get(audio_url, timeout=60)
+                if audio_response.status_code == 200:
+                    with open(filepath, 'wb') as f:
+                        f.write(audio_response.content)
+
+                    # 保存元数据
+                    music_id = database.save_generated_music(
+                        title=title,
+                        prompt=prompt,
+                        lyrics=lyrics,
+                        filename=filename,
+                        created_by=current_name
+                    )
+
+                    return jsonify({
+                        'success': True,
+                        'message': '音乐生成成功',
+                        'music_id': music_id,
+                        'filename': filename,
+                        'url': f'/static/music/{filename}'
+                    })
+
+            return jsonify({'success': False, 'message': '生成失败，未获取到音频URL'})
+        else:
+            err_msg = result.get('base_resp', {}).get('status_msg', '未知错误')
+            return jsonify({'success': False, 'message': f'生成失败: {err_msg}'})
+
+    except requests.exceptions.Timeout:
+        return jsonify({'success': False, 'message': '请求超时，请稍后重试'})
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'生成异常: {str(e)}'})
+
+
+@app.route('/api/admin/music/list', methods=['GET'])
+def get_music_list():
+    """获取生成的音乐列表(管理员)"""
+    if 'verified_student' not in session:
+        return jsonify({'success': False, 'message': '请先登录'})
+
+    current_name = session['verified_student']['name']
+    if not is_admin(current_name) and not is_super_admin(current_name):
+        return jsonify({'success': False, 'message': '无权限'})
+
+    music_list = database.get_generated_music_list()
+    return jsonify({'success': True, 'list': music_list})
+
+
+@app.route('/api/admin/music/delete', methods=['POST'])
+def delete_music():
+    """删除生成的音乐(管理员)"""
+    if 'verified_student' not in session:
+        return jsonify({'success': False, 'message': '请先登录'})
+
+    current_name = session['verified_student']['name']
+    if not is_admin(current_name) and not is_super_admin(current_name):
+        return jsonify({'success': False, 'message': '无权限'})
+
+    data = request.get_json()
+    music_id = data.get('music_id')
+    filename = data.get('filename')
+
+    if music_id:
+        database.delete_generated_music(music_id)
+
+    if filename:
+        filepath = f'/home/ubuntu/jlu8/static/music/{filename}'
+        if os.path.exists(filepath):
+            os.remove(filepath)
+
+    return jsonify({'success': True, 'message': '删除成功'})
+
+
+@app.route('/api/admin/music/apikey', methods=['GET'])
+def get_music_apikey():
+    """获取MiniMax API Key配置(仅超级管理员)"""
+    if 'verified_student' not in session:
+        return jsonify({'success': False, 'message': '请先登录'})
+
+    current_name = session['verified_student']['name']
+    if not is_super_admin(current_name):
+        return jsonify({'success': False, 'message': '无权限'})
+
+    api_key = database.get_config('minimax_api_key', '')
+    # 返回脱敏的key
+    if api_key and len(api_key) > 8:
+        masked = api_key[:6] + '****' + api_key[-4:]
+    else:
+        masked = ''
+    return jsonify({'success': True, 'has_key': bool(api_key), 'masked_key': masked})
+
+
+@app.route('/api/admin/music/apikey', methods=['POST'])
+def set_music_apikey():
+    """设置MiniMax API Key(仅超级管理员)"""
+    if 'verified_student' not in session:
+        return jsonify({'success': False, 'message': '请先登录'})
+
+    current_name = session['verified_student']['name']
+    if not is_super_admin(current_name):
+        return jsonify({'success': False, 'message': '无权限'})
+
+    data = request.get_json()
+    api_key = data.get('api_key', '').strip()
+
+    if not api_key:
+        return jsonify({'success': False, 'message': 'API Key不能为空'})
+
+    database.set_config('minimax_api_key', api_key)
+    return jsonify({'success': True, 'message': 'API Key设置成功'})
+
+
+@app.route('/api/admin/music/setting', methods=['GET'])
+def get_music_setting():
+    """获取背景音乐设置(管理员)"""
+    if 'verified_student' not in session:
+        return jsonify({'success': False, 'message': '请先登录'})
+
+    current_name = session['verified_student']['name']
+    if not is_admin(current_name) and not is_super_admin(current_name):
+        return jsonify({'success': False, 'message': '无权限'})
+
+    bg_music_timeline = database.get_config('bg_music_timeline', '')
+    bg_music_gallery = database.get_config('bg_music_gallery', '')
+    bg_music_vinyl = database.get_config('bg_music_vinyl', '')
+
+    # 获取音乐详情
+    def get_music_info(music_id):
+        if not music_id:
+            return None
+        conn = database.get_db()
+        cursor = conn.cursor()
+        cursor.execute('SELECT * FROM generated_music WHERE id = ?', (music_id,))
+        row = cursor.fetchone()
+        return dict(row) if row else None
+
+    return jsonify({
+        'success': True,
+        'bg_music_timeline': get_music_info(bg_music_timeline),
+        'bg_music_gallery': get_music_info(bg_music_gallery),
+        'bg_music_vinyl': get_music_info(bg_music_vinyl)
+    })
+
+
+@app.route('/api/admin/music/setting', methods=['POST'])
+def set_music_setting():
+    """设置背景音乐(管理员)"""
+    if 'verified_student' not in session:
+        return jsonify({'success': False, 'message': '请先登录'})
+
+    current_name = session['verified_student']['name']
+    if not is_admin(current_name) and not is_super_admin(current_name):
+        return jsonify({'success': False, 'message': '无权限'})
+
+    data = request.get_json()
+    location = data.get('location')  # timeline, gallery, vinyl
+    music_id = data.get('music_id')  # 音乐ID或空字符串(取消)
+
+    if location not in ['timeline', 'gallery', 'vinyl']:
+        return jsonify({'success': False, 'message': '无效的音乐位置'})
+
+    config_key = f'bg_music_{location}'
+    if music_id:
+        database.set_config(config_key, str(music_id))
+    else:
+        # 取消设置 - 删除配置
+        conn = database.get_db()
+        cursor = conn.cursor()
+        cursor.execute('DELETE FROM config WHERE key = ?', (config_key,))
+        conn.commit()
+
+    return jsonify({'success': True, 'message': '设置成功'})
+
+
+@app.route('/api/music/bg', methods=['GET'])
+def get_bg_music():
+    """获取各位置背景音乐URL(公开)"""
+    import os
+
+    def get_music_url(music_id):
+        if not music_id:
+            return None
+        conn = database.get_db()
+        cursor = conn.cursor()
+        cursor.execute('SELECT filename FROM generated_music WHERE id = ?', (music_id,))
+        row = cursor.fetchone()
+        if row:
+            filepath = f'/home/ubuntu/jlu8/static/music/{row[0]}'
+            if os.path.exists(filepath):
+                return f'/static/music/{row[0]}'
+        return None
+
+    bg_timeline = get_music_url(database.get_config('bg_music_timeline', ''))
+    bg_gallery = get_music_url(database.get_config('bg_music_gallery', ''))
+    bg_vinyl = get_music_url(database.get_config('bg_music_vinyl', ''))
+
+    return jsonify({
+        'success': True,
+        'timeline': bg_timeline,
+        'gallery': bg_gallery,
+        'vinyl': bg_vinyl
+    })
+
+
+@app.route('/api/music/all', methods=['GET'])
+def get_all_music():
+    """获取所有AI生成的音乐(公开)"""
+    import os
+    music_list = database.get_generated_music_list()
+    result = []
+    for m in music_list:
+        filepath = f'/home/ubuntu/jlu8/static/music/{m["filename"]}'
+        if os.path.exists(filepath):
+            result.append({
+                'id': m['id'],
+                'prompt': m.get('prompt', ''),
+                'url': f'/static/music/{m["filename"]}'
+            })
+    return jsonify({'success': True, 'list': result})
+
+
+@app.route('/api/ai_image/generate', methods=['POST'])
+def generate_ai_image():
+    """AI生成图片(需登录)"""
+    if 'verified_student' not in session:
+        return jsonify({'success': False, 'message': '请先登录'})
+
+    data = request.get_json()
+    prompt = data.get('prompt', '')
+    ref_image = data.get('ref_image', '')  # base64编码的参考图，可选
+    aspect_ratio = data.get('aspect_ratio', '1:1')
+
+    if not prompt:
+        return jsonify({'success': False, 'message': '请输入图片描述'})
+
+    api_key = database.get_config('minimax_api_key', '')
+    if not api_key:
+        return jsonify({'success': False, 'message': '请先在管理页面配置MiniMax API Key'})
+
+    import base64
+    import requests
+    import os
+
+    try:
+        url = 'https://api.minimaxi.com/v1/image_generation'
+        headers = {
+            'Content-Type': 'application/json',
+            'Authorization': f'Bearer {api_key}'
+        }
+        payload = {
+            'model': 'image-01',
+            'prompt': prompt,
+            'aspect_ratio': aspect_ratio,
+            'response_format': 'base64'
+        }
+        if ref_image:
+            payload['subject_reference'] = [{
+                'type': 'character',
+                'image_file': ref_image if ref_image.startswith('data:') else f'data:image/jpeg;base64,{ref_image}'
+            }]
+
+        response = requests.post(url, headers=headers, json=payload, timeout=120)
+        result = response.json()
+        print(f"[AI Image] API response keys: {result.keys()}")
+
+        # MiniMax 图片生成 API 响应格式
+        # 成功: {"id": "...", "data": {"image_base64": ["..."]}}
+        # 失败: {"base_resp": {"status_code": 1004, "status_msg": "..."}}
+        images = []
+        status_code = result.get('base_resp', {}).get('status_code') if result.get('base_resp') else None
+
+        if status_code is not None and status_code != 0:
+            # 失败的响应
+            err_msg = result.get('base_resp', {}).get('status_msg', '未知错误')
+            return jsonify({'success': False, 'message': f'生成失败: {err_msg}'})
+
+        # 获取图片数据
+        data = result.get('data', {})
+        if isinstance(data, dict):
+            images = data.get('image_base64', [])
+        elif isinstance(data, list) and len(data) > 0:
+            images = [d.get('b64_json', '') for d in data if d.get('b64_json')]
+
+        if not images or not images[0]:
+            return jsonify({'success': False, 'message': '生成失败：未返回图片数据'})
+
+        # 保存图片
+        img_dir = os.path.join(DATA_DIR, 'static/imgs/messages')
+        os.makedirs(img_dir, exist_ok=True)
+        filename = f'ai-{datetime.now().strftime("%Y%m%d%H%M%S")}-{uuid.uuid4().hex[:8]}.png'
+        filepath = os.path.join(img_dir, filename)
+
+        with open(filepath, 'wb') as f:
+            f.write(base64.b64decode(images[0]))
+
+        # 生成缩略图
+        try:
+            from PIL import Image
+            with Image.open(filepath) as img:
+                img.thumbnail((800, 800), Image.Resampling.LANCZOS)
+                thumb_filename = f'thumb_{filename}'
+                img.save(os.path.join(DATA_DIR, 'static/imgs/thumbs', thumb_filename), quality=85)
+        except Exception as e:
+            print(f'生成缩略图失败: {e}')
+
+        image_url = f'/static/imgs/messages/{filename}'
+        return jsonify({
+            'success': True,
+            'message': '图片生成成功',
+            'url': image_url
+        })
+
+    except requests.exceptions.Timeout:
+        return jsonify({'success': False, 'message': '请求超时，请稍后重试'})
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'生成异常: {str(e)}'})
+
+
 def do_crawl_news():
-    """执行新闻爬取（供调度器调用）"""
+    """执行新闻爬取(供调度器调用)"""
     from datetime import datetime
     executed_at = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     with app.app_context():
@@ -2617,14 +3674,20 @@ def do_crawl_news():
             news_list = news_crawler.fetch_jlu_news()
             for news in news_list:
                 database.save_news(
-                    title=news['title'],
-                    content=news['content'],
-                    source_url=news['source_url'],
-                    image_url=news['image_url'],
-                    published_time=news['published_time']
+                    title=news.get('title', ''),
+                    content=news.get('content', '来源:吉大新闻网'),
+                    source_url=news.get('source_url', ''),
+                    image_url=news.get('image_url', ''),
+                    published_time=news.get('published_time', '')
                 )
             database.set_news_crawl_log(executed_at, 'success', len(news_list), '定时爬取成功')
             print(f"[News Crawler] 成功爬取{len(news_list)}条新闻")
+
+            # 清除缓存
+            _news_cache['data'] = None
+            _news_cache['timestamp'] = None
+            _alumni_cache['data'] = None
+            _alumni_cache['timestamp'] = None
         except Exception as e:
             database.set_news_crawl_log(executed_at, 'failed', 0, f'定时爬取失败: {e}')
             print(f"[News Crawler] 爬取失败: {e}")
@@ -2667,7 +3730,7 @@ def init_news_scheduler():
     )
     scheduler.start()
     app.news_scheduler = scheduler
-    print(f"[News Scheduler] 已启动，每天{hour:02d}:{minute:02d}自动爬取新闻")
+    print(f"[News Scheduler] 已启动,每天{hour:02d}:{minute:02d}自动爬取新闻")
 
 
 if __name__ == '__main__':

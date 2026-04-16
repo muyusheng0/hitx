@@ -65,7 +65,7 @@
         </a>
         <a href="/lyb" class="tab-item">
             <span class="tab-icon">💬</span>
-            <span class="tab-label">留言板</span>
+            <span class="tab-label">留言信件</span>
         </a>
         <a href="/gallery" class="tab-item active">
             <span class="tab-icon">📷</span>
@@ -151,6 +151,66 @@
         </div>
     </div>
 
+    <!-- 相册背景音乐控制 -->
+    <div id="galleryMusicControl" style="position: fixed; bottom: 160px; right: 20px; z-index: 100;">
+        <button onclick="toggleGalleryMusic()" id="galleryMusicBtn" title="播放相册背景音乐" style="background: var(--secondary, #e74c3c); color: white; border: none; width: 56px; height: 56px; border-radius: 50%; cursor: pointer; font-size: 1.5rem; box-shadow: 0 4px 15px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center;">🎵</button>
+    </div>
+
     <script src="/static/js/main.js"></script>
+    <script>
+    let galleryAudio = null;
+    let galleryMusicPlaying = false;
+    let galleryBgMusicUrl = null;
+    let galleryMusicFetched = false;
+
+    async function fetchGalleryBgMusic() {
+        if (galleryMusicFetched) return galleryBgMusicUrl;
+        try {
+            const res = await fetch('/api/music/bg');
+            const data = await res.json();
+            if (data.success && data.gallery) {
+                galleryBgMusicUrl = data.gallery;
+                galleryMusicFetched = true;
+                document.getElementById('galleryMusicControl').style.display = 'block';
+                initGalleryAudio();
+            }
+        } catch (e) {
+            console.log('获取相册背景音乐失败');
+        }
+        return galleryBgMusicUrl;
+    }
+
+    function initGalleryAudio() {
+        if (galleryBgMusicUrl && !galleryAudio) {
+            galleryAudio = new Audio(galleryBgMusicUrl);
+            galleryAudio.loop = true;
+            const savedVolume = localStorage.getItem('bgVolume') || '60';
+            const isMuted = localStorage.getItem('bgMuted') === 'true';
+            galleryAudio.volume = (isMuted ? 0 : parseInt(savedVolume) / 100) * 0.6;
+        }
+    }
+
+    async function toggleGalleryMusic() {
+        if (!galleryBgMusicUrl && !galleryMusicFetched) {
+            await fetchGalleryBgMusic();
+        }
+        if (!galleryAudio) {
+            initGalleryAudio();
+        }
+        if (galleryAudio) {
+            if (galleryMusicPlaying) {
+                galleryAudio.pause();
+                document.getElementById('galleryMusicBtn').textContent = '🎵';
+            } else {
+                galleryAudio.play().catch(e => console.error('播放失败:', e));
+                document.getElementById('galleryMusicBtn').textContent = '🎵';
+            }
+            galleryMusicPlaying = !galleryMusicPlaying;
+        }
+    }
+
+    // 页面加载时获取背景音乐
+    fetchGalleryBgMusic();
+    </script>
 </body>
 </html>

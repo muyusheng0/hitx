@@ -1,0 +1,208 @@
+/**
+ * 黑胶唱片机频谱可视化增强
+ * 播放音乐时产生视觉反馈
+ */
+
+/* ==================== 频谱可视化 ==================== */
+.vinyl-visualizer {
+    position: absolute;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 3px;
+    height: 40px;
+    width: 120px;
+}
+
+.viz-bar {
+    width: 4px;
+    background: linear-gradient(to top, var(--secondary), var(--accent));
+    border-radius: 2px;
+    transition: height 0.1s ease;
+    min-height: 3px;
+}
+
+.vinyl-player.player-playing .viz-bar {
+    animation: viz-dance 0.5s ease-in-out infinite alternate;
+}
+
+.viz-bar:nth-child(1) { animation-delay: 0s; }
+.viz-bar:nth-child(2) { animation-delay: 0.05s; }
+.viz-bar:nth-child(3) { animation-delay: 0.1s; }
+.viz-bar:nth-child(4) { animation-delay: 0.15s; }
+.viz-bar:nth-child(5) { animation-delay: 0.2s; }
+.viz-bar:nth-child(6) { animation-delay: 0.15s; }
+.viz-bar:nth-child(7) { animation-delay: 0.1s; }
+.viz-bar:nth-child(8) { animation-delay: 0.05s; }
+.viz-bar:nth-child(9) { animation-delay: 0s; }
+
+@keyframes viz-dance {
+    from { transform: scaleY(0.4); }
+    to { transform: scaleY(1); }
+}
+
+/* ==================== 唱片反射光 ==================== */
+.record-reflection {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: linear-gradient(
+        135deg,
+        transparent 0%,
+        transparent 40%,
+        rgba(255, 255, 255, 0.15) 45%,
+        rgba(255, 255, 255, 0.25) 50%,
+        rgba(255, 255, 255, 0.15) 55%,
+        transparent 60%,
+        transparent 100%
+    );
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.5s ease;
+}
+
+.vinyl-player.player-playing .record-reflection {
+    opacity: 1;
+    animation: reflection-spin 3s linear infinite;
+}
+
+@keyframes reflection-spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* ==================== 播放时的光晕 ==================== */
+.vinyl-player.player-playing::before {
+    content: '';
+    position: absolute;
+    top: -20px;
+    left: -20px;
+    right: -20px;
+    bottom: -20px;
+    background: radial-gradient(
+        circle at center,
+        rgba(243, 156, 18, 0.2) 0%,
+        transparent 70%
+    );
+    border-radius: 50%;
+    animation: player-glow 2s ease-in-out infinite;
+    pointer-events: none;
+    z-index: -1;
+}
+
+@keyframes player-glow {
+    0%, 100% { opacity: 0.5; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.05); }
+}
+
+/* ==================== 唱臂动画增强 ==================== */
+.tonearm {
+    transform-origin: 85% 10%;
+    transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.vinyl-player.player-playing .tonearm {
+    transform: rotate(20deg);
+}
+
+/* 唱臂微振动 */
+.vinyl-player.player-playing .tonearm::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    animation: tonearm-vibrate 0.15s linear infinite;
+}
+
+@keyframes tonearm-vibrate {
+    0%, 100% { transform: rotate(0deg); }
+    25% { transform: rotate(0.3deg); }
+    75% { transform: rotate(-0.3deg); }
+}
+
+/* ==================== 播放按钮脉冲 ==================== */
+.play-btn {
+    transition: all 0.3s ease;
+}
+
+.play-btn:hover {
+    box-shadow: 0 0 20px rgba(231, 76, 60, 0.5);
+}
+
+.play-btn:active {
+    transform: scale(0.95);
+}
+
+.vinyl-player.player-playing .play-btn {
+    animation: play-btn-pulse 1s ease-in-out infinite;
+}
+
+@keyframes play-btn-pulse {
+    0%, 100% { box-shadow: 0 0 10px rgba(231, 76, 60, 0.3); }
+    50% { box-shadow: 0 0 25px rgba(231, 76, 60, 0.6); }
+}
+
+/* ==================== 进度条流动效果 ==================== */
+.progress-bar {
+    position: relative;
+    overflow: hidden;
+}
+
+.progress-bar::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 255, 255, 0.3),
+        transparent
+    );
+    animation: progress-shine 2s linear infinite;
+}
+
+@keyframes progress-shine {
+    from { transform: translateX(-100%); }
+    to { transform: translateX(100%); }
+}
+
+/* ==================== 音量条动画 ==================== */
+.volume-bar {
+    display: flex;
+    align-items: flex-end;
+    gap: 2px;
+    height: 20px;
+}
+
+.volume-bar .vol {
+    width: 3px;
+    background: linear-gradient(to top, var(--accent), var(--secondary));
+    border-radius: 1px;
+    transition: height 0.2s ease;
+}
+
+.vinyl-player.player-playing .volume-bar .vol {
+    animation: vol-dance 0.6s ease-in-out infinite alternate;
+}
+
+.volume-bar .vol:nth-child(1) { height: 8px; animation-delay: 0s; }
+.volume-bar .vol:nth-child(2) { height: 14px; animation-delay: 0.1s; }
+.volume-bar .vol:nth-child(3) { height: 10px; animation-delay: 0.2s; }
+.volume-bar .vol:nth-child(4) { height: 18px; animation-delay: 0.3s; }
+.volume-bar .vol:nth-child(5) { height: 12px; animation-delay: 0.4s; }
+
+@keyframes vol-dance {
+    from { transform: scaleY(0.6); }
+    to { transform: scaleY(1); }
+}

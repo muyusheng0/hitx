@@ -543,7 +543,7 @@ body::before {
 
 .search-box input {
     width: 100%;
-    padding: 1rem 1.5rem;
+    padding: 1rem 6rem 1rem 3rem;
     padding-left: 3rem;
     border: 2px solid var(--bg-dark);
     border-radius: 50px;
@@ -551,6 +551,7 @@ body::before {
     font-family: inherit;
     transition: all 0.3s ease;
     background: var(--card-bg);
+    box-sizing: border-box;
 }
 
 .search-box input:focus {
@@ -566,6 +567,27 @@ body::before {
     top: 50%;
     transform: translateY(-50%);
     font-size: 1rem;
+}
+
+.search-box-btn {
+    position: absolute;
+    right: 0.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+    padding: 0.5rem 1rem;
+    background: var(--secondary);
+    color: white;
+    border: none;
+    border-radius: 50px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: inherit;
+}
+
+.search-box-btn:hover {
+    background: var(--primary);
+    transform: translateY(-50%) scale(1.05);
 }
 
 /* 离我最近的同学 */
@@ -1097,6 +1119,31 @@ body::before {
 .voice-duration {
     font-size: 0.8rem;
     color: var(--text-light);
+}
+
+/* 语音留言返回按钮 */
+.voice-back-bar {
+    margin-bottom: 1rem;
+}
+
+.voice-back-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.5rem 1rem;
+    background: var(--bg);
+    border: 1px solid var(--bg-dark);
+    border-radius: 20px;
+    font-size: 0.85rem;
+    color: var(--text);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.voice-back-btn:hover {
+    background: var(--secondary);
+    color: white;
+    border-color: var(--secondary);
 }
 
 /* 语音录制按钮 */
@@ -2551,10 +2598,12 @@ body::before {
 }
 
 .profile-welcome {
-    font-family: 'ZCOOL XiaoWei', serif;
+    font-family: 'Noto Serif SC', 'Source Han Serif SC', 'Microsoft YaHei', 'PingFang SC', sans-serif;
     font-size: 1.8rem;
     color: var(--primary);
     margin-bottom: 0.5rem;
+    letter-spacing: 4px;
+    font-weight: 400;
 }
 
 .profile-desc {
@@ -3347,3 +3396,410 @@ body::before {
 .notification-type-comment { background: rgba(52, 152, 219, 0.15); }
 .notification-type-like { background: rgba(231, 76, 60, 0.15); }
 .notification-type-voice_shout { background: rgba(155, 89, 182, 0.15); }
+
+/* 首页登录提示卡片 */
+.index-login-prompt {
+    margin: 2rem auto;
+    max-width: 400px;
+}
+
+.index-login-card {
+    background: linear-gradient(145deg, rgba(255,250,245,0.95), rgba(255,240,230,0.9));
+    border: 2px solid rgba(212, 165, 116, 0.3);
+    border-radius: 24px;
+    padding: 3rem 2.5rem;
+    text-align: center;
+    box-shadow: 0 10px 40px rgba(139, 90, 43, 0.12);
+    position: relative;
+}
+
+.index-login-card::before {
+    content: '';
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+    border: 1px solid rgba(212, 165, 116, 0.2);
+    border-radius: 18px;
+    pointer-events: none;
+}
+
+.index-login-icon {
+    font-size: 3.5rem;
+    margin-bottom: 1.2rem;
+    filter: drop-shadow(0 3px 8px rgba(212, 165, 116, 0.4));
+}
+
+.index-login-card h3 {
+    font-family: 'ZCOOL XiaoWei', 'Noto Serif SC', serif;
+    font-size: 1.4rem;
+    color: #5d4037;
+    margin-bottom: 0.8rem;
+    letter-spacing: 2px;
+}
+
+.index-login-card p {
+    font-size: 0.95rem;
+    color: #8d6e63;
+    margin-bottom: 1.8rem;
+    line-height: 1.6;
+}
+
+.index-login-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0.9rem 2.8rem;
+    background: linear-gradient(135deg, #d4a574, #c9a96e);
+    color: #fff;
+    border: none;
+    border-radius: 30px;
+    font-size: 1rem;
+    font-weight: 500;
+    letter-spacing: 2px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 6px 20px rgba(212, 165, 116, 0.35);
+}
+
+.index-login-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(212, 165, 116, 0.45);
+}
+
+@media (max-width: 768px) {
+    .index-login-prompt {
+        margin: 1.5rem 0.5rem;
+    }
+    .index-login-card {
+        padding: 2.5rem 2rem;
+    }
+}
+
+/* ==================== 留言板输入面板 ==================== */
+.msg-compose-card {
+    background: var(--card-bg);
+    border-radius: 16px;
+    padding: 1.25rem;
+    box-shadow: var(--shadow);
+    border: 1px solid rgba(0,0,0,0.05);
+    margin-bottom: 1.5rem;
+}
+
+.msg-compose-header {
+    display: flex;
+    gap: 0.75rem;
+    align-items: flex-start;
+}
+
+.msg-compose-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--secondary), var(--accent));
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'ZCOOL XiaoWei', serif;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+    background-size: cover;
+    background-position: center;
+}
+
+.msg-compose-avatar:not([style*="background-image"]) {
+    background: linear-gradient(135deg, var(--secondary), var(--accent));
+}
+
+.msg-compose-textarea {
+    flex: 1;
+    border: none;
+    background: var(--bg);
+    border-radius: 12px;
+    padding: 0.75rem 1rem;
+    font-size: 0.95rem;
+    font-family: inherit;
+    resize: none;
+    min-height: 80px;
+    line-height: 1.6;
+    color: var(--text);
+}
+
+.msg-compose-textarea:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(231, 76, 60, 0.15);
+}
+
+.msg-compose-textarea::placeholder {
+    color: var(--text-light);
+}
+
+.msg-compose-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--bg-dark);
+}
+
+.msg-compose-tools {
+    display: flex;
+    gap: 0.25rem;
+}
+
+.msg-tool-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    border: none;
+    background: var(--bg);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    transition: all 0.2s ease;
+    color: var(--text-light);
+}
+
+.msg-tool-btn:hover {
+    background: var(--secondary);
+    color: white;
+    transform: scale(1.05);
+}
+
+.msg-tool-btn.active {
+    background: var(--secondary);
+    color: white;
+}
+
+.msg-compose-count {
+    font-size: 0.75rem;
+    color: var(--text-light);
+}
+
+.msg-compose-preview {
+    max-width: 100%;
+    max-height: 200px;
+    border-radius: 12px;
+    margin-top: 0.75rem;
+    box-shadow: var(--shadow);
+}
+
+.msg-submit-btn {
+    width: 100%;
+    padding: 0.75rem;
+    margin-top: 0.75rem;
+    border: none;
+    border-radius: 12px;
+    background: linear-gradient(135deg, var(--secondary), #c0392b);
+    color: white;
+    font-size: 0.95rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: inherit;
+}
+
+.msg-submit-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(231, 76, 60, 0.35);
+}
+
+.msg-submit-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* AI 图片生成卡片 */
+.ai-gen-card {
+    background: linear-gradient(135deg, rgba(231,76,60,0.05), rgba(243,156,18,0.05));
+    border: 1px solid rgba(231, 76, 60, 0.15);
+    border-radius: 14px;
+    margin-bottom: 1rem;
+    overflow: hidden;
+}
+
+.ai-gen-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.9rem 1.1rem;
+    cursor: pointer;
+    user-select: none;
+}
+
+.ai-gen-title {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--secondary);
+}
+
+.ai-gen-toggle {
+    font-size: 0.75rem;
+    color: var(--text-light);
+    transition: transform 0.2s;
+}
+
+.ai-gen-content {
+    padding: 0 1.1rem 1rem;
+}
+
+.ai-gen-input {
+    width: 100%;
+    border: 1px solid var(--bg-dark);
+    border-radius: 10px;
+    padding: 0.7rem;
+    font-size: 0.85rem;
+    font-family: inherit;
+    resize: none;
+    min-height: 70px;
+    background: var(--card-bg);
+    color: var(--text);
+    box-sizing: border-box;
+}
+
+.ai-gen-input:focus {
+    outline: none;
+    border-color: var(--secondary);
+}
+
+.ai-gen-row {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    margin-top: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.ai-gen-upload {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.4rem 0.8rem;
+    background: var(--bg);
+    border: 1px solid var(--bg-dark);
+    border-radius: 8px;
+    font-size: 0.75rem;
+    cursor: pointer;
+    color: var(--text);
+    transition: all 0.2s;
+}
+
+.ai-gen-upload:hover {
+    border-color: var(--secondary);
+    color: var(--secondary);
+}
+
+.ai-gen-ref-preview {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    object-fit: cover;
+}
+
+.ai-gen-select {
+    padding: 0.4rem 0.6rem;
+    border: 1px solid var(--bg-dark);
+    border-radius: 8px;
+    font-size: 0.75rem;
+    background: var(--bg);
+    color: var(--text);
+    cursor: pointer;
+}
+
+.ai-gen-select:focus {
+    outline: none;
+    border-color: var(--secondary);
+}
+
+.ai-gen-progress {
+    margin-top: 0.75rem;
+    text-align: center;
+}
+
+.ai-gen-progress-bar {
+    background: var(--bg-dark);
+    border-radius: 4px;
+    height: 6px;
+    overflow: hidden;
+}
+
+.ai-gen-progress-bar > div {
+    height: 100%;
+    background: linear-gradient(90deg, #f093fb, #f5576c);
+    width: 0%;
+    transition: width 0.3s;
+}
+
+.ai-gen-progress p {
+    font-size: 0.75rem;
+    color: var(--text-light);
+    margin-top: 0.4rem;
+}
+
+.ai-gen-result {
+    margin-top: 0.75rem;
+    text-align: center;
+}
+
+.ai-gen-result img {
+    max-width: 100%;
+    max-height: 200px;
+    border-radius: 10px;
+    box-shadow: var(--shadow);
+}
+
+.ai-gen-insert-btn {
+    margin-top: 0.5rem;
+    padding: 0.4rem 1rem;
+    background: var(--secondary);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.75rem;
+    cursor: pointer;
+}
+
+.ai-gen-insert-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.ai-gen-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+    justify-content: center;
+}
+
+.ai-gen-actions button {
+    padding: 0.5rem 1.2rem;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.ai-gen-actions button:first-child {
+    background: linear-gradient(135deg, #f093fb, #f5576c);
+    color: white;
+}
+
+.ai-gen-actions button:first-child:hover {
+    transform: scale(1.03);
+}
+
+.ai-gen-actions button:last-child {
+    background: var(--bg);
+    color: var(--text);
+}
+
+.ai-gen-actions button:last-child:hover {
+    background: var(--bg-dark);
+}

@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- Version: 2026-04-15-v3 | 权限控制修复 -->
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -9,11 +10,39 @@
     <link rel="stylesheet" href="/static/css/sakura.css">
     <link rel="stylesheet" href="/static/css/news-card.css">
     <link rel="stylesheet" href="/static/css/bento.css">
+    <link rel="stylesheet" href="/static/css/ambient-bg.css">
+    <link rel="stylesheet" href="/static/css/special-effects.css">
+    <link rel="stylesheet" href="/static/css/interactions.css">
+    <link rel="stylesheet" href="/static/css/night-mode.css">
+    <link rel="stylesheet" href="/static/css/media-vintage.css">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='80' font-size='80'>📖</text></svg>">
 </head>
 <body>
     <!-- 胶片颗粒质感层 -->
     <div class="film-grain-overlay"></div>
+
+    <!-- 氛围背景层 -->
+    <div class="ambient-bg-container">
+        <div class="starfield">
+            <div class="star small"></div><div class="star medium"></div><div class="star large"></div>
+            <div class="star small"></div><div class="star medium"></div><div class="star small"></div>
+            <div class="star large"></div><div class="star small"></div><div class="star medium"></div>
+            <div class="star small"></div><div class="star medium"></div><div class="star small"></div>
+            <div class="star medium"></div><div class="star large"></div><div class="star small"></div>
+        </div>
+        <div class="fireflies">
+            <div class="firefly"></div><div class="firefly"></div><div class="firefly"></div>
+            <div class="firefly"></div><div class="firefly"></div><div class="firefly"></div>
+            <div class="firefly"></div><div class="firefly"></div>
+        </div>
+        <div class="ambient-glow warm"></div>
+        <div class="ambient-glow cool"></div>
+        <div class="ambient-glow accent"></div>
+        <div class="clouds">
+            <div class="cloud"></div><div class="cloud"></div><div class="cloud"></div>
+            <div class="cloud"></div><div class="cloud"></div>
+        </div>
+    </div>
 
     <!-- 顶部标题栏 -->
     <header class="top-header">
@@ -42,11 +71,29 @@
             <div class="media-tabs">
                 <button class="media-tab active" onclick="switchMediaTab('photos')">📷 相册</button>
                 <button class="media-tab" onclick="switchMediaTab('videos')">🎬 视频</button>
+                <button class="media-tab" onclick="switchMediaTab('alumni')">🎓 校友会</button>
                 <button class="media-tab" onclick="switchMediaTab('news')">📰 新闻</button>
             </div>
 
             <!-- 相册区域 -->
             <div id="photosSection">
+                <!-- 未登录提示遮罩 -->
+                {% if not logged_in %}
+                <div class="media-login-overlay">
+                    <div class="media-login-card">
+                        <span class="deco-corner tl"></span>
+                        <span class="deco-corner tr"></span>
+                        <span class="deco-corner bl"></span>
+                        <span class="deco-corner br"></span>
+                        <div class="media-login-icon">📷</div>
+                        <h3>开启记忆宝盒</h3>
+                        <p>登录解锁班级相册，珍藏每一张青春回忆</p>
+                        <button class="media-login-btn" onclick="window.location.href='/about'">
+                            <span>🔐</span> 立即登录
+                        </button>
+                    </div>
+                </div>
+                {% else %}
                 <!-- 上传区域 -->
                 <div class="upload-zone fade-in-up" onclick="showUploadModal()">
                     <div class="upload-zone-icon">📤</div>
@@ -70,7 +117,7 @@
                             <span class="like-icon">🤍</span>
                             <span class="like-count">0</span>
                         </button>
-                        {% if session.get('verified_student') and (session['verified_student']['name'] == img.owner or is_admin_user) %}
+                        {% if logged_in and (session['verified_student']['name'] == img.owner or is_admin_user) %}
                         <button class="delete-photo-btn" onclick="event.stopPropagation(); deletePhoto('{{ img.id | default('') }}', '{{ img.name | default('') }}', {{ 'true' if img.id else 'false' }})">🗑️</button>
                         {% endif %}
                     </div>
@@ -82,10 +129,28 @@
                     </div>
                     {% endif %}
                 </div>
+                {% endif %}
             </div>
 
             <!-- 视频区域 -->
             <div id="videosSection" style="display: none;">
+                <!-- 未登录提示遮罩 -->
+                {% if not logged_in %}
+                <div class="media-login-overlay">
+                    <div class="media-login-card">
+                        <span class="deco-corner tl"></span>
+                        <span class="deco-corner tr"></span>
+                        <span class="deco-corner bl"></span>
+                        <span class="deco-corner br"></span>
+                        <div class="media-login-icon">🎬</div>
+                        <h3>解锁光影时光</h3>
+                        <p>登录后观看班级视频，重温那些美好瞬间</p>
+                        <button class="media-login-btn" onclick="window.location.href='/about'">
+                            <span>🔐</span> 立即登录
+                        </button>
+                    </div>
+                </div>
+                {% else %}
                 <!-- 添加视频表单 -->
                 <div class="add-video-form" onclick="showAddVideoForm()">
                     <div style="text-align: center; padding: 1rem;">
@@ -106,7 +171,7 @@
                             <span class="like-icon">🤍</span>
                             <span class="like-count">0</span>
                         </button>
-                        {% if session.get('verified_student') and session['verified_student']['name'] == video.owner %}
+                        {% if logged_in and session['verified_student']['name'] == video.owner %}
                         <button class="delete-video-btn" onclick="deleteVideo({{ video.id }})">🗑️</button>
                         {% endif %}
                         <div class="video-info">
@@ -124,6 +189,7 @@
                     </div>
                     {% endif %}
                 </div>
+                {% endif %}
             </div>
 
             <!-- 新闻区域 - 报纸剪报风格 -->
@@ -153,6 +219,13 @@
                     {% endif %}
                 </div>
             </div>
+
+            <!-- 校友会区域 -->
+            <div id="alumniSection" style="display: none;">
+                <div class="alumni-grid" id="alumniGrid">
+                    <!-- 动态加载校友会内容 -->
+                </div>
+            </div>
         </div>
     </main>
 
@@ -168,7 +241,7 @@
         </a>
         <a href="/lyb" class="tab-item">
             <span class="tab-icon">💬</span>
-            <span class="tab-label">留言板</span>
+            <span class="tab-label">留言信件</span>
         </a>
         <a href="/media" class="tab-item active">
             <span class="tab-icon">📷</span>
@@ -313,6 +386,7 @@
             const photosSection = document.getElementById('photosSection');
             const videosSection = document.getElementById('videosSection');
             const newsSection = document.getElementById('newsSection');
+            const alumniSection = document.getElementById('alumniSection');
             const tabs = document.querySelectorAll('.media-tab');
 
             tabs.forEach(t => t.classList.remove('active'));
@@ -321,18 +395,111 @@
                 photosSection.style.display = 'block';
                 videosSection.style.display = 'none';
                 newsSection.style.display = 'none';
+                alumniSection.style.display = 'none';
                 tabs[0].classList.add('active');
             } else if (tab === 'videos') {
                 photosSection.style.display = 'none';
                 videosSection.style.display = 'block';
                 newsSection.style.display = 'none';
+                alumniSection.style.display = 'none';
                 tabs[1].classList.add('active');
+            } else if (tab === 'alumni') {
+                photosSection.style.display = 'none';
+                videosSection.style.display = 'none';
+                newsSection.style.display = 'none';
+                alumniSection.style.display = 'block';
+                tabs[2].classList.add('active');
+                loadAlumniContent();
             } else if (tab === 'news') {
                 photosSection.style.display = 'none';
                 videosSection.style.display = 'none';
                 newsSection.style.display = 'block';
-                tabs[2].classList.add('active');
+                alumniSection.style.display = 'none';
+                tabs[3].classList.add('active');
             }
+        }
+
+        // 加载校友会内容
+        let alumniLoaded = false;
+        function loadAlumniContent() {
+            if (alumniLoaded) return;
+            alumniLoaded = true;
+
+            const grid = document.getElementById('alumniGrid');
+            grid.innerHTML = '<div class="empty-message" style="grid-column: 1/-1; text-align: center; padding: 3rem;"><p style="font-size: 2rem; margin-bottom: 1rem;">🎓</p><p>正在加载校友会资讯...</p></div>';
+
+            fetch('/api/alumni')
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success && data.alumni && data.alumni.length > 0) {
+                        const associations = data.alumni.filter(item => item.type === 'association');
+                        const news = data.alumni.filter(item => item.type !== 'association');
+
+                        let html = '';
+
+                        // 校友会信息卡片
+                        if (associations.length > 0) {
+                            html += '<div class="alumni-section-title">🎓 各地校友会</div>';
+                            html += '<div class="alumni-grid">';
+                            html += associations.map(item => {
+                                const contactHtml = item.wechat ? `<div class="contact-item">💬 微信号：${item.wechat}</div>` : '';
+                                const emailHtml = item.email ? `<div class="contact-item">📧 邮箱：${item.email}</div>` : '';
+                                const contactMethod = item.contact ? `<div class="contact-item">📞 ${item.contact}</div>` : '';
+                                return `
+                                    <div class="alumni-card alumni-association">
+                                        <div class="alumni-image">
+                                            <div class="alumni-image-placeholder">🎓</div>
+                                        </div>
+                                        <div class="alumni-content">
+                                            <span class="alumni-location-badge">📍 ${item.location}</span>
+                                            <h4 class="alumni-title">${item.name}</h4>
+                                            <p class="alumni-desc">${item.description || ''}</p>
+                                            <div class="alumni-contact">
+                                                ${contactMethod}
+                                                ${contactHtml}
+                                                ${emailHtml}
+                                                ${item.join_method ? `<div class="contact-item">✨ ${item.join_method}</div>` : ''}
+                                            </div>
+                                        </div>
+                                    </div>
+                                `;
+                            }).join('');
+                            html += '</div>';
+                        }
+
+                        // 校友会新闻
+                        if (news.length > 0) {
+                            html += '<div class="alumni-section-title">📰 校友会动态</div>';
+                            html += '<div class="alumni-grid">';
+                            html += news.map(item => {
+                                const location = item.location || '';
+                                const locationBadge = location ? `<span class="alumni-location">📍 ${location}</span>` : '';
+                                return `
+                                    <div class="alumni-card" onclick="window.open('${item.source_url || '#'}', '_blank')">
+                                        ${item.image_url ? `<div class="alumni-image"><img src="${item.image_url}" alt="${item.title}"></div>` : '<div class="alumni-image"><div class="alumni-image-placeholder">📰</div></div>'}
+                                        <div class="alumni-content">
+                                            ${locationBadge}
+                                            <h4 class="alumni-title">${item.title}</h4>
+                                            <p class="alumni-desc">${item.content ? item.content.substring(0, 80) + '...' : ''}</p>
+                                            <div class="alumni-meta">
+                                                <span class="alumni-date">📅 ${item.published_time || ''}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                `;
+                            }).join('');
+                            html += '</div>';
+                        }
+
+                        grid.innerHTML = html;
+                    } else {
+                        grid.innerHTML = '<div class="empty-message" style="grid-column: 1/-1; text-align: center; padding: 3rem;"><p style="font-size: 3rem; margin-bottom: 1rem;">🎓</p><p>暂无校友会资讯</p></div>';
+                    }
+                })
+                .catch(err => {
+                    console.error('加载校友会失败:', err);
+                    grid.innerHTML = '<div class="empty-message" style="grid-column: 1/-1; text-align: center; padding: 3rem;"><p style="font-size: 3rem; margin-bottom: 1rem;">🎓</p><p>加载失败，请稍后重试</p></div>';
+                });
         }
 
         // 页面加载时检查hash和参数
@@ -729,5 +896,104 @@
     <button id="backToTopBtn" class="back-to-top" onclick="scrollToTop()">↑</button>
     <!-- 页面底部提示 -->
     <div id="pageEndMessage" class="page-end-message">已加载全部内容</div>
+
+    <!-- 夜间模式切换 -->
+    <button class="night-mode-toggle" id="nightModeToggle" onclick="toggleNightMode()" title="切换夜间模式"></button>
+    <!-- 季节装饰容器 -->
+    <div class="corner-decor top-right" id="seasonalDecor"></div>
+
+    <script>
+    function toggleNightMode() {
+        document.body.classList.toggle('night-mode');
+        localStorage.setItem('nightMode', document.body.classList.contains('night-mode'));
+    }
+    if (localStorage.getItem('nightMode') === 'true') {
+        document.body.classList.add('night-mode');
+    }
+    function loadSeasonalDecor() {
+        const decor = document.getElementById('seasonalDecor');
+        if (!decor) return;
+        const month = new Date().getMonth();
+        if (month === 11 || month === 0 || month === 1) {
+            decor.innerHTML = '<div class="snowflakes">' +
+                '<div class="snowflake">❄</div><div class="snowflake">❄</div>' +
+                '<div class="snowflake">❄</div><div class="snowflake">❄</div>' +
+                '<div class="snowflake">❄</div><div class="snowflake">❄</div>' +
+                '<div class="snowflake">❄</div><div class="snowflake">❄</div>' +
+                '<div class="snowflake">❄</div><div class="snowflake">❄</div>' +
+                '</div>';
+        } else if (month >= 1 && month <= 2) {
+            decor.innerHTML = '<div class="lantern-string">' +
+                '<div class="lantern"><div class="lantern-body"></div><div class="lantern-tassel"></div></div>' +
+                '<div class="lantern"><div class="lantern-body"></div><div class="lantern-tassel"></div></div>' +
+                '<div class="lantern"><div class="lantern-body"></div><div class="lantern-tassel"></div></div>' +
+                '<div class="lantern"><div class="lantern-body"></div><div class="lantern-tassel"></div></div>' +
+                '<div class="lantern"><div class="lantern-body"></div><div class="lantern-tassel"></div></div>' +
+                '</div>';
+        }
+    }
+    loadSeasonalDecor();
+    </script>
+
+    <!-- 媒体中心背景音乐控制 -->
+    <div id="galleryMusicControl" style="position: fixed; bottom: 160px; right: 20px; z-index: 100;">
+        <button onclick="toggleGalleryMusic()" id="galleryMusicBtn" title="播放背景音乐" style="background: var(--secondary, #e74c3c); color: white; border: none; width: 56px; height: 56px; border-radius: 50%; cursor: pointer; font-size: 1.5rem; box-shadow: 0 4px 15px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center;">🎵</button>
+    </div>
+
+    <script>
+    let galleryAudio = null;
+    let galleryMusicPlaying = false;
+    let galleryBgMusicUrl = null;
+    let galleryMusicFetched = false;
+
+    async function fetchGalleryBgMusic() {
+        if (galleryMusicFetched) return galleryBgMusicUrl;
+        try {
+            const res = await fetch('/api/music/bg');
+            const data = await res.json();
+            if (data.success && data.gallery) {
+                galleryBgMusicUrl = data.gallery;
+                galleryMusicFetched = true;
+                document.getElementById('galleryMusicControl').style.display = 'block';
+                initGalleryAudio();
+            }
+        } catch (e) {
+            console.log('获取相册背景音乐失败');
+        }
+        return galleryBgMusicUrl;
+    }
+
+    function initGalleryAudio() {
+        if (galleryBgMusicUrl && !galleryAudio) {
+            galleryAudio = new Audio(galleryBgMusicUrl);
+            galleryAudio.loop = true;
+            const savedVolume = localStorage.getItem('bgVolume') || '60';
+            const isMuted = localStorage.getItem('bgMuted') === 'true';
+            galleryAudio.volume = (isMuted ? 0 : parseInt(savedVolume) / 100) * 0.6;
+        }
+    }
+
+    async function toggleGalleryMusic() {
+        if (!galleryBgMusicUrl && !galleryMusicFetched) {
+            await fetchGalleryBgMusic();
+        }
+        if (!galleryAudio) {
+            initGalleryAudio();
+        }
+        if (galleryAudio) {
+            if (galleryMusicPlaying) {
+                galleryAudio.pause();
+                document.getElementById('galleryMusicBtn').textContent = '🎵';
+            } else {
+                galleryAudio.play().catch(e => console.error('播放失败:', e));
+                document.getElementById('galleryMusicBtn').textContent = '🎵';
+            }
+            galleryMusicPlaying = !galleryMusicPlaying;
+        }
+    }
+
+    // 页面加载时获取背景音乐
+    fetchGalleryBgMusic();
+    </script>
 </body>
 </html>
