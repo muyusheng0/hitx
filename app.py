@@ -24,10 +24,11 @@ app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # 100MB max for video uplo
 app.config['UPLOAD_FOLDER'] = 'static/imgs/avatars'
 app.config['ALLOWED_EXTENSIONS'] = {'png', 'jpg', 'jpeg', 'gif'}
 # Session 配置 - 兼容微信浏览器
-app.config['SESSION_COOKIE_SAMESITE'] = 'None'  # 兼容微信内置浏览器
-app.config['SESSION_COOKIE_SECURE'] = True  # HTTPS 环境
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'  # 兼容微信内置浏览器
+app.config['SESSION_COOKIE_SECURE'] = False  # 开发环境用HTTP，生产环境建议用HTTPS
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_NAME'] = 'jlu_session'  # 自定义 cookie 名称
+app.config['SESSION_COOKIE_PATH'] = '/'  # 全站可用
 
 # 新闻和校友会数据缓存(5分钟)
 _news_cache = {'data': None, 'timestamp': None}

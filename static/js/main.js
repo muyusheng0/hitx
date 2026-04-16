@@ -346,6 +346,17 @@ async function submitVerify(e) {
                     updateUserStatusUI(true, verifyData.student);
                     updateVerifyUI(true);
                     updateMessageInputUI(true);
+                    // 获取完整用户信息（包含所有数据库字段）
+                    try {
+                        const studentRes = await fetch('/api/get_student', { credentials: 'same-origin' });
+                        const studentData = await studentRes.json();
+                        if (studentData.success) {
+                            window.currentUser = studentData.student;
+                        }
+                    } catch(e) {
+                        console.log('获取完整用户信息失败:', e);
+                    }
+
                     // 触发登录成功事件
                     window.dispatchEvent(new CustomEvent('userLoginSuccess', { detail: window.currentUser }));
                     if (typeof loadStudentData === 'function') {
@@ -360,12 +371,18 @@ async function submitVerify(e) {
                     if (unloggedView) unloggedView.style.display = 'none';
                     if (loggedView) {
                         loggedView.style.display = 'block';
-                        const nameEl = document.getElementById('profileName');
-                        const idEl = document.getElementById('profileId');
-                        const avatarEl = document.getElementById('profileAvatarInitial');
-                        if (nameEl && verifyData.student) nameEl.textContent = verifyData.student.name || '未设置';
-                        if (idEl && verifyData.student) idEl.textContent = '学号：' + (verifyData.student.id || '未设置');
-                        if (avatarEl && verifyData.student) avatarEl.textContent = (verifyData.student.name || '?')[0];
+                        // 优先调用 about.html 的 showLoggedView 来更新所有字段
+                        if (typeof showLoggedView === 'function') {
+                            showLoggedView(window.currentUser);
+                        } else {
+                            // fallback: 直接更新基本字段
+                            const nameEl = document.getElementById('profileName');
+                            const idEl = document.getElementById('profileId');
+                            const avatarEl = document.getElementById('profileAvatarInitial');
+                            if (nameEl && window.currentUser) nameEl.textContent = window.currentUser.name || '未设置';
+                            if (idEl && window.currentUser) idEl.textContent = '学号：' + (window.currentUser.id || '未设置');
+                            if (avatarEl && window.currentUser) avatarEl.textContent = (window.currentUser.name || '?')[0];
+                        }
                     }
                     console.log('登录成功完成');
                 } else {
