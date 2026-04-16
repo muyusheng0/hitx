@@ -590,10 +590,24 @@ if ('caches' in window) {
         </div>
     </div>
 
+    <!-- 工具模块 -->
+    <script src="/static/js/utils/xss.js"></script>
+    <script src="/static/js/utils/debounce.js"></script>
+    <script src="/static/js/utils/dom.js"></script>
+    <script src="/static/js/modules/userStore.js"></script>
     <script src="/static/js/main.js?v=20260407b"></script>
     <script>
         // 版本号：20260407-001
         console.log('[VERSION] about.html v20260407-006');
+
+        // 初始化UserStore
+        UserStore.init();
+
+        // 保持向后兼容：window.currentUser代理到UserStore
+        Object.defineProperty(window, 'currentUser', {
+            get() { return UserStore.getState(); },
+            set(val) { UserStore.setState(val); }
+        });
 
         // 缓存地区数据
         let locationCache = { provinces: null, cities: {}, districts: {} };
@@ -1601,14 +1615,14 @@ if ('caches' in window) {
             if (el) el.value = val || '';
         }
 
-        function showEditProfileModal() {
+        async function showEditProfileModal() {
             const user = window.currentUser;
             if (!user) {
                 showVerifyModal();
                 return;
             }
 
-            initProvinceSelect();
+            await initProvinceSelect();
 
             setValue('editPhone', user.phone);
             setValue('editEmail', user.email);
@@ -2005,7 +2019,7 @@ if ('caches' in window) {
                 listEl.innerHTML = data.items.map(item => {
                     const typeIcon = item.type === 'photo' ? '📷' : item.type === 'video' ? '🎬' : item.type === 'message' ? '💬' : item.type === 'comment' ? '💭' : item.type === 'voice_shout' ? '🎤' : '📝';
                     const typeName = item.type === 'photo' ? '照片' : item.type === 'video' ? '视频' : item.type === 'message' ? '留言' : item.type === 'comment' ? '评论' : item.type === 'voice_shout' ? '喊话' : '其他';
-                    const deletedByText = item.deleted_by && item.deleted_by !== item.owner ? `<span style="color: #e74c3c; font-size: 0.75rem; overflow-wrap: break-word;">(被${item.deleted_by}删除)</span>` : '';
+                    const deletedByText = item.deleted_by && item.deleted_by !== item.owner ? `<span style="color: #e74c3c; font-size: 0.75rem; overflow-wrap: break-word;">(被${escapeHtml(item.deleted_by)}删除)</span>` : '';
                     return `
                         <div class="deleted-item" style="padding: 0.8rem; border-bottom: 1px solid var(--bg-dark); display: flex; flex-direction: column; gap: 0.5rem; overflow-wrap: break-word;">
                             <div style="display: flex; align-items: flex-start; gap: 0.5rem; flex-wrap: wrap;">
@@ -2013,11 +2027,11 @@ if ('caches' in window) {
                                 <div style="flex: 1; min-width: 0;">
                                     <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.3rem; flex-wrap: wrap;">
                                         <span style="font-weight: 500; overflow-wrap: break-word;">${typeName}</span>
-                                        <span style="color: var(--text-light); font-size: 0.85rem; overflow-wrap: break-word;">by ${item.owner}</span>
+                                        <span style="color: var(--text-light); font-size: 0.85rem; overflow-wrap: break-word;">by ${escapeHtml(item.owner)}</span>
                                         ${deletedByText}
                                     </div>
-                                    <div style="color: var(--text); font-size: 0.9rem; overflow-wrap: break-word; word-break: break-all;">${item.content ? item.content.substring(0, 50) + (item.content.length > 50 ? '...' : '') : '(无内容)'}</div>
-                                    <div style="color: var(--text-light); font-size: 0.8rem; margin-top: 0.3rem;">删除于 ${item.deleted_time}</div>
+                                    <div style="color: var(--text); font-size: 0.9rem; overflow-wrap: break-word; word-break: break-all;">${item.content ? escapeHtml(item.content.substring(0, 50)) + (item.content.length > 50 ? '...' : '') : '(无内容)'}</div>
+                                    <div style="color: var(--text-light); font-size: 0.8rem; margin-top: 0.3rem;">删除于 ${escapeHtml(item.deleted_time)}</div>
                                 </div>
                             </div>
                             <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
@@ -2083,27 +2097,27 @@ if ('caches' in window) {
             let html = '';
 
             if (item.type === 'photo') {
-                html = `<div style="margin-bottom: 1rem;"><img src="/static/photos/${item.content}" style="max-width: 100%; max-height: 50vh; border-radius: 8px;" onerror="this.src='/static/imgs/placeholder.png'"></div>`;
+                html = `<div style="margin-bottom: 1rem;"><img src="/static/photos/${escapeHtml(item.content)}" style="max-width: 100%; max-height: 50vh; border-radius: 8px;" onerror="this.src='/static/imgs/placeholder.png'"></div>`;
             } else if (item.type === 'video') {
-                html = `<div style="margin-bottom: 1rem;"><p style="color: var(--text-light);">视频标题: ${item.content}</p><a href="${item.extra}" target="_blank" style="color: var(--secondary);">点击查看视频</a></div>`;
+                html = `<div style="margin-bottom: 1rem;"><p style="color: var(--text-light);">视频标题: ${escapeHtml(item.content)}</p><a href="${escapeHtml(item.extra)}" target="_blank" style="color: var(--secondary);">点击查看视频</a></div>`;
             } else if (item.type === 'message' || item.type === 'comment') {
-                html = `<div style="margin-bottom: 1rem; padding: 1rem; background: var(--bg-dark); border-radius: 8px; text-align: left;"><p style="white-space: pre-wrap; word-break: break-all;">${item.content || '(无内容)'}</p></div>`;
+                html = `<div style="margin-bottom: 1rem; padding: 1rem; background: var(--bg-dark); border-radius: 8px; text-align: left;"><p style="white-space: pre-wrap; word-break: break-all;">${escapeHtml(item.content) || '(无内容)'}</p></div>`;
                 // 如果有图片，显示图片预览
                 if (item.extra) {
-                    html += `<div style="margin-bottom: 1rem;"><img src="${item.extra}" style="max-width: 100%; max-height: 50vh; border-radius: 8px; cursor: pointer;" onclick="previewImage(this.src)" onerror="this.style.display='none'"></div>`;
+                    html += `<div style="margin-bottom: 1rem;"><img src="${escapeHtml(item.extra)}" style="max-width: 100%; max-height: 50vh; border-radius: 8px; cursor: pointer;" onclick="previewImage(this.src)" onerror="this.style.display='none'"></div>`;
                 }
             } else if (item.type === 'voice_shout') {
-                html = `<div style="margin-bottom: 1rem;"><p style="color: var(--text-light);">喊话语音</p><audio src="${item.extra}" controls style="width: 100%;"></audio></div>`;
+                html = `<div style="margin-bottom: 1rem;"><p style="color: var(--text-light);">喊话语音</p><audio src="${escapeHtml(item.extra)}" controls style="width: 100%;"></audio></div>`;
             } else {
-                html = `<div style="margin-bottom: 1rem;"><p>${item.content || '(无内容)'}</p></div>`;
+                html = `<div style="margin-bottom: 1rem;"><p>${escapeHtml(item.content) || '(无内容)'}</p></div>`;
             }
 
             html += `<div style="text-align: left; color: var(--text-light); font-size: 0.9rem;">
                 <p>类型: ${item.type === 'photo' ? '照片' : item.type === 'video' ? '视频' : item.type === 'message' ? '留言' : item.type === 'comment' ? '评论' : item.type === 'voice_shout' ? '喊话' : '其他'}</p>
-                <p>原发布者: ${item.owner}</p>
-                ${item.deleted_by ? `<p>删除者: ${item.deleted_by}</p>` : ''}
-                <p>原时间: ${item.time || '未知'}</p>
-                <p>删除时间: ${item.deleted_time}</p>
+                <p>原发布者: ${escapeHtml(item.owner)}</p>
+                ${item.deleted_by ? `<p>删除者: ${escapeHtml(item.deleted_by)}</p>` : ''}
+                <p>原时间: ${escapeHtml(item.time) || '未知'}</p>
+                <p>删除时间: ${escapeHtml(item.deleted_time)}</p>
             </div>`;
 
             contentEl.innerHTML = html;
@@ -2176,12 +2190,12 @@ if ('caches' in window) {
                                 <div style="flex: 1; min-width: 0;">
                                     <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; flex-wrap: wrap;">
                                         <span style="font-size: 1.2rem;">${typeIcon}</span>
-                                        <span style="font-weight: 600; font-size: 1rem;">${activity.actor}</span>
-                                        <span style="color: var(--text-light); font-size: 0.85rem;">${activity.time}</span>
+                                        <span style="font-weight: 600; font-size: 1rem;">${escapeHtml(activity.actor)}</span>
+                                        <span style="color: var(--text-light); font-size: 0.85rem;">${escapeHtml(activity.time)}</span>
                                     </div>
-                                    <div style="color: var(--text); font-size: 0.95rem; line-height: 1.5; word-wrap: break-word; overflow-wrap: break-word; max-width: 100%;">${activity.content || '(无内容)'}</div>
+                                    <div style="color: var(--text); font-size: 0.95rem; line-height: 1.5; word-wrap: break-word; overflow-wrap: break-word; max-width: 100%;">${escapeHtml(activity.content) || '(无内容)'}</div>
                                 </div>
-                                <button onclick="deleteActivity('${activity.time}', '${activity.actor}', '${activity.type}', '${(activity.original_content || '').replace(/'/g, "\\'").replace(/\n/g, '\\n').replace(/\r/g, '\\r')}', '${(activity.content || '').replace(/'/g, "\\'").replace(/\n/g, '\\n').replace(/\r/g, '\\r')}', ${page})" style="background: #e74c3c; color: white; border: none; padding: 0.6rem 1.2rem; border-radius: 20px; cursor: pointer; font-size: 0.9rem; margin-left: 0.5rem; flex-shrink: 0;">删除</button>
+                                <button onclick="deleteActivity('${escapeHtml(activity.time).replace(/'/g, "\\'")}', '${escapeHtml(activity.actor).replace(/'/g, "\\'")}', '${escapeHtml(activity.type).replace(/'/g, "\\'")}', '${(activity.original_content || '').replace(/'/g, "\\'").replace(/\n/g, '\\n').replace(/\r/g, '\\r')}', '${(activity.content || '').replace(/'/g, "\\'").replace(/\n/g, '\\n').replace(/\r/g, '\\r')}', ${page})" style="background: #e74c3c; color: white; border: none; padding: 0.6rem 1.2rem; border-radius: 20px; cursor: pointer; font-size: 0.9rem; margin-left: 0.5rem; flex-shrink: 0;">删除</button>
                             </div>
                         `;
                     }).join('');
@@ -2260,9 +2274,9 @@ if ('caches' in window) {
                     html += data.logs.map(log => `
                         <div style="padding: 0.8rem; border-bottom: 1px solid var(--bg-dark); display: flex; justify-content: space-between; align-items: center;">
                             <div>
-                                <div style="font-weight: 500;">${log.username}</div>
-                                <div style="color: var(--text-light); font-size: 0.8rem; margin-top: 0.2rem;">${log.login_time}</div>
-                                ${log.ip_address ? `<div style="color: var(--text-light); font-size: 0.75rem;">IP: ${log.ip_address} ${log.ip_location ? `(${log.ip_location})` : ''}</div>` : ''}
+                                <div style="font-weight: 500;">${escapeHtml(log.username)}</div>
+                                <div style="color: var(--text-light); font-size: 0.8rem; margin-top: 0.2rem;">${escapeHtml(log.login_time)}</div>
+                                ${log.ip_address ? `<div style="color: var(--text-light); font-size: 0.75rem;">IP: ${escapeHtml(log.ip_address)} ${log.ip_location ? `(${escapeHtml(log.ip_location)})` : ''}</div>` : ''}
                             </div>
                         </div>
                     `).join('');
@@ -2307,14 +2321,6 @@ if ('caches' in window) {
                 }
             }
         }
-
-        window.addEventListener('userLoginSuccess', function() {
-            loadDeletedItems();
-            loadActivityManagement();
-            loadLoginLogs();
-            loadNotifications();
-            initProfileTabs();
-        });
 
         // 页面加载时也检查
         if (window.currentUser) {
