@@ -1340,6 +1340,47 @@ def generate_ai_image():
         return jsonify({'success': False, 'error': str(e)})
 
 
+# ==================== 校友会API ====================
+
+@wx_bp.route('/alumni', methods=['GET'])
+def get_alumni():
+    """获取校友会信息和新闻"""
+    try:
+        import requests as req
+        host = request.host_url.rstrip('/')
+        resp = req.get(f'{host}/api/alumni', timeout=10)
+        if resp.status_code == 200:
+            data = resp.json()
+            return jsonify(data)
+    except Exception as e:
+        pass
+
+    # 如果主站不可用，返回本地预定义数据
+    alumni_associations = [
+        {
+            'name': '吉林大学校友总会',
+            'location': '长春',
+            'contact': '0431-85166001',
+            'wechat': 'JLU_alumni',
+            'email': 'xyh@jlu.edu.cn',
+            'join_method': '联系校友总会咨询',
+            'description': '吉林大学官方校友组织,统筹各地校友会工作',
+            'type': 'association'
+        },
+        {
+            'name': '吉林大学北京校友会',
+            'location': '北京',
+            'contact': '微信群:BJ_JLUers',
+            'wechat': 'jlu_bj',
+            'email': 'jlu_bj@126.com',
+            'join_method': '扫码加入北京校友群',
+            'description': '京城吉大人的温馨家园,定期举办联谊活动',
+            'type': 'association'
+        }
+    ]
+    return jsonify({'success': True, 'alumni': alumni_associations})
+
+
 # ==================== 新闻爬取设置API ====================
 
 @wx_bp.route('/admin/news/config', methods=['GET'])
