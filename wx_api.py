@@ -1275,6 +1275,71 @@ def upload_voice_message():
     return jsonify({'success': True})
 
 
+@wx_bp.route('/ai/image/generate', methods=['POST'])
+@token_required
+def generate_ai_image():
+    """AI生成图片"""
+    nickname = request.wx_user['name']
+
+    data = request.get_json()
+    prompt = data.get('prompt', '')
+    ref_image = data.get('ref_image', '')
+    aspect_ratio = data.get('aspect_ratio', '1:1')
+
+    if not prompt:
+        return jsonify({'success': False, 'error': '请输入图片描述'})
+
+    api_key = database.get_config('minimax_api_key', '')
+    if not api_key:
+        return jsonify({'success': False, 'error': '请先在管理页面配置MiniMax API Key'})
+
+    try:
+        import base64
+        import requests
+        import uuid
+
+        url = 'https://api.minimaxi.com/v1/image_generation'
+        headers = {
+            'Content-Type': 'application/json',
+            'Authorization': f'Bearer {api_key}'
+        }
+        payload = {
+            'model': 'image-01',
+            'prompt': prompt,
+            'aspect_ratio': aspect_ratio
+        }
+
+        if ref_image:
+            payload['ref_image'] = ref_image
+
+        response = requests.post(url, headers=headers, json=payload, timeout=120)
+        result = response.json()
+
+        if 'data' in result and 'image_url' in result['data']:
+            image_url = result['data']['image_url']
+
+            # 下载图片到本地
+            img_response = requests.get(image_url, timeout=30)
+            if img_response.status_code == 200:
+                ext = 'png'
+                filename = f"ai_{uuid.uuid4().hex}.{ext}"
+                upload_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'static/imgs/messages')
+                os.makedirs(upload_dir, exist_ok=True)
+                filepath = os.path.join(upload_dir, filename)
+                with open(filepath, 'wb') as f:
+                    f.write(img_response.content)
+
+                return jsonify({
+                    'success': True,
+                    'url': f'/static/imgs/messages/{filename}'
+                })
+
+        return jsonify({'success': False, 'error': '生成失败'})
+
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+
 # ==================== 新闻爬取设置API ====================
 
 @wx_bp.route('/admin/news/config', methods=['GET'])
