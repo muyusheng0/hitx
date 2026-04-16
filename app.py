@@ -405,6 +405,9 @@ PROVINCE_MAP = {
     'aomen': '澳门'
 }
 
+# 中文名到拼音的反向映射
+NAME_TO_PROVINCE_PINYIN = {v: k for k, v in PROVINCE_MAP.items()}
+
 # 省份坐标(用于地图展示,简化版中国地图)
 PROVINCE_COORDS = {
     '北京': (60, 35),
@@ -779,6 +782,15 @@ def txl():
     else:
         students = database.read_txl()
 
+    # 为每个学生添加拼音用于排序
+    try:
+        from pypinyin import lazy_pinyin
+        for s in students:
+            s['pinyin'] = ''.join(lazy_pinyin(s.get('name', '')))
+    except:
+        for s in students:
+            s['pinyin'] = s.get('name', '')
+
     # 为没有坐标的学生填充坐标(根据城市名和区)
     for s in students:
         if not s.get('coords'):
@@ -852,6 +864,226 @@ def haversine_distance(lat1, lon1, lat2, lon2):
     c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
 
     return R * c
+
+
+# 动态加载地区数据 API
+LOCATION_DATA = {
+    'provinces': [],
+    'cities': {},
+    'districts': {}
+}
+
+# 名称到代码的映射（用于回填用户数据）
+PROVINCE_NAME_TO_CODE = {}
+PROVINCE_CODE_TO_NAME = {}
+CITY_NAME_TO_CODE = {}
+CITY_CODE_TO_NAME = {}
+CITY_CODE_PREFIX_TO_CODE = {}  # (province_prefix, city_suffix) -> full_city_code
+
+def _strip_province_suffix(name):
+    """去掉省份名称的后缀（省、市、自治区、特别行政区）"""
+    if not name:
+        return name
+    for suffix in ['特别行政区', '自治区', '省', '市']:
+        if name.endswith(suffix):
+            return name[:-len(suffix)]
+    return name
+
+def _load_location_data():
+    """加载地区数据到内存"""
+    import json as _json
+    base_path = os.path.join(os.path.dirname(__file__), 'static/js/location')
+
+    # 加载省份
+    with open(os.path.join(base_path, 'province.json'), encoding='utf-8') as f:
+        provinces = _json.load(f)
+    LOCATION_DATA['provinces'] = [{'code': p['code'], 'name': p['name']} for p in provinces]
+    for p in provinces:
+        PROVINCE_NAME_TO_CODE[p['name']] = p['code']
+        PROVINCE_CODE_TO_NAME[p['code']] = p['name']
+        # 同时添加去掉后缀的简称
+        short_name = _strip_province_suffix(p['name'])
+        if short_name != p['name']:
+            PROVINCE_NAME_TO_CODE[short_name] = p['code']
+
+    # 加载城市，按省份分组，同时构建反向映射
+    with open(os.path.join(base_path, 'city.json'), encoding='utf-8') as f:
+        cities = _json.load(f)
+    for city in cities:
+        prov = city['province']
+        full_code = city['code']
+        if prov not in LOCATION_DATA['cities']:
+            LOCATION_DATA['cities'][prov] = []
+        LOCATION_DATA['cities'][prov].append({'code': full_code, 'name': city['name']})
+        CITY_NAME_TO_CODE[city['name']] = full_code
+        CITY_CODE_TO_NAME[full_code] = city['name']
+        # 构建 (province_prefix, city_suffix) -> full_code 的映射
+        prov_prefix = prov  # 2位省份码
+        city_suffix = city['city']  # 2位城市码
+        CITY_CODE_PREFIX_TO_CODE[(prov_prefix, city_suffix)] = full_code
+
+    # 加载区县，需要将short city code转换为full city code
+    with open(os.path.join(base_path, 'area.json'), encoding='utf-8') as f:
+        areas = _json.load(f)
+    for area in areas:
+        prov = area['province']
+        city_short = area['city']  # 短码如 "01"
+        # 尝试构建完整的城市代码
+        full_city_code = CITY_CODE_PREFIX_TO_CODE.get((prov, city_short))
+        if full_city_code:
+            # 普通城市：使用完整城市代码作为键
+            if full_city_code not in LOCATION_DATA['districts']:
+                LOCATION_DATA['districts'][full_city_code] = []
+            LOCATION_DATA['districts'][full_city_code].append({'code': area['code'], 'name': area['name']})
+        else:
+            # 直辖市等没有城市条目：使用 "province_code" 作为键来存储区县
+            prov_full_code = prov + '0000'  # 补齐为省份代码
+            if prov_full_code not in LOCATION_DATA['districts']:
+                LOCATION_DATA['districts'][prov_full_code] = []
+            LOCATION_DATA['districts'][prov_full_code].append({'code': area['code'], 'name': area['name']})
+
+# 启动时加载
+_load_location_data()
+
+def get_location_names(province_code, city_code, district_code):
+    """将地区代码转换为存储格式（hometown用拼音，city/district用中文名）"""
+    result = {
+        'hometown': '',
+        'hometown_name': '',
+        'city': '',
+        'district': ''
+    }
+
+    if province_code:
+        full_name = PROVINCE_CODE_TO_NAME.get(province_code, '')
+        result['hometown_name'] = full_name
+        # 去掉后缀后查找拼音
+        short_name = _strip_province_suffix(full_name)
+        result['hometown'] = NAME_TO_PROVINCE_PINYIN.get(short_name, '')
+        # 如果还是找不到，尝试直接查找
+        if not result['hometown']:
+            result['hometown'] = NAME_TO_PROVINCE_PINYIN.get(full_name, '')
+
+    if city_code:
+        result['city'] = CITY_CODE_TO_NAME.get(city_code, '')
+
+    if district_code:
+        # 在区县字典中查找
+        for city_key, districts in LOCATION_DATA['districts'].items():
+            for d in districts:
+                if d['code'] == district_code:
+                    result['district'] = d['name']
+                    break
+            if result['district']:
+                break
+
+    return result
+
+@app.route('/api/location/codes_to_names')
+def codes_to_names():
+    """将地区代码转换为存储格式，用于保存用户数据"""
+    province_code = request.args.get('province', '')
+    city_code = request.args.get('city', '')
+    district_code = request.args.get('district', '')
+
+    result = get_location_names(province_code, city_code, district_code)
+    return jsonify({'success': True, 'data': result})
+
+@app.route('/api/location/provinces')
+def get_provinces():
+    """获取所有省份"""
+    return jsonify({'success': True, 'data': LOCATION_DATA['provinces']})
+
+@app.route('/api/location/cities/<province_code>')
+def get_cities(province_code):
+    """获取指定省份的所有城市"""
+    # 省份代码的前两位作为城市字典的键
+    prov_prefix = province_code[:2] if len(province_code) >= 2 else province_code
+    cities = LOCATION_DATA['cities'].get(prov_prefix, [])
+    return jsonify({'success': True, 'data': cities})
+
+@app.route('/api/location/districts/<city_code>')
+def get_districts(city_code):
+    """获取指定城市的所有区县"""
+    districts = LOCATION_DATA['districts'].get(city_code, [])
+    return jsonify({'success': True, 'data': districts})
+
+@app.route('/api/location/lookup')
+def lookup_location():
+    """根据名称查找省/市/区的代码，用于回填用户数据"""
+    province_name = request.args.get('province', '')
+    city_name = request.args.get('city', '')
+    district_name = request.args.get('district', '')
+
+    result = {'province_code': '', 'city_code': '', 'district_code': ''}
+
+    if province_name:
+        # 尝试直接查找
+        result['province_code'] = PROVINCE_NAME_TO_CODE.get(province_name, '')
+        # 如果没找到，尝试去掉后缀
+        if not result['province_code']:
+            short_name = _strip_province_suffix(province_name)
+            result['province_code'] = PROVINCE_NAME_TO_CODE.get(short_name, '')
+
+    if city_name:
+        prov_code = result['province_code']
+        # 先在city.json中查找该省份下的城市
+        if prov_code and prov_code in LOCATION_DATA['cities']:
+            cities = LOCATION_DATA['cities'][prov_code]
+            for c in cities:
+                if c['name'] == city_name:
+                    result['city_code'] = c['code']
+                    break
+            # 如果没找到，尝试去掉"市"后缀
+            if not result['city_code'] and city_name.endswith('市'):
+                short_city = city_name[:-1]
+                for c in cities:
+                    if c['name'] == short_city or c['name'].startswith(short_city):
+                        result['city_code'] = c['code']
+                        break
+
+        # 如果没找到，尝试在整个city.json中查找（可能有重名城市）
+        if not result['city_code']:
+            for code, name in CITY_NAME_TO_CODE.items():
+                if name == city_name:
+                    result['city_code'] = code
+                    break
+            # 尝试去掉"市"后缀
+            if not result['city_code'] and city_name.endswith('市'):
+                short_city = city_name[:-1]
+                for code, name in CITY_NAME_TO_CODE.items():
+                    if name == short_city or name.startswith(short_city):
+                        result['city_code'] = code
+                        break
+
+    # 处理区县查找（关键：区县按城市代码存储，需要找到正确的城市代码）
+    if district_name:
+        prov_code = result['province_code']
+
+        # 如果已经有city_code，先尝试直接查找
+        if result['city_code'] and result['city_code'] in LOCATION_DATA['districts']:
+            districts = LOCATION_DATA['districts'][result['city_code']]
+            for d in districts:
+                if d['name'] == district_name:
+                    result['district_code'] = d['code']
+                    break
+
+        # 如果没找到，在该省份所有区县中查找
+        if not result['district_code'] and prov_code:
+            # 遍历所有城市，查找该省份下的区县
+            for city_code, district_list in LOCATION_DATA['districts'].items():
+                if not city_code.startswith(prov_code[:2]):
+                    continue
+                for d in district_list:
+                    if d['name'] == district_name:
+                        result['district_code'] = d['code']
+                        # 同时设置city_code
+                        result['city_code'] = city_code
+                        break
+                if result['district_code']:
+                    break
+
+    return jsonify({'success': True, 'data': result})
 
 
 @app.route('/api/update_coords', methods=['POST'])
@@ -2891,8 +3123,12 @@ def openclaw_chat():
         if not reply:
             reply = '抱歉，AI 没有返回有效回复'
 
-        # 保存聊天记录
-        database.save_ai_chat(current_name, message, reply)
+        # 保存聊天记录（异常也尝试保存）
+        try:
+            database.save_ai_chat(current_name, message, reply)
+        except Exception as save_err:
+            import logging
+            logging.error(f'保存AI聊天记录失败: {save_err}')
 
         return jsonify({'code': 0, 'message': 'success', 'data': {'reply': reply}})
     except subprocess.TimeoutExpired:
@@ -2902,6 +3138,16 @@ def openclaw_chat():
             pass
         lock_fd.close()
         return jsonify({'code': 1, 'message': '请求超时，请稍后重试', 'data': None})
+    except Exception as e:
+        # 记录错误但不丢失用户消息
+        import logging
+        logging.error(f'AI聊天异常: {e}, 用户消息: {message[:50]}')
+        # 即使异常也尝试保存用户消息
+        try:
+            database.save_ai_chat(current_name, message, f'错误: {str(e)[:100]}')
+        except:
+            pass
+        return jsonify({'code': 1, 'message': f'错误: {str(e)}', 'data': None})
     except json.JSONDecodeError:
         try:
             fcntl.flock(lock_fd, fcntl.LOCK_UN)
@@ -3171,7 +3417,7 @@ def mark_disconnected():
 def get_openclaw_history():
     """获取 AI 聊天记录
 
-    - 超级管理员：可以查看所有人的记录
+    - 超级管理员：可以查看所有人的记录，可按用户筛选
     - 普通管理员：只能查看自己的记录
     """
     if 'verified_student' not in session:
@@ -3180,15 +3426,16 @@ def get_openclaw_history():
     current_name = session['verified_student']['name']
     is_super = is_super_admin(current_name)
 
-    # 获取分页参数
+    # 获取请求参数
     page = request.args.get('page', 1, type=int)
     limit = request.args.get('limit', 20, type=int)
     offset = (page - 1) * limit
+    filter_user = request.args.get('user', None)  # 筛选特定用户
 
     # 普通管理员只能看自己的记录
     if is_super:
-        history = database.get_ai_chat_history(user_name=None, limit=limit, offset=offset)
-        total = database.get_ai_chat_history_count()
+        history = database.get_ai_chat_history(user_name=filter_user, limit=limit, offset=offset)
+        total = database.get_ai_chat_history_count(user_name=filter_user)
     else:
         history = database.get_ai_chat_history(user_name=current_name, limit=limit, offset=offset)
         total = database.get_ai_chat_history_count(user_name=current_name)
@@ -3202,9 +3449,23 @@ def get_openclaw_history():
             'page': page,
             'limit': limit,
             'pages': (total + limit - 1) // limit if limit > 0 else 0,
-            'is_super_admin': is_super
+            'is_super_admin': is_super,
+            'filter_user': filter_user
         }
     })
+
+
+@app.route('/api/openclaw/history/users', methods=['GET'])
+def get_ai_chat_history_users():
+    """获取所有有聊天记录的用户列表（仅超级管理员）"""
+    if 'verified_student' not in session:
+        return jsonify({'code': 401, 'message': '需要先登录', 'data': None})
+
+    if not is_super_admin(session['verified_student']['name']):
+        return jsonify({'code': 403, 'message': '仅超级管理员可以使用此功能', 'data': None})
+
+    users = database.get_ai_chat_history_users()
+    return jsonify({'code': 0, 'message': 'success', 'data': users})
 
 
 @app.route('/api/openclaw/history', methods=['DELETE'])

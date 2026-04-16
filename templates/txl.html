@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Version: 2026-04-15-v3 | 权限控制修复 -->
+<!-- Version: 2026-04-16-wechat | 微信联系人风格 -->
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -7,7 +7,7 @@
     <title>通讯录 - 吉大自动化八班</title>
     <link rel="stylesheet" href="/static/css/style.css">
     <link rel="stylesheet" href="/static/css/film-grain.css">
-    <link rel="stylesheet" href="/static/css/txl-flip.css">
+    <link rel="stylesheet" href="/static/css/txl-wechat.css">
     <link rel="stylesheet" href="/static/css/ambient-bg.css">
     <link rel="stylesheet" href="/static/css/special-effects.css">
     <link rel="stylesheet" href="/static/css/interactions.css">
@@ -46,12 +46,13 @@
         <div id="userStatus" class="user-status"></div>
     </header>
 
-    <!-- 主内容 -->
+    <!-- 主内容 - 微信联系人风格 -->
     <main class="main-content">
         <div class="container">
-            <div class="page-header">
-                <h1 class="page-title">📖 同学通讯录</h1>
-                <p class="page-subtitle">珍藏回忆，联络你我</p>
+            <!-- 顶部标题 -->
+            <div class="page-header" style="padding: 20px 16px 10px;">
+                <h1 class="page-title" style="font-size: 22px; margin-bottom: 4px;">通讯录</h1>
+                <p class="page-subtitle" style="font-size: 12px; opacity: 0.6;">{{ students|length }} 位同学</p>
             </div>
 
             <!-- 未登录提示 -->
@@ -66,123 +67,84 @@
             </div>
             {% endif %}
 
-            <!-- 搜索框 -->
+            <!-- 微信风格通讯录容器 -->
             {% if logged_in %}
-            <div class="search-box">
-                <input type="text" id="searchInput" placeholder="搜索同学姓名或籍贯...">
-                <button type="button" class="search-box-btn" onclick="scrollToMyCard()" title="定位到我的卡片">🎯 我的卡片</button>
-            </div>
-            {% endif %}
+            <div class="txl-wechat-container">
+                <!-- 搜索栏 -->
+                <div class="wechat-search-bar">
+                    <input type="text" class="wechat-search-input" id="searchInput" placeholder="搜索姓名或籍贯..." oninput="filterContacts()">
+                </div>
 
-            <!-- 离我最近的同学 -->
-            {% if nearest_classmates %}
-            <div class="nearest-section">
-                <h2 class="section-title">📍 离我最近的同学</h2>
-                <div class="nearest-list">
+                <!-- 离我最近的同学 -->
+                {% if nearest_classmates %}
+                <div class="wechat-nearest-section">
+                    <div class="wechat-section-header">离我最近的同学</div>
                     {% for mate, dist in nearest_classmates %}
-                    <a href="#student-{{ mate.name }}" class="nearest-item" onclick="scrollToStudent('{{ mate.name }}')">
-                        <div class="nearest-avatar">
+                    <a href="javascript:void(0)" class="wechat-nearest-item" data-name="{{ mate.name }}">
+                        <div class="wechat-avatar">
                             {% if mate.avatar %}
                             <img src="{{ mate.avatar }}" alt="{{ mate.name }}">
                             {% else %}
                             {{ mate.name[0] }}
                             {% endif %}
                         </div>
-                        <div class="nearest-info">
-                            <div class="nearest-name">{{ mate.name }}</div>
-                            <div class="nearest-location">{{ mate.hometown_name or '' }}{{ mate.city or '' }}</div>
+                        <div class="wechat-nearest-info">
+                            <div class="wechat-nearest-name">{{ mate.name }}</div>
+                            <div class="wechat-nearest-location">{{ mate.hometown_name or '' }}{{ mate.city or '' }}</div>
                         </div>
-                        <div class="nearest-distance">{{ dist }}公里</div>
+                        <div class="wechat-nearest-distance">{{ dist }}km</div>
                     </a>
                     {% endfor %}
                 </div>
-            </div>
-            {% endif %}
+                {% endif %}
 
-            <!-- 学生卡片网格 -->
-            {% if logged_in %}
-            <div class="student-grid" id="studentGrid">
-                {% for student in students %}
-                <div class="student-card"
-                     id="student-{{ student.name }}"
-                     data-name="{{ student.name }}"
-                     data-hometown="{{ student.hometown_name }}"
-                     data-custom-intro="{{ student.custom_intro or '' }}"
-                     data-hobby="{{ student.hobby or '' }}">
-                    <div class="student-avatar-wrap">
-                        <div class="student-avatar {% if student.avatar %}avatar-has{% endif %} {% if student.avatar %}avatar-clickable{% endif %}" onclick="{% if student.avatar %}showAvatarLightbox('{{ student.avatar }}'){% endif %}">
-                            {% if student.avatar %}
-                            <img src="{{ student.avatar }}" alt="{{ student.name }}">
-                            {% else %}
-                            {{ student.name[0] }}
-                            {% endif %}
-                        </div>
-                        <div class="student-name">{{ student.name }}</div>
-                        {% if student.custom_intro %}
-                        <div class="student-custom-intro">"{{ student.custom_intro }}"</div>
+                <!-- 联系人列表（按字母分组） -->
+                <div class="wechat-contact-list" id="contactList">
+                    {% set letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ#' | list %}
+                    {% set grouped = {} %}
+                    {% for student in students %}
+                        {% set letter = student.pinyin|upper|first if student.pinyin else '#' %}
+                        {% if letter not in grouped %}
+                            {% set _ = grouped.update({letter: []}) %}
                         {% endif %}
-                        {% if student.hometown_name %}
-                        <div class="student-location-tag">📍 {{ student.hometown_name }}{% if student.city %} {{ student.city }}{% endif %}</div>
-                        {% endif %}
-                    </div>
-                    <div class="student-info-collapsed">
-                    <div class="student-info">
-                        <span>📞 {{ student.phone if student.phone else '暂无' }} {% if student.phone %}<button type="button" class="copy-phone-btn" onclick="copyPhone('{{ student.phone }}')" title="复制号码">⧉</button>{% endif %}</span>
-                        {% if student.position %}
-                        <span>💼 {{ student.position }}</span>
-                        {% endif %}
-                        {% if student.industry %}
-                        <span>🏢 {{ student.industry }}</span>
-                        {% endif %}
-                        {% if student.company %}
-                        <span>🏗️ {{ student.company }}</span>
-                        {% endif %}
-                        {% if student.hobby %}
-                        <span>💫 {{ student.hobby }}</span>
-                        {% endif %}
-                        {% if student.github %}
-                        <span>🔗 <a href="{{ student.github }}" target="_blank" style="color: var(--secondary); text-decoration: none;">GitHub</a></span>
-                        {% endif %}
-                        {% if student.douyin %}
-                        <span>🔗 <a href="{{ student.douyin }}" target="_blank" style="color: var(--secondary); text-decoration: none;">抖音</a></span>
-                        {% endif %}
-                        {% if student.xiaohongshu %}
-                        <span>🔗 <a href="{{ student.xiaohongshu }}" target="_blank" style="color: var(--secondary); text-decoration: none;">小红书</a></span>
-                        {% endif %}
-                    </div>
-                    </div>
-                    <div class="expand-toggle">👆 点击查看详情</div>
+                        {% set _ = grouped[letter].append(student) %}
+                    {% endfor %}
 
-                    <!-- 喊话区域 -->
-                    <div class="voice-shout-section">
-                        {% set voice_shouts_for_this = [] %}
-                        {% for shout in voice_shouts %}
-                            {% if shout.to_name == student.name %}
-                                {% set _ = voice_shouts_for_this.append(shout) %}
-                            {% endif %}
-                        {% endfor %}
-                        {% if voice_shouts_for_this %}
-                        <div class="voice-shout-list">
-                            {% for shout in voice_shouts_for_this %}
-                            <div class="voice-shout-item" data-shout-id="{{ shout.id }}" data-audio-url="{{ shout.audio_url }}" data-from="{{ shout.from_name }}">
-                                <span class="voice-shout-from">{{ shout.from_name }}:</span>
-                                <div class="voice-message-player small">
-                                    <button class="voice-play-btn" onclick="toggleVoiceShoutPlay(this, '{{ shout.audio_url }}')">
-                                        <span class="voice-play-icon">▶️</span>
-                                    </button>
-                                </div>
-                                {% if logged_in and (session['verified_student']['name'] == shout.from_name or session['verified_student']['name'] == shout.to_name) %}
-                                <button type="button" class="del-voice-btn" onclick="deleteVoice({{ shout.id }})" title="删除">🗑️</button>
+                    {% for letter in letters %}
+                        {% if letter in grouped %}
+                        <div class="wechat-letter-header">{{ letter }}</div>
+                        {% for student in grouped[letter] %}
+                        <a href="javascript:void(0)" class="wechat-contact-item" data-name="{{ student.name }}">
+                            <div class="wechat-avatar">
+                                {% if student.avatar %}
+                                <img src="{{ student.avatar }}" alt="{{ student.name }}">
+                                {% else %}
+                                {{ student.name[0] }}
                                 {% endif %}
                             </div>
-                            {% endfor %}
-                        </div>
+                            <div class="wechat-contact-info">
+                                <div class="wechat-contact-name">{{ student.name }}</div>
+                                <div class="wechat-contact-detail">
+                                    {% if student.position %}{{ student.position }}{% endif %}
+                                    {% if student.company %} · {{ student.company }}{% endif %}
+                                </div>
+                            </div>
+                            <span class="arrow">›</span>
+                        </a>
+                        {% endfor %}
                         {% endif %}
-                        <button type="button" class="voice-shout-btn" onclick="openVoiceShoutModal('{{ student.name }}', '{{ student.gender }}')">🎤 向{{ '她' if student.gender == '女' else '他' }}喊话</button>
-                    </div>
+                    {% endfor %}
                 </div>
-                {% else %}
-                <div class="empty-message">暂无同学信息</div>
+
+                <!-- 搜索结果 -->
+                <div class="wechat-search-result" id="searchResults"></div>
+            </div>
+
+            <!-- 右侧字母索引 -->
+            <div class="wechat-sidebar-index" id="sidebarIndex">
+                <span onclick="scrollToLetter('↑')">↑</span>
+                {% for letter in 'ABCDEFGHIJKLMNOPQRSTUVWXYZ#' | list %}
+                <span onclick="scrollToLetter('{{ letter }}')">{{ letter }}</span>
                 {% endfor %}
             </div>
             {% endif %}
@@ -471,6 +433,202 @@
             document.addEventListener('DOMContentLoaded', scrollToHashCard);
         } else {
             scrollToHashCard();
+        }
+
+        // ==================== 微信风格通讯录功能 ====================
+
+        // 使用事件委托处理联系人点击
+        document.addEventListener('DOMContentLoaded', function() {
+            const contactList = document.getElementById('contactList');
+            if (contactList) {
+                contactList.addEventListener('click', function(e) {
+                    const item = e.target.closest('.wechat-contact-item, .wechat-nearest-item');
+                    if (item) {
+                        const name = item.dataset.name;
+                        if (name) {
+                            showStudentDetail(name);
+                        }
+                    }
+                });
+            }
+        });
+
+        // 筛选联系人
+        function filterContacts() {
+            const query = document.getElementById('searchInput').value.trim().toLowerCase();
+            const items = document.querySelectorAll('.wechat-contact-item');
+            const headers = document.querySelectorAll('.wechat-letter-header');
+            const nearest = document.querySelector('.wechat-nearest-section');
+            const contactList = document.getElementById('contactList');
+            const searchResults = document.getElementById('searchResults');
+
+            if (!query) {
+                // 显示原始列表
+                contactList.style.display = 'block';
+                searchResults.classList.remove('show');
+                searchResults.innerHTML = '';
+                items.forEach(item => item.style.display = '');
+                // 重新显示/隐藏分组头
+                updateLetterHeaders();
+                return;
+            }
+
+            // 搜索模式
+            contactList.style.display = 'none';
+            searchResults.classList.add('show');
+
+            let html = '';
+            let hasResults = false;
+
+            items.forEach(item => {
+                const name = item.querySelector('.wechat-contact-name').textContent.toLowerCase();
+                const detail = (item.querySelector('.wechat-contact-detail').textContent || '').toLowerCase();
+                if (name.includes(query) || detail.includes(query)) {
+                    html += item.outerHTML;
+                    hasResults = true;
+                }
+            });
+
+            if (!hasResults) {
+                html = '<div class="wechat-search-empty">未找到匹配的同学</div>';
+            }
+
+            searchResults.innerHTML = html;
+        }
+
+        // 更新字母分组头的显示状态
+        function updateLetterHeaders() {
+            const headers = document.querySelectorAll('.wechat-letter-header');
+            headers.forEach(header => {
+                const next = header.nextElementSibling;
+                // 如果下一个是空或也是header，则隐藏
+                if (!next || next.classList.contains('wechat-letter-header')) {
+                    header.style.display = 'none';
+                } else {
+                    header.style.display = '';
+                }
+            });
+        }
+
+        // 滚动到指定字母
+        function scrollToLetter(letter) {
+            if (letter === '↑') {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+                return;
+            }
+            // 找到目标字母的header并滚动
+            document.querySelectorAll('.wechat-letter-header').forEach(h => {
+                if (h.textContent === letter) {
+                    h.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            });
+        }
+
+        // 显示同学详情
+        function showStudentDetail(name) {
+            // 获取学生数据
+            const students = {{ students | tojson | safe }};
+            const student = students.find(s => s.name === name);
+            if (!student) {
+                alert('未找到学生: ' + name);
+                return;
+            }
+
+            // 构建详情HTML（避免复杂嵌套三元表达式）
+            let avatarHtml = student.avatar
+                ? '<img src="' + student.avatar + '" style="width:100%;height:100%;object-fit:cover;border-radius:4px;">'
+                : student.name[0];
+
+            // 构建详情信息行
+            function buildInfoRow(label, value) {
+                if (!value) return '';
+                return '<div style="display:flex;align-items:center;padding:10px 0;border-bottom:0.5px solid #eee;">' +
+                    '<span style="color:#888;width:70px;">' + label + '</span>' +
+                    '<span style="flex:1;word-break:break-all;">' + value + '</span>' +
+                    '</div>';
+            }
+
+            let infoHtml = '';
+            infoHtml += buildInfoRow('电话', student.phone);
+            infoHtml += buildInfoRow('位置', (student.hometown_name || '') + (student.city ? ' ' + student.city : ''));
+            infoHtml += buildInfoRow('公司', student.company);
+            infoHtml += buildInfoRow('行业', student.industry);
+            infoHtml += buildInfoRow('职位', student.position);
+            infoHtml += buildInfoRow('工作', student.work);
+            infoHtml += buildInfoRow('生日', student.birthday);
+            infoHtml += buildInfoRow('爱好', student.hobby);
+            infoHtml += buildInfoRow('邮箱', student.email);
+            infoHtml += buildInfoRow('QQ', student.qq);
+            infoHtml += buildInfoRow('微信', student.wechat);
+            infoHtml += buildInfoRow('微博', student.weibo);
+            infoHtml += buildInfoRow('抖音', student.douyin);
+            infoHtml += buildInfoRow('小红书', student.xiaohongshu);
+            infoHtml += buildInfoRow('GitHub', student.github);
+            infoHtml += buildInfoRow('签名', student.custom_intro ? '"' + student.custom_intro + '"' : '');
+
+            // 喊话列表
+            let shoutsHtml = '';
+            const voiceShouts = {{ voice_shouts | tojson | safe }};
+            const myShouts = voiceShouts.filter(s => s.to_name === name);
+            if (myShouts.length > 0) {
+                shoutsHtml = '<div style="margin-top:16px;padding-top:16px;border-top:1px solid #eee;">' +
+                    '<div style="color:#888;font-size:13px;margin-bottom:10px;">🎤 收到的喊话 (' + myShouts.length + ')</div>';
+                myShouts.forEach(shout => {
+                    shoutsHtml += '<div style="display:flex;align-items:center;padding:8px 0;background:#f9f9f9;margin-bottom:6px;border-radius:6px;">' +
+                        '<div style="flex:1;">' +
+                        '<span style="color:#07c160;font-weight:500;">' + shout.from_name + '</span>' +
+                        '<span style="color:#888;font-size:12px;margin-left:8px;">' + shout.time + '</span>' +
+                        '</div>' +
+                        '<button onclick="toggleVoiceShoutPlay(this, \'' + shout.audio_url + '\')" style="background:#07c160;color:#fff;border:none;padding:6px 12px;border-radius:4px;font-size:12px;cursor:pointer;">▶ 播放</button>' +
+                        '</div>';
+                });
+                shoutsHtml += '</div>';
+            }
+
+            const detailHtml =
+                '<div class="modal-overlay active" onclick="closeStudentDetail(event)">' +
+                '<div class="modal" onclick="event.stopPropagation()" style="max-width:360px;padding:0;border-radius:12px;overflow:hidden;">' +
+                '<div style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);padding:30px 20px;text-align:center;color:#fff;">' +
+                '<div class="wechat-avatar" style="width:72px;height:72px;font-size:28px;margin:0 auto 12px;">' + avatarHtml + '</div>' +
+                '<h2 style="margin:0 0 4px;font-size:20px;">' + student.name + '</h2>' +
+                '<p style="margin:0;opacity:0.8;font-size:13px;">' + (student.position || student.company ? (student.position || '') + (student.position && student.company ? ' · ' : '') + (student.company || '') : '') + '</p>' +
+                '</div>' +
+                '<div style="padding:20px;max-height:60vh;overflow-y:auto;">' +
+                infoHtml +
+                shoutsHtml +
+                '<div style="display:flex;gap:12px;padding-top:16px;">' +
+                '<button onclick="openVoiceShoutModal(\'' + student.name + '\', \'' + student.gender + '\')" style="flex:1;background:#07c160;color:#fff;border:none;padding:12px;border-radius:8px;font-size:15px;cursor:pointer;">🎤 喊话</button>' +
+                '<button onclick="closeStudentDetailDirect()" style="flex:1;background:#f5f5f5;color:#333;border:none;padding:12px;border-radius:8px;font-size:15px;cursor:pointer;">关闭</button>' +
+                '</div></div></div></div>';
+
+            let modal = document.getElementById('studentDetailModal');
+            if (!modal) {
+                modal = document.createElement('div');
+                modal.id = 'studentDetailModal';
+                document.body.appendChild(modal);
+            }
+            modal.innerHTML = detailHtml;
+        }
+
+        function closeStudentDetail(event) {
+            if (event && event.target !== event.currentTarget) return;
+            const modal = document.getElementById('studentDetailModal');
+            if (modal) {
+                modal.innerHTML = '';
+            }
+        }
+
+        function closeStudentDetailDirect() {
+            closeStudentDetail({ target: document.getElementById('studentDetailModal'), currentTarget: document.getElementById('studentDetailModal') });
+        }
+
+        // 复制手机号
+        function copyPhone(phone) {
+            navigator.clipboard.writeText(phone).then(() => {
+                alert('已复制: ' + phone);
+            }).catch(() => {
+                prompt('微信号:', phone);
+            });
         }
 
         function scrollToStudent(name) {

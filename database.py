@@ -1541,6 +1541,15 @@ def delete_ai_chat_history(user_name):
     return cursor.rowcount
 
 
+def get_ai_chat_history_users():
+    """获取所有有聊天记录的用户列表"""
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('SELECT DISTINCT user_name FROM ai_chat_history ORDER BY user_name')
+    rows = cursor.fetchall()
+    return [row['user_name'] for row in rows]
+
+
 # ==================== 喊话数据操作 ====================
 
 def read_voice_shouts(include_deleted=False):

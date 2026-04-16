@@ -513,7 +513,7 @@
         <!-- 历史记录面板 -->
         <div class="history-panel" id="historyPanel">
             <div class="history-filter" id="historyFilter" style="display: none;">
-                <select id="historyUserFilter">
+                <select id="historyUserFilter" onchange="onHistoryUserFilterChange(this.value)">
                     <option value="">全部用户</option>
                 </select>
             </div>
@@ -547,6 +547,7 @@
         let historyShowing = false;
         let isConnected = false;
         let connectionId = 0;  // 用于追踪连接请求是否过期
+        let historyFilterUser = '';  // 当前筛选的用户
 
         // 页面离开时自动断开连接
         window.addEventListener('beforeunload', async () => {
@@ -858,6 +859,21 @@
             }
         }
 
+        // 加载所有有聊天记录的用户列表（超级管理员用）
+        async function loadHistoryUsers() {
+            try {
+                const res = await fetch('/api/openclaw/history/users', { credentials: 'same-origin' });
+                const data = await res.json();
+                if (data.code === 0 && data.data.length) {
+                    const select = document.getElementById('historyUserFilter');
+                    select.innerHTML = '<option value="">全部用户</option>' +
+                        data.data.map(u => `<option value="${u}" ${u === historyFilterUser ? 'selected' : ''}>${u}</option>`).join('');
+                }
+            } catch (e) {
+                console.error('加载用户列表失败', e);
+            }
+        }
+
         // 加载历史记录
         async function loadHistory(page) {
             historyPage = page;
@@ -867,10 +883,14 @@
 
             content.innerHTML = '<div class="history-empty">加载中...</div>';
 
+            // 构建请求URL
+            let url = `/api/openclaw/history?page=${page}&limit=10`;
+            if (historyFilterUser) {
+                url += `&user=${encodeURIComponent(historyFilterUser)}`;
+            }
+
             try {
-                const res = await fetch(`/api/openclaw/history?page=${page}&limit=10`, {
-                    credentials: 'same-origin'
-                });
+                const res = await fetch(url, { credentials: 'same-origin' });
                 const data = await res.json();
 
                 if (data.code !== 0 || !data.data.history.length) {
@@ -882,11 +902,8 @@
                 // 显示超级管理员筛选器
                 if (isSuperAdmin && page === 1) {
                     filter.style.display = 'flex';
-                    // 填充用户列表
-                    const users = [...new Set(data.data.history.map(h => h.user_name))];
-                    const select = document.getElementById('historyUserFilter');
-                    select.innerHTML = '<option value="">全部用户</option>' +
-                        users.map(u => `<option value="${u}">${u}</option>`).join('');
+                    // 加载所有用户列表
+                    loadHistoryUsers();
                 }
 
                 // 渲染历史记录
@@ -930,6 +947,12 @@
             } catch (e) {
                 content.innerHTML = '<div class="history-empty">加载失败，请重试</div>';
             }
+        }
+
+        // 用户筛选变化时重新加载
+        function onHistoryUserFilterChange(user) {
+            historyFilterUser = user;
+            loadHistory(1);
         }
 
         // 初始化

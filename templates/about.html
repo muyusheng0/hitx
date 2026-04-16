@@ -590,28 +590,37 @@ if ('caches' in window) {
         </div>
     </div>
 
-    <script src="/static/js/province_data.js"></script>
     <script src="/static/js/main.js?v=20260407b"></script>
     <script>
         // 版本号：20260407-001
         console.log('[VERSION] about.html v20260407-006');
 
+        // 缓存地区数据
+        let locationCache = { provinces: null, cities: {}, districts: {} };
+
         // 初始化省份下拉框
-        function initProvinceSelect() {
+        async function initProvinceSelect() {
             const select = document.getElementById('editProvince');
             if (!select) return;
-            select.innerHTML = '<option value="">省份</option>';
-            for (const key in window.PROVINCE_DATA) {
-                const opt = document.createElement('option');
-                opt.value = key;
-                opt.textContent = window.PROVINCE_DATA[key].name;
-                select.appendChild(opt);
+
+            if (!locationCache.provinces) {
+                const res = await fetch('/api/location/provinces', { credentials: 'same-origin' });
+                const data = await res.json();
+                locationCache.provinces = data.data;
             }
+
+            select.innerHTML = '<option value="">省份</option>';
+            locationCache.provinces.forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = p.code;
+                opt.textContent = p.name;
+                select.appendChild(opt);
+            });
         }
 
         // 省份变更时更新城市下拉框
-        function onProvinceChange() {
-            const provinceKey = document.getElementById('editProvince')?.value;
+        async function onProvinceChange() {
+            const provinceCode = document.getElementById('editProvince')?.value;
             const citySelect = document.getElementById('editCity');
             const districtSelect = document.getElementById('editDistrict');
             if (!citySelect) return;
@@ -619,35 +628,47 @@ if ('caches' in window) {
             citySelect.innerHTML = '<option value="">城市</option>';
             districtSelect.innerHTML = '<option value="">区县</option>';
 
-            if (provinceKey && window.PROVINCE_DATA[provinceKey]) {
-                const cities = window.PROVINCE_DATA[provinceKey].cities;
-                for (const key in cities) {
-                    const opt = document.createElement('option');
-                    opt.value = key;
-                    opt.textContent = window.PINYIN_TO_CITY[key] || key;
-                    citySelect.appendChild(opt);
-                }
+            if (!provinceCode) return;
+
+            // 动态加载城市
+            if (!locationCache.cities[provinceCode]) {
+                const res = await fetch('/api/location/cities/' + provinceCode, { credentials: 'same-origin' });
+                const data = await res.json();
+                locationCache.cities[provinceCode] = data.data;
             }
+
+            locationCache.cities[provinceCode].forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c.code;
+                opt.textContent = c.name;
+                citySelect.appendChild(opt);
+            });
         }
 
         // 城市变更时更新区县下拉框
-        function onCityChange() {
-            const provinceKey = document.getElementById('editProvince')?.value;
-            const cityKey = document.getElementById('editCity')?.value;
+        async function onCityChange() {
+            const provinceCode = document.getElementById('editProvince')?.value;
+            const cityCode = document.getElementById('editCity')?.value;
             const districtSelect = document.getElementById('editDistrict');
             if (!districtSelect) return;
 
             districtSelect.innerHTML = '<option value="">区县</option>';
 
-            if (provinceKey && cityKey && window.PROVINCE_DATA[provinceKey] && window.PROVINCE_DATA[provinceKey].cities[cityKey]) {
-                const districts = window.PROVINCE_DATA[provinceKey].cities[cityKey];
-                districts.forEach(d => {
-                    const opt = document.createElement('option');
-                    opt.value = d;
-                    opt.textContent = d;
-                    districtSelect.appendChild(opt);
-                });
+            if (!provinceCode || !cityCode) return;
+
+            // 动态加载区县
+            if (!locationCache.districts[cityCode]) {
+                const res = await fetch('/api/location/districts/' + cityCode, { credentials: 'same-origin' });
+                const data = await res.json();
+                locationCache.districts[cityCode] = data.data;
             }
+
+            locationCache.districts[cityCode].forEach(d => {
+                const opt = document.createElement('option');
+                opt.value = d.code;
+                opt.textContent = d.name;
+                districtSelect.appendChild(opt);
+            });
         }
 
         // 页面加载时检查登录状态并更新UI
@@ -1604,22 +1625,29 @@ if ('caches' in window) {
             const gpsStatusEl = document.getElementById('gpsStatus');
             if (gpsStatusEl) gpsStatusEl.textContent = user.gps_coords ? '✓ 已设置GPS' : '';
 
-            const provinceKey = user.hometown;
-            if (provinceKey && window.PROVINCE_DATA[provinceKey]) {
-                setValue('editProvince', provinceKey);
-                onProvinceChange();
-                setTimeout(() => {
-                    if (user.city) {
-                        const cityPinyin = window.CITY_TO_PINYIN[user.city] || user.city;
-                        setValue('editCity', cityPinyin);
-                        onCityChange();
-                        setTimeout(() => {
-                            if (user.district) {
-                                setValue('editDistrict', user.district);
-                            }
-                        }, 50);
+            // 使用API查找代码并回填
+            if (user.hometown_name) {
+                try {
+                    const lookupRes = await fetch('/api/location/lookup?province=' + encodeURIComponent(user.hometown_name) + '&city=' + encodeURIComponent(user.city || '') + '&district=' + encodeURIComponent(user.district || ''), { credentials: 'same-origin' });
+                    const lookupData = await lookupRes.json();
+                    if (lookupData.success && lookupData.data.province_code) {
+                        setValue('editProvince', lookupData.data.province_code);
+                        await onProvinceChange();
+                        if (lookupData.data.city_code) {
+                            setTimeout(() => {
+                                setValue('editCity', lookupData.data.city_code);
+                                onCityChange();
+                                if (lookupData.data.district_code) {
+                                    setTimeout(() => {
+                                        setValue('editDistrict', lookupData.data.district_code);
+                                    }, 50);
+                                }
+                            }, 50);
+                        }
                     }
-                }, 50);
+                } catch (e) {
+                    console.log('Location lookup error:', e);
+                }
             }
 
             if (user.avatar) {
@@ -1789,12 +1817,32 @@ if ('caches' in window) {
             xhr.send(formData);
         }
 
-        function submitProfileEdit(event) {
+        async function submitProfileEdit(event) {
             event.preventDefault();
 
             const form = event.target;
             const formData = new FormData(form);
             formData.append('student_id', window.currentUser.student_id);
+
+            // 转换地区代码为存储格式
+            const provinceCode = formData.get('hometown');
+            const cityCode = formData.get('city');
+            const districtCode = formData.get('district');
+
+            if (provinceCode) {
+                try {
+                    const res = await fetch('/api/location/codes_to_names?province=' + encodeURIComponent(provinceCode) + '&city=' + encodeURIComponent(cityCode || '') + '&district=' + encodeURIComponent(districtCode || ''), { credentials: 'same-origin' });
+                    const data = await res.json();
+                    if (data.success) {
+                        // 替换formData中的值
+                        formData.set('hometown', data.data.hometown || '');
+                        formData.set('city', data.data.city || '');
+                        formData.set('district', data.data.district || '');
+                    }
+                } catch (e) {
+                    console.log('Code conversion error:', e);
+                }
+            }
 
             fetch('/update_profile', {
                 method: 'POST',
@@ -1804,6 +1852,7 @@ if ('caches' in window) {
             .then(res => res.json())
             .then(data => {
                 if (data.success) {
+                    // 更新currentUser
                     Object.assign(window.currentUser, {
                         phone: formData.get('phone'),
                         email: formData.get('email'),
@@ -1811,6 +1860,7 @@ if ('caches' in window) {
                         position: formData.get('position'),
                         birthday: formData.get('birthday'),
                         hometown: formData.get('hometown'),
+                        hometown_name: data.data.hometown_name || window.currentUser.hometown_name,
                         city: formData.get('city'),
                         district: formData.get('district'),
                         hobby: formData.get('hobby'),

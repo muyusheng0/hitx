@@ -352,7 +352,7 @@
     }
 }
 
-.hero-badge {
+.hero-section .hero-badge {
     display: inline-block;
     background: rgba(201, 169, 110, 0.1);
     border: 1px solid rgba(201, 169, 110, 0.2);
@@ -364,7 +364,7 @@
     letter-spacing: 2px;
 }
 
-.hero-title {
+.hero-section .hero-title {
     font-family: 'ZCOOL XiaoWei', 'Noto Serif SC', serif;
     font-size: 3.2rem;
     font-weight: normal;
@@ -373,25 +373,25 @@
     margin-bottom: 1rem;
 }
 
-.hero-title span {
+.hero-section .hero-title span {
     color: #c9a96e;
 }
 
-.hero-subtitle {
+.hero-section .hero-subtitle {
     font-size: 1.1rem;
     color: rgba(255, 255, 255, 0.5);
     letter-spacing: 1px;
 }
 
-.hero-meta {
+.hero-section .hero-meta {
     display: flex;
     justify-content: center;
     gap: 2rem;
     flex-wrap: wrap;
 }
 
-.hero-location,
-.hero-year {
+.hero-section .hero-location,
+.hero-section .hero-year {
     font-size: 0.85rem;
     color: rgba(255, 255, 255, 0.4);
 }
@@ -424,7 +424,7 @@
     }
 }
 
-.stat-number {
+.hero-stats .stat-number {
     font-family: 'ZCOOL XiaoWei', serif;
     font-size: 2.8rem;
     font-weight: bold;
@@ -432,7 +432,7 @@
     line-height: 1.2;
 }
 
-.stat-label {
+.hero-stats .stat-label {
     font-size: 0.8rem;
     color: rgba(255, 255, 255, 0.4);
     margin-top: 0.5rem;
@@ -524,16 +524,16 @@
         margin-bottom: 2rem;
     }
 
-    .hero-title {
+    .hero-section .hero-title {
         font-size: 2rem;
         letter-spacing: 4px;
     }
 
-    .hero-subtitle {
+    .hero-section .hero-subtitle {
         font-size: 0.9rem;
     }
 
-    .hero-meta {
+    .hero-section .hero-meta {
         gap: 1.5rem;
     }
 
@@ -541,7 +541,7 @@
         gap: 2.5rem;
     }
 
-    .stat-number {
+    .hero-stats .stat-number {
         font-size: 2.2rem;
     }
 

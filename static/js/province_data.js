@@ -1,75 +1,75 @@
 /**
- * 中国省份城市数据 - 共享数据文件
+ * 中国省份数据 - 动态加载城市
+ * 只保留省份列表，城市和区县通过API动态获取
  */
 
-const PROVINCE_DATA = {
-    'beijing': { name: '北京', cities: { 'beijing': ['东城区', '西城区', '朝阳区', '丰台区', '石景山区', '海淀区', '门头沟区', '房山区', '通州区', '顺义区', '昌平区', '大兴区', '怀柔区', '平谷区', '密云区', '延庆区'] }},
-    'shanghai': { name: '上海', cities: { 'shanghai': ['黄浦区', '徐汇区', '长宁区', '静安区', '普陀区', '虹口区', '杨浦区', '闵行区', '宝山区', '嘉定区', '浦东新区', '金山区', '松江区', '青浦区', '奉贤区', '崇明区'] }},
-    'tianjin': { name: '天津', cities: { 'tianjin': ['和平区', '河东区', '河西区', '南开区', '河北区', '红桥区', '东丽区', '西青区', '津南区', '北辰区', '武清区', '宝坻区', '滨海新区', '宁河区', '静海区', '蓟州区'] }},
-    'chongqing': { name: '重庆', cities: { 'chongqing': ['万州区', '涪陵区', '渝中区', '大渡口区', '江北区', '沙坪坝区', '九龙坡区', '南岸区', '北碚区', '綦江区', '大足区', '渝北区', '巴南区', '黔江区', '长寿区', '江津区', '合川区', '永川区', '南川区', '璧山区', '铜梁区', '潼南区', '荣昌区', '开州区', '梁平区', '武隆区'] }},
-    'guangdong': { name: '广东', cities: { 'guangzhou': ['荔湾区', '越秀区', '海珠区', '天河区', '白云区', '黄埔区', '番禺区', '花都区', '南沙区', '从化区', '增城区'], 'shenzhen': ['罗湖区', '福田区', '南山区', '宝安区', '龙岗区', '盐田区', '龙华区', '坪山区', '光明区'], 'zhuhai': ['香洲区', '斗门区', '金湾区'], 'dongguan': ['莞城区', '南城区', '东城区', '万江区', '石碣镇', '石龙镇', '茶山镇', '石排镇', '企石镇', '横沥镇', '桥头镇', '谢岗镇', '东坑镇', '常平镇', '寮步镇', '大朗镇', '黄江镇', '清溪镇', '塘厦镇', '凤岗镇', '长安镇', '虎门镇', '厚街镇', '沙田镇', '道滘镇', '洪梅镇', '麻涌镇', '望牛墩镇', '中堂镇', '高埗镇'], 'foshan': ['禅城区', '南海区', '顺德区', '三水区', '高明区'], 'other': ['其他'] }},
-    'jiangsu': { name: '江苏', cities: { 'nanjing': ['玄武区', '秦淮区', '建邺区', '鼓楼区', '浦口区', '栖霞区', '雨花台区', '江宁区', '六合区', '溧水区', '高淳区'], 'suzhou': ['姑苏区', '虎丘区', '吴中区', '相城区', '吴江区', '苏州工业园区', '常熟市', '张家港市', '昆山市', '太仓市'], 'wuxi': ['锡山区', '惠山区', '滨湖区', '梁溪区', '新吴区', '江阴市', '宜兴市'], 'other': ['其他'] }},
-    'zhejiang': { name: '浙江', cities: { 'hangzhou': ['上城区', '下城区', '江干区', '拱墅区', '西湖区', '滨江区', '萧山区', '余杭区', '富阳区', '临安区', '桐庐县', '淳安县'], 'ningbo': ['海曙区', '江北区', '北仑区', '镇海区', '鄞州区', '奉化区', '余姚市', '慈溪市', '象山县', '宁海县'], 'wenzhou': ['鹿城区', '龙湾区', '瓯海区', '洞头区', '永嘉县', '平阳县', '苍南县', '文成县', '泰顺县', '瑞安市', '乐清市'], 'other': ['其他'] }},
-    'sichuan': { name: '四川', cities: { 'chengdu': ['锦江区', '青羊区', '金牛区', '武侯区', '成华区', '龙泉驿区', '青白江区', '新都区', '温江区', '双流区', '郫都区', '大邑县', '蒲江县', '新津县', '都江堰市', '彭州市', '邛崃市', '崇州市', '简阳市'], 'mianyang': ['涪城区', '游仙区', '安州区', '三台县', '盐亭县', '梓潼县', '北川县', '平武县', '江油市'], 'other': ['其他'] }},
-    'hubei': { name: '湖北', cities: { 'wuhan': ['江岸区', '江汉区', '硚口区', '汉阳区', '武昌区', '青山区', '洪山区', '东西湖区', '汉南区', '蔡甸区', '江夏区', '黄陂区', '新洲区'], 'yichang': ['西陵区', '伍家岗区', '点军区', '猇亭区', '夷陵区', '远安县', '兴山县', '秭归县', '长阳县', '五峰县', '宜都市', '当阳市', '枝江市'], 'other': ['其他'] }},
-    'hunan': { name: '湖南', cities: { 'changsha': ['芙蓉区', '天心区', '岳麓区', '开福区', '雨花区', '望城区', '长沙县', '浏阳市', '宁乡市'], 'zhuzhou': ['荷塘区', '芦淞区', '石峰区', '天元区', '株洲县', '攸县', '茶陵县', '炎陵县', '醴陵市'], 'other': ['其他'] }},
-    'henan': { name: '河南', cities: { 'zhengzhou': ['中原区', '二七区', '管城区', '金水区', '上街区', '惠济区', '中牟县', '巩义市', '荥阳市', '新密市', '新郑市', '登封市'], 'luoyang': ['老城区', '西工区', '瀍河区', '涧西区', '吉利区', '洛龙区', '孟津县', '新安县', '栾川县', '嵩县', '汝阳县', '宜阳县', '洛宁县', '伊川县', '偃师市'], 'other': ['其他'] }},
-    'shandong': { name: '山东', cities: { 'jinan': ['历下区', '市中区', '槐荫区', '天桥区', '历城区', '长清区', '平阴县', '济阳县', '商河县', '章丘区', '莱芜区', '钢城区'], 'qingdao': ['市南区', '市北区', '黄岛区', '崂山区', '李沧区', '城阳区', '胶州市', '即墨区', '平度市', '莱西市'], 'yantai': ['芝罘区', '福山区', '牟平区', '莱山区', '长岛县', '龙口市', '莱阳市', '莱州市', '蓬莱市', '招远市', '栖霞市', '海阳市'], 'weifang': ['潍城区', '寒亭区', '坊子区', '奎文区', '临朐县', '昌乐县', '青州市', '诸城市', '寿光市', '安丘市', '高密市', '昌邑市'], 'other': ['其他'] }},
-    'hebei': { name: '河北', cities: { 'shijiazhuang': ['长安区', '桥西区', '新华区', '井陉矿区', '裕华区', '藁城区', '鹿泉区', '栾城区', '井陉县', '正定县', '行唐县', '灵寿县', '高邑县', '深泽县', '赞皇县', '无极县', '平山县', '元氏县', '赵县', '晋州市', '新乐市'], 'baoding': ['竞秀区', '莲池区', '满城区', '清苑区', '徐水区', '涞水县', '阜平县', '定兴县', '唐县', '高阳县', '容城县', '涞源县', '望都县', '安新县', '易县', '曲阳县', '蠡县', '顺平县', '博野县', '雄县', '涿州市', '定州市', '安国市', '高碑店市'], 'tangshan': ['路南区', '路北区', '古冶区', '开平区', '丰南区', '丰润区', '曹妃甸区', '滦南县', '乐亭县', '迁西县', '玉田县', '遵化市', '迁安市'], 'other': ['其他'] }},
-    'shaanxi': { name: '陕西', cities: { 'xian': ['新城区', '碑林区', '莲湖区', '灞桥区', '未央区', '雁塔区', '阎良区', '临潼区', '长安区', '高陵区', '鄠邑区', '蓝田县', '周至县'], 'xianyang': ['秦都区', '杨陵区', '渭城区', '三原县', '泾阳县', '乾县', '礼泉县', '永寿县', '彬州市', '长武县', '旬邑县', '淳化县', '武功县', '兴平市'], 'other': ['其他'] }},
-    'liaoning': { name: '辽宁', cities: { 'shenyang': ['和平区', '沈河区', '大东区', '皇姑区', '铁西区', '苏家屯区', '浑南区', '沈北新区', '于洪区', '辽中区', '康平县', '法库县', '新民市'], 'dalian': ['中山区', '西岗区', '沙河口区', '甘井子区', '旅顺口区', '金州区', '普兰店区', '长海县', '瓦房店市', '庄河市'], 'anshan': ['铁东区', '铁西区', '立山区', '千山区', '台安县', '岫岩县', '海城市'], 'fushun': ['新抚区', '东洲区', '望花区', '顺城区', '抚顺县', '新宾县', '清原县'], 'other': ['其他'] }},
-    'jilin': { name: '吉林', cities: { 'changchun': ['南关区', '宽城区', '朝阳区', '二道区', '绿园区', '双阳区', '九台区', '农安县', '榆树市', '德惠市'], 'jilin': ['昌邑区', '龙潭区', '船营区', '丰满区', '永吉县', '蛟河市', '桦甸市', '舒兰市', '磐石市'], 'siping': ['铁西区', '铁东区', '梨树县', '伊通县', '公主岭市', '双辽市'], 'other': ['其他'] }},
-    'heilongjiang': { name: '黑龙江', cities: { 'harbin': ['道里区', '南岗区', '道外区', '平房区', '松北区', '香坊区', '呼兰区', '阿城区', '双城区', '依兰县', '方正县', '宾县', '巴彦县', '木兰县', '通河县', '延寿县', '尚志市', '五常市'], 'qiqihar': ['龙沙区', '建华区', '铁锋区', '昂昂溪区', '富拉尔基区', '碾子山区', '梅里斯区', '龙江县', '依安县', '泰来县', '甘南县', '富裕县', '克山县', '克东县', '拜泉县', '讷河市'], 'mudanjiang': ['东安区', '阳明区', '西安区', '爱民区', '林口县', '绥芬河市', '海林市', '宁安市', '穆棱市'], 'other': ['其他'] }},
-    'neimenggu': { name: '内蒙古', cities: { 'hohhot': ['新城区', '回民区', '玉泉区', '赛罕区', '土默特左旗', '托克托县', '和林格尔县', '清水河县', '武川县'], 'baotou': ['东河区', '昆都仑区', '青山区', '石拐区', '白云矿区', '九原区', '土默特右旗', '固阳县', '达尔罕茂明安联合旗'], 'other': ['其他'] }},
-    'xinjiang': { name: '新疆', cities: { 'urumqi': ['天山区', '沙依巴克区', '新市区', '水磨沟区', '头屯河区', '达坂城区', '米东区', '乌鲁木齐县'], 'other': ['其他'] }},
-    'gansu': { name: '甘肃', cities: { 'lanzhou': ['城关区', '七里河区', '西固区', '安宁区', '红古区', '永登县', '皋兰县', '榆中县'], 'other': ['其他'] }},
-    'qinghai': { name: '青海', cities: { 'xining': ['城东区', '城中区', '城西区', '城北区', '湟中县', '湟源县', '大通县'], 'other': ['其他'] }},
-    'ningxia': { name: '宁夏', cities: { 'yinchuan': ['兴庆区', '西夏区', '金凤区', '永宁县', '贺兰县', '灵武市'], 'other': ['其他'] }},
-    'shanxi': { name: '山西', cities: { 'taiyuan': ['小店区', '迎泽区', '杏花岭区', '尖草坪区', '万柏林区', '晋源区', '清徐县', '阳曲县', '娄烦县', '古交市'], 'datong': ['城区', '矿区', '南郊区', '新荣区', '阳高县', '天镇县', '广灵县', '灵丘县', '浑源县', '左云县', '大同县'], 'other': ['其他'] }},
-    'anhui': { name: '安徽', cities: { 'hefei': ['瑶海区', '庐江区', '蜀山区', '包河区', '长丰县', '肥东县', '肥西县', '庐江县'], 'wuhu': ['镜湖区', '弋江区', '鸠江区', '三山区', '芜湖县', '繁昌县', '南陵县', '无为县'], 'bangbu': ['龙子湖区', '蚌山区', '禹会区', '淮上区', '怀远县', '五河县', '固镇县'], 'other': ['其他'] }},
-    'fujian': { name: '福建', cities: { 'fuzhou': ['鼓楼区', '台江区', '仓山区', '马尾区', '晋安区', '长乐区', '闽侯县', '连江县', '罗源县', '闽清县', '永泰县', '平潭县', '福清市'], 'xiamen': ['思明区', '海沧区', '湖里区', '集美区', '同安区', '翔安区'], 'quanzhou': ['鲤城区', '丰泽区', '洛江区', '泉港区', '惠安县', '安溪县', '永春县', '德化县', '金门县', '石狮市', '晋江市', '南安市'], 'zhangzhou': ['芗城区', '龙文区', '云霄县', '漳浦县', '诏安县', '长泰县', '东山县', '南靖县', '平和县', '华安县', '龙海市'], 'other': ['其他'] }},
-    'jiangxi': { name: '江西', cities: { 'nanchang': ['东湖区', '西湖区', '青云谱区', '湾里区', '青山湖区', '新建区', '南昌县', '安义县', '进贤县'], 'ganzhou': ['章贡区', '南康区', '赣县', '信丰县', '大余县', '上犹县', '崇义县', '安远县', '龙南县', '定南县', '全南县', '宁都县', '于都县', '兴国县', '会昌县', '寻乌县', '石城县', '瑞金市'], 'jiujiang': ['庐山区', '浔阳区', '武宁县', '修水县', '永修县', '德安县', '星子县', '都昌县', '湖口县', '彭泽县', '瑞昌市', '共青城市'], 'other': ['其他'] }},
-    'guangxi': { name: '广西', cities: { 'nanning': ['兴宁区', '青秀区', '江南区', '西乡塘区', '良庆区', '邕宁区', '武鸣区', '隆安县', '马山县', '上林县', '宾阳县', '横县'], 'liuzhou': ['城中区', '鱼峰区', '柳南区', '柳北区', '柳江区', '柳城县', '鹿寨县', '融安县', '融水县', '三江县'], 'guilin': ['秀峰区', '叠彩区', '象山区', '七星区', '雁山区', '临桂区', '阳朔县', '灵川县', '全州县', '兴安县', '永福县', '灌阳县', '龙胜县', '资源县', '平乐县', '荔浦市', '恭城县'], 'other': ['其他'] }},
-    'hainan': { name: '海南', cities: { 'haikou': ['秀英区', '龙华区', '琼山区', '美兰区'], 'sanya': ['海棠区', '吉阳区', '天涯区', '崖州区'], 'other': ['其他'] }},
-    'yunnan': { name: '云南', cities: { 'kunming': ['五华区', '盘龙区', '官渡区', '西山区', '东川区', '呈贡区', '晋宁区', '富民县', '宜良县', '石林县', '嵩明县', '禄劝县', '寻甸县', '安宁市'], 'dali': ['大理市', '漾濞县', '祥云县', '宾川县', '弥渡县', '南涧县', '巍山县', '永平县', '云龙县', '洱源县', '剑川县', '鹤庆县'], 'other': ['其他'] }},
-    'guizhou': { name: '贵州', cities: { 'guiyang': ['南明区', '云岩区', '花溪区', '乌当区', '白云区', '观山湖区', '开阳县', '息烽县', '修文县', '清镇市'], 'zunyi': ['红花岗区', '汇川区', '播州区', '桐梓县', '绥阳县', '正安县', '道真县', '务川县', '凤冈县', '湄潭县', '余庆县', '习水县', '赤水市', '仁怀市'], 'other': ['其他'] }},
-    'xizang': { name: '西藏', cities: { 'lhasa': ['城关区', '堆龙德庆区', '达孜区', '林周县', '当雄县', '尼木县', '曲水县', '墨竹工卡县'], 'other': ['其他'] }},
-    'taiwan': { name: '台湾', cities: { 'taipei': ['中正区', '大同区', '中山区', '松山区', '大安区', '万华区', '信义区', '士林区', '北投区', '内湖区', '南港区', '文山区'], 'kaohsiung': ['盐埕区', '鼓山区', '左营区', '楠梓区', '三民区', '新兴区', '前金区', '苓雅区', '前镇区', '旗津区', '小港区'], 'other': ['其他'] }},
-    'xianggang': { name: '香港', cities: { 'hongkong': ['中西区', '湾仔区', '东区', '南区', '深水埗区', '油尖旺区', '九龙城区', '黄大仙区', '观塘区', '北区', '大埔区', '沙田区', '西贡区', '荃湾区', '屯门区', '元朗区', '葵青区', '离岛区'] }},
-    'aomen': { name: '澳门', cities: { 'macau': ['花地玛堂区', '圣安多尼堂区', '望德堂区', '大堂区', '风顺堂区'] }}
-};
+const PROVINCE_LIST = [
+    { key: 'beijing', name: '北京' },
+    { key: 'tianjin', name: '天津' },
+    { key: 'hebei', name: '河北' },
+    { key: 'shanxi', name: '山西' },
+    { key: 'neimenggu', name: '内蒙古' },
+    { key: 'liaoning', name: '辽宁' },
+    { key: 'jilin', name: '吉林' },
+    { key: 'heilongjiang', name: '黑龙江' },
+    { key: 'shanghai', name: '上海' },
+    { key: 'jiangsu', name: '江苏' },
+    { key: 'zhejiang', name: '浙江' },
+    { key: 'anhui', name: '安徽' },
+    { key: 'fujian', name: '福建' },
+    { key: 'jiangxi', name: '江西' },
+    { key: 'shandong', name: '山东' },
+    { key: 'henan', name: '河南' },
+    { key: 'hubei', name: '湖北' },
+    { key: 'hunan', name: '湖南' },
+    { key: 'guangdong', name: '广东' },
+    { key: 'guangxi', name: '广西' },
+    { key: 'hainan', name: '海南' },
+    { key: 'chongqing', name: '重庆' },
+    { key: 'sichuan', name: '四川' },
+    { key: 'guizhou', name: '贵州' },
+    { key: 'yunnan', name: '云南' },
+    { key: 'xizang', name: '西藏' },
+    { key: 'shaanxi', name: '陕西' },
+    { key: 'gansu', name: '甘肃' },
+    { key: 'qinghai', name: '青海' },
+    { key: 'ningxia', name: '宁夏' },
+    { key: 'xinjiang', name: '新疆' },
+    { key: 'taiwan', name: '台湾' },
+    { key: 'xianggang', name: '香港' },
+    { key: 'aomen', name: '澳门' }
+];
 
-// 城市中文名到拼音键的映射
+// 城市中文名到拼音键的映射（常用城市）
 const CITY_TO_PINYIN = {
     '北京': 'beijing', '上海': 'shanghai', '天津': 'tianjin', '重庆': 'chongqing',
     '广州': 'guangzhou', '深圳': 'shenzhen', '珠海': 'zhuhai', '东莞': 'dongguan', '佛山': 'foshan',
-    '南京': 'nanjing', '苏州': 'suzhou', '无锡': 'wuxi',
-    '杭州': 'hangzhou', '宁波': 'ningbo', '温州': 'wenzhou',
-    '成都': 'chengdu', '绵阳': 'mianyang',
-    '武汉': 'wuhan', '宜昌': 'yichang',
-    '长沙': 'changsha', '株洲': 'zhuzhou',
-    '郑州': 'zhengzhou', '洛阳': 'luoyang',
-    '济南': 'jinan', '青岛': 'qingdao', '烟台': 'yantai', '潍坊': 'weifang',
-    '石家庄': 'shijiazhuang', '保定': 'baoding', '唐山': 'tangshan',
-    '西安': 'xian', '咸阳': 'xianyang',
-    '沈阳': 'shenyang', '大连': 'dalian', '鞍山': 'anshan', '抚顺': 'fushun',
-    '长春': 'changchun', '吉林': 'jilin', '四平': 'siping',
-    '哈尔滨': 'harbin', '齐齐哈尔': 'qiqihar', '牡丹江': 'mudanjiang',
-    '呼和浩特': 'hohhot', '包头': 'baotou',
-    '乌鲁木齐': 'urumqi',
-    '兰州': 'lanzhou',
-    '西宁': 'xining',
-    '银川': 'yinchuan',
-    '太原': 'taiyuan', '大同': 'datong',
-    '合肥': 'hefei', '芜湖': 'wuhu', '蚌埠': 'bangbu',
-    '福州': 'fuzhou', '厦门': 'xiamen', '泉州': 'quanzhou', '漳州': 'zhangzhou',
-    '南昌': 'nanchang', '赣州': 'ganzhou', '九江': 'jiujiang',
-    '南宁': 'nanning', '柳州': 'liuzhou', '桂林': 'guilin',
-    '海口': 'haikou', '三亚': 'sanya',
-    '昆明': 'kunming', '大理': 'dali',
-    '贵阳': 'guiyang', '遵义': 'zunyi',
-    '拉萨': 'lhasa',
-    '台北': 'taipei', '高雄': 'kaohsiung',
+    '南京': 'nanjing', '苏州': 'suzhou', '无锡': 'wuxi', '常州': 'changzhou', '徐州': 'xuzhou', '南通': 'nantong', '扬州': 'yangzhou', '盐城': 'yancheng', '连云港': 'lianyungang', '淮安': 'huaian', '泰州': 'taizhou', '镇江': 'zhenjiang', '宿迁': 'suqian',
+    '杭州': 'hangzhou', '宁波': 'ningbo', '温州': 'wenzhou', '嘉兴': 'jiaxing', '湖州': 'huzhou', '绍兴': 'shaoxing', '金华': 'jinhua', '衢州': 'quzhou', '舟山': 'zhoushan', '台州': 'taizhou', '丽水': 'lishui',
+    '合肥': 'hefei', '芜湖': 'wuhu', '蚌埠': 'bangbu', '淮南': 'huainan', '马鞍山': 'maanshan', '淮北': 'huaibei', '铜陵': 'tongling', '安庆': 'anqing', '黄山': 'huangshan', '滁州': 'chuzhou', '阜阳': 'fuyang', '宿州': 'suzhou', '六安': 'liuan', '亳州': 'bozhou', '池州': 'chizhou', '宣城': 'xuancheng',
+    '福州': 'fuzhou', '厦门': 'xiamen', '泉州': 'quanzhou', '漳州': 'zhangzhou', '莆田': 'putian', '三明': 'sanming', '南平': 'nanping', '龙岩': 'longyan', '宁德': 'ningde',
+    '南昌': 'nanchang', '景德镇': 'jingdezhen', '九江': 'jiujiang', '赣州': 'ganzhou', '吉安': 'jian', '宜春': 'yichun', '抚州': 'fuzhou', '上饶': 'shangrao', '萍乡': 'pingxiang', '新余': 'xinyu', '鹰潭': 'yingtan',
+    '济南': 'jinan', '青岛': 'qingdao', '烟台': 'yantai', '潍坊': 'weifang', '威海': 'weihai', '淄博': 'zibo', '枣庄': 'zaozhuang', '东营': 'dongying', '济宁': 'jining', '泰安': 'taian', '日照': 'rizhao', '莱芜': 'laiwu', '临沂': 'linyi', '德州': 'dezhou', '聊城': 'liaocheng', '滨州': 'binzhou', '菏泽': 'heze',
+    '郑州': 'zhengzhou', '洛阳': 'luoyang', '开封': 'kaifeng', '平顶山': 'pingdingshan', '安阳': 'anyang', '鹤壁': 'hebi', '新乡': 'xinxiang', '焦作': 'jiaozuo', '濮阳': 'puyang', '许昌': 'xuchang', '漯河': 'luohe', '三门峡': 'sanmenxia', '南阳': 'nanyang', '商丘': 'shangqiu', '信阳': 'xinyang', '周口': 'zhoukou', '驻马店': 'zhumadian', '济源': 'jiyuan',
+    '武汉': 'wuhan', '黄石': 'huangshi', '十堰': 'shiyan', '宜昌': 'yichang', '襄阳': 'xiangyang', '鄂州': 'ezhou', '荆门': 'jingmen', '孝感': 'xiaogan', '荆州': 'jingzhou', '黄冈': 'huanggang', '咸宁': 'xianning', '随州': 'suizhou', '恩施': 'enshi', '仙桃': 'xiantao', '潜江': 'qianjiang', '天门': 'tianmen', '神农架': 'shennongjia',
+    '长沙': 'changsha', '株洲': 'zhuzhou', '湘潭': 'xiangtan', '衡阳': 'hengyang', '邵阳': 'shaoyang', '岳阳': 'yueyang', '常德': 'changde', '张家界': 'zhangjiajie', '益阳': 'yiyang', '郴州': 'chenzhou', '永州': 'yongzhou', '怀化': 'huaihua', '娄底': 'loudi', '湘西': 'xiangxi',
+    '广州': 'guangzhou', '深圳': 'shenzhen', '珠海': 'zhuhai', '东莞': 'dongguan', '佛山': 'foshan', '中山': 'zhongshan', '惠州': 'huizhou', '江门': 'jiangmen', '湛江': 'zhanjiang', '茂名': 'maoming', '肇庆': 'zhaoqing', '梅州': 'meizhou', '汕尾': 'shanwei', '河源': 'heyuan', '阳江': 'yangjiang', '清远': 'qingyuan', '韶关': 'shaoguan', '揭阳': 'jieyang', '潮州': 'chaozhou', '汕头': 'shantou', '云浮': 'yunfu',
+    '南宁': 'nanning', '柳州': 'liuzhou', '桂林': 'guilin', '梧州': 'wuzhou', '北海': 'beihai', '防城港': 'fangchenggang', '钦州': 'qinzhou', '贵港': 'guigang', '玉林': 'yulin', '百色': 'baise', '贺州': 'hezhou', '河池': 'hechi', '来宾': 'laibin', '崇左': 'chongzuo',
+    '海口': 'haikou', '三亚': 'sanya', '三沙': 'sansha', '儋州': 'danzhou',
+    '成都': 'chengdu', '绵阳': 'mianyang', '自贡': 'zigong', '攀枝花': 'panzhihua', '泸州': 'luzhou', '德阳': 'deyang', '广元': 'guangyuan', '遂宁': 'suining', '内江': 'neijiang', '乐山': 'leshan', '南充': 'nanchong', '眉山': 'meishan', '宜宾': 'yibin', '广安': 'guangan', '达州': 'dazhou', '雅安': 'yaan', '巴中': 'bazhong', '资阳': 'ziyang', '阿坝': 'aba', '甘孜': 'ganzi', '凉山': 'liangshan',
+    '贵阳': 'guiyang', '遵义': 'zunyi', '六盘水': 'liupanshui', '安顺': 'anshun', '毕节': 'bijie', '铜仁': 'tongren', '黔西南': 'qianxinna', '黔东南': 'qiandongnan', '黔南': 'qiannan',
+    '昆明': 'kunming', '曲靖': 'qujing', '玉溪': 'yuxi', '保山': 'baoshan', '昭通': 'zhaotong', '丽江': 'lijiang', '普洱': 'puer', '临沧': 'lincang', '楚雄': 'chuxiong', '红河': 'honghe', '文山': 'wenshan', '西双版纳': 'xishuangbanna', '大理': 'dali', '德宏': 'dehong', '怒江': 'nujiang', '迪庆': 'diqing',
+    '拉萨': 'lhasa', '日喀则': 'rikaze', '昌都': 'changdu', '林芝': 'linzhi', '山南': 'shannan', '那曲': 'naqu', '阿里': 'ali',
+    '西安': 'xian', '宝鸡': 'baoji', '咸阳': 'xianyang', '铜川': 'tongchuan', '渭南': 'weinan', '延安': 'yanan', '汉中': 'hanzhong', '榆林': 'yulin', '安康': 'ankang', '商洛': 'shangluo',
+    '兰州': 'lanzhou', '嘉峪关': 'jiayuguan', '金昌': 'jinchang', '白银': 'baiyin', '天水': 'tianshui', '武威': 'wuwei', '张掖': 'zhangye', '平凉': 'pingliang', '酒泉': 'jiuquan', '庆阳': 'qingyang', '定西': 'dingxi', '陇南': 'longnan', '临夏': 'linxia', '甘南': 'gannan',
+    '西宁': 'xining', '海东': 'haidong', '海北': 'haibei', '黄南': 'huangnan', '海南州': 'hainanzhou', '果洛': 'guoluo', '玉树': 'yushu', '海西': 'haixi',
+    '银川': 'yinchuan', '石嘴山': 'shizuishan', '吴忠': 'wuzhong', '固原': 'guyuan', '中卫': 'zhongwei',
+    '乌鲁木齐': 'urumqi', '克拉玛依': 'kelamayi', '吐鲁番': 'tulufan', '哈密': 'hami', '昌吉': 'changji', '博尔塔拉': 'boertala', '巴音郭楞': 'bayinguoleng', '阿克苏': 'akesu', '克孜勒苏': 'kezilesu', '喀什': 'kashi', '和田': 'hetian', '伊犁': 'yili', '塔城': 'tacheng', '阿勒泰': 'aletai',
+    '呼和浩特': 'hohhot', '包头': 'baotou', '乌海': 'wuhai', '赤峰': 'chifeng', '通辽': 'tongliao', '鄂尔多斯': 'eerduosi', '呼伦贝尔': 'hulunbeier', '巴彦淖尔': 'bayannaoer', '乌兰察布': 'wulanchabu', '兴安': 'xingan', '锡林郭勒': 'xilinguole', '阿拉善': 'alashan',
+    '沈阳': 'shenyang', '大连': 'dalian', '鞍山': 'anshan', '抚顺': 'fushun', '本溪': 'benxi', '丹东': 'dandong', '锦州': 'jinzhou', '营口': 'yingkou', '阜新': 'fuxin', '辽阳': 'liaoyang', '盘锦': 'panjin', '铁岭': 'tieling', '朝阳': 'chaoyang', '葫芦岛': 'huludao',
+    '长春': 'changchun', '吉林': 'jilin', '四平': 'siping', '辽源': 'liaoyuan', '通化': 'tonghua', '白山': 'baishan', '松原': 'songyuan', '白城': 'baicheng', '延边': 'yanbian',
+    '哈尔滨': 'harbin', '齐齐哈尔': 'qiqihar', '鸡西': 'jixi', '鹤岗': 'hegang', '双鸭山': 'shuangyashan', '大庆': 'daqing', '伊春': 'yichun', '佳木斯': 'jiamusi', '七台河': 'qitaihe', '牡丹江': 'mudanjiang', '黑河': 'heihe', '绥化': 'suihua', '大兴安岭': 'daxinganling',
+    '台北': 'taipei', '高雄': 'kaohsiung', '基隆': 'keelung', '新北': 'xinbei', '桃园': 'taoyuan', '台中': 'taichung', '台南': 'tainan', '新竹': 'hsinchu',
     '香港': 'hongkong', '澳门': 'macau'
 };
 
@@ -78,45 +78,8 @@ const PINYIN_TO_CITY = {};
 for (const city in CITY_TO_PINYIN) {
     PINYIN_TO_CITY[CITY_TO_PINYIN[city]] = city;
 }
-// 添加首府城市的映射
-PINYIN_TO_CITY['beijing'] = '北京';
-PINYIN_TO_CITY['shanghai'] = '上海';
-PINYIN_TO_CITY['tianjin'] = '天津';
-PINYIN_TO_CITY['chongqing'] = '重庆';
-PINYIN_TO_CITY['guangzhou'] = '广州';
-PINYIN_TO_CITY['shenzhen'] = '深圳';
-PINYIN_TO_CITY['nanjing'] = '南京';
-PINYIN_TO_CITY['hangzhou'] = '杭州';
-PINYIN_TO_CITY['chengdu'] = '成都';
-PINYIN_TO_CITY['wuhan'] = '武汉';
-PINYIN_TO_CITY['xian'] = '西安';
-PINYIN_TO_CITY['shenyang'] = '沈阳';
-PINYIN_TO_CITY['changchun'] = '长春';
-PINYIN_TO_CITY['harbin'] = '哈尔滨';
-PINYIN_TO_CITY['zhengzhou'] = '郑州';
-PINYIN_TO_CITY['jinan'] = '济南';
-PINYIN_TO_CITY['changsha'] = '长沙';
-PINYIN_TO_CITY['nanchang'] = '南昌';
-PINYIN_TO_CITY['fuzhou'] = '福州';
-PINYIN_TO_CITY['nanning'] = '南宁';
-PINYIN_TO_CITY['guiyang'] = '贵阳';
-PINYIN_TO_CITY['kunming'] = '昆明';
-PINYIN_TO_CITY['haikou'] = '海口';
-PINYIN_TO_CITY['sanya'] = '三亚';
-PINYIN_TO_CITY['lanzhou'] = '兰州';
-PINYIN_TO_CITY['xining'] = '西宁';
-PINYIN_TO_CITY['yinchuan'] = '银川';
-PINYIN_TO_CITY['urumqi'] = '乌鲁木齐';
-PINYIN_TO_CITY['hohhot'] = '呼和浩特';
-PINYIN_TO_CITY['taiyuan'] = '太原';
-PINYIN_TO_CITY['hefei'] = '合肥';
-PINYIN_TO_CITY['shijiazhuang'] = '石家庄';
-PINYIN_TO_CITY['taipei'] = '台北';
-PINYIN_TO_CITY['kaohsiung'] = '高雄';
-PINYIN_TO_CITY['hongkong'] = '香港';
-PINYIN_TO_CITY['macau'] = '澳门';
 
 // 导出到window对象
-window.PROVINCE_DATA = PROVINCE_DATA;
+window.PROVINCE_LIST = PROVINCE_LIST;
 window.CITY_TO_PINYIN = CITY_TO_PINYIN;
 window.PINYIN_TO_CITY = PINYIN_TO_CITY;

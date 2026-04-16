@@ -1,537 +1,689 @@
 /**
- * 留言板「时光信箱」样式
- * 每条留言像一封从时光信箱投递出来的复古信件
+ * 留言板「朋友圈」样式
+ * 微信朋友圈风格，直接展示所有内容，无需展开
  */
 
-/* ==================== 信封卡片容器 ==================== */
+/* ==================== 留言列表容器 ==================== */
 .message-list {
     display: flex;
     flex-direction: column;
-    gap: 30px;
-    padding: 20px 0;
-    perspective: 1000px;
+    gap: 0;
+    padding: 10px 0;
 }
 
-/* ==================== 信封主体 ==================== */
+/* ==================== 留言卡片（朋友圈风格） ==================== */
 .envelope-card {
     position: relative;
-    width: 100%;
-    max-width: 500px;
-    margin: 0 auto;
-    cursor: pointer;
-    transform-style: preserve-3d;
-    transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-    box-sizing: border-box;
+    background: #fff;
+    padding: 16px;
+    margin-bottom: 12px;
+    border-radius: 0;
+    border-bottom: 1px solid #f0f0f0;
+    animation: fadeInUp 0.4s ease backwards;
 }
 
-.envelope-card:hover {
-    transform: translateY(-5px) rotateX(2deg);
+.envelope-card:nth-child(1) { animation-delay: 0.05s; }
+.envelope-card:nth-child(2) { animation-delay: 0.08s; }
+.envelope-card:nth-child(3) { animation-delay: 0.11s; }
+.envelope-card:nth-child(4) { animation-delay: 0.14s; }
+.envelope-card:nth-child(5) { animation-delay: 0.17s; }
+.envelope-card:nth-child(6) { animation-delay: 0.2s; }
+.envelope-card:nth-child(n+7) { animation-delay: 0.23s; }
+
+@keyframes fadeInUp {
+    0% {
+        opacity: 0;
+        transform: translateY(15px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
-/* 信封外壳 */
+/* 移除所有信封装饰 */
+.envelope-flap,
+.wax-seal,
+.postmark,
+.expand-hint {
+    display: none !important;
+}
+
+/* 移除信封背景 */
 .envelope-body {
-    position: relative;
-    background: linear-gradient(145deg, #f5e6d3 0%, #e8d5c4 50%, #dcc8b5 100%);
-    border-radius: 8px;
-    padding: 25px 20px 20px 20px;
-    box-shadow:
-        0 4px 15px rgba(0, 0, 0, 0.15),
-        inset 0 1px 0 rgba(255, 255, 255, 0.5);
+    background: none !important;
+    padding: 0 !important;
+    box-shadow: none !important;
 }
-
-/* 信封纹理 */
 .envelope-body::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.05'/%3E%3C/svg%3E");
-    border-radius: 8px;
-    pointer-events: none;
-    opacity: 0.5;
+    display: none !important;
 }
 
-/* ==================== 信封封口 ==================== */
-.envelope-flap {
-    position: absolute;
-    top: -5px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 80%;
-    height: 40px;
-    background: linear-gradient(180deg, #dcc8b5 0%, #c9b8a8 100%);
-    clip-path: polygon(50% 0%, 100% 100%, 0% 100%);
-    z-index: 2;
-    transition: all 0.3s ease;
-}
-
-.envelope-card.open .envelope-flap {
-    transform: translateX(-50%) rotateX(180deg);
-    opacity: 0.7;
-}
-
-/* 蜡封 */
-.wax-seal {
-    position: absolute;
-    top: -12px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 36px;
-    height: 36px;
-    background: radial-gradient(circle at 30% 30%, #c0392b 0%, #8b0000 70%, #5c0000 100%);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 16px;
-    z-index: 3;
-    box-shadow:
-        0 2px 8px rgba(0, 0, 0, 0.3),
-        inset 0 -2px 4px rgba(0, 0, 0, 0.2),
-        inset 0 2px 4px rgba(255, 255, 255, 0.1);
-    transition: transform 0.3s ease;
-}
-
-.envelope-card:hover .wax-seal {
-    transform: translateX(-50%) scale(1.1);
-}
-
-.wax-seal::after {
-    content: '✉';
-    color: rgba(255, 255, 255, 0.9);
-    font-size: 14px;
-}
-
-/* ==================== 邮戳日期章 ==================== */
-.postmark {
-    position: absolute;
-    top: 8px;
-    right: 15px;
-    width: 60px;
-    height: 60px;
-    border: 3px solid #8b4513;
-    border-radius: 50%;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    opacity: 0.6;
-    transform: rotate(-15deg);
-}
-
-.postmark-date {
-    font-family: 'Courier New', monospace;
-    font-size: 8px;
-    font-weight: bold;
-    color: #8b4513;
-    text-align: center;
-    line-height: 1.2;
-}
-
-.postmark-year {
-    font-size: 10px;
-}
-
-/* ==================== 信纸内容 ==================== */
-.letter-content {
-    position: relative;
-    background: linear-gradient(to bottom, #fffef8 0%, #faf6e8 100%);
-    padding: 20px;
-    margin-top: 15px;
-    border-radius: 4px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-    transform-origin: top center;
-    transition: all 0.4s ease;
-}
-
-.envelope-card:not(.open) .letter-content {
-    max-height: 120px;
-    overflow: hidden;
-}
-
-.envelope-card.open .letter-content {
-    max-height: 500px;
-}
-
-/* 信纸装饰线 */
-.letter-content::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 20px;
-    right: 20px;
-    height: 2px;
-    background: repeating-linear-gradient(
-        90deg,
-        transparent,
-        transparent 3px,
-        #d4a574 3px,
-        #d4a574 6px
-    );
-    opacity: 0.3;
-}
-
-/* ==================== 头部信息 ==================== */
+/* ==================== 头部（头像+昵称+时间） ==================== */
 .letter-header {
     display: flex;
-    align-items: center;
-    margin-bottom: 12px;
-    padding-bottom: 10px;
-    border-bottom: 1px dashed #d4a574;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 10px;
+    padding-bottom: 0;
+    border-bottom: none;
 }
 
 .letter-avatar {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    border: 2px solid #d4a574;
+    width: 42px;
+    height: 42px;
+    border-radius: 6px;
+    border: none;
     object-fit: cover;
-    background: #f5e6d3;
+    background: #e0e0e0;
     background-size: cover;
     background-position: center;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'ZCOOL XiaoWei', serif;
+    font-size: 1.2rem;
+    color: #666;
 }
 
 .letter-info {
-    margin-left: 12px;
+    margin-left: 0;
+    flex: 1;
+    min-width: 0;
 }
 
 .letter-nickname {
     font-family: 'ZCOOL XiaoWei', 'Noto Serif SC', serif;
-    font-size: 1.1rem;
-    color: #2c3e50;
+    font-size: 1rem;
+    font-weight: 500;
+    color: #4c6b8a;
 }
 
 .letter-time {
     font-size: 0.75rem;
-    color: #8b7355;
+    color: #b0b0b0;
     margin-top: 2px;
 }
 
-/* ==================== 手写体内容 ==================== */
+/* ==================== 留言内容 ==================== */
+.letter-content {
+    position: relative;
+    background: none;
+    padding: 0;
+    margin-top: 0;
+    border-radius: 0;
+    box-shadow: none;
+    transform-origin: none;
+    transition: none;
+    max-height: none;
+    overflow: visible;
+}
+.letter-content::before {
+    display: none;
+}
+
 .letter-text {
-    font-family: 'Ma Shan Zheng', 'ZCOOL XiaoWei', 'Noto Serif SC', cursive;
-    font-size: 1rem;
-    color: #3d3d3d;
-    line-height: 2;
-    padding: 10px 0;
+    font-family: 'ZCOOL XiaoWei', 'Noto Serif SC', serif;
+    font-size: 0.95rem;
+    color: #333;
+    line-height: 1.7;
+    padding: 0;
+    margin-bottom: 12px;
+    word-break: break-word;
 }
-
-/* 引号装饰 */
-.letter-text::before {
-    content: '"';
-    font-size: 2rem;
-    color: #d4a574;
-    opacity: 0.5;
-    margin-right: 5px;
-}
-
+.letter-text::before,
 .letter-text::after {
-    content: '"';
-    font-size: 2rem;
-    color: #d4a574;
-    opacity: 0.5;
-    margin-left: 5px;
+    display: none;
 }
 
 /* ==================== 签名 ==================== */
 .letter-signature {
     text-align: right;
-    font-family: 'Ma Shan Zheng', cursive;
-    font-size: 1rem;
-    color: #8b4513;
-    margin-top: 15px;
+    font-family: 'ZCOOL XiaoWei', cursive;
+    font-size: 0.85rem;
+    color: #b0b0b0;
+    margin-top: 10px;
+    margin-bottom: 0;
 }
-
 .letter-signature::before {
     content: '—— ';
 }
 
 /* ==================== 留言图片 ==================== */
 .letter-image {
-    margin-top: 15px;
-    padding: 10px;
-    background: #faf6e8;
-    border-radius: 4px;
+    margin: 12px 0;
+    padding: 0;
+    background: none;
+    border-radius: 6px;
+    overflow: hidden;
 }
-
 .letter-image img {
     max-width: 100%;
-    max-height: 200px;
-    border-radius: 4px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    max-height: 300px;
+    object-fit: cover;
+    border-radius: 6px;
+    box-shadow: none;
     cursor: pointer;
-    transition: transform 0.2s ease;
+    transition: opacity 0.2s ease;
+    display: block;
 }
-
 .letter-image img:hover {
-    transform: scale(1.02);
+    opacity: 0.9;
+    transform: none;
 }
 
 /* ==================== 互动按钮 ==================== */
 .letter-actions {
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    margin-top: 15px;
-    padding-top: 12px;
-    border-top: 1px dotted #d4a574;
+    justify-content: flex-end;
+    gap: 16px;
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: none;
 }
 
-.letter-like-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    padding: 6px 12px;
-    background: none;
-    border: 1px solid #d4a574;
-    border-radius: 20px;
-    cursor: pointer;
-    font-size: 0.85rem;
-    color: #8b7355;
-    transition: all 0.3s ease;
-}
-
-.letter-like-btn:hover {
-    background: rgba(212, 165, 116, 0.2);
-    color: #c0392b;
-    border-color: #c0392b;
-}
-
-.letter-like-btn.liked {
-    background: rgba(192, 57, 43, 0.1);
-    color: #c0392b;
-    border-color: #c0392b;
-}
-
+.letter-like-btn,
 .letter-comment-btn {
     display: inline-flex;
     align-items: center;
-    gap: 5px;
-    padding: 6px 12px;
+    gap: 4px;
+    padding: 4px 10px;
     background: none;
-    border: 1px solid #d4a574;
-    border-radius: 20px;
+    border: none;
+    border-radius: 4px;
     cursor: pointer;
     font-size: 0.85rem;
-    color: #8b7355;
-    transition: all 0.3s ease;
+    color: #888;
+    transition: all 0.2s ease;
 }
 
+.letter-like-btn:hover,
 .letter-comment-btn:hover {
-    background: rgba(212, 165, 116, 0.2);
-    color: #2c3e50;
+    background: rgba(0,0,0,0.04);
 }
 
-/* ==================== 展开提示 ==================== */
-.expand-hint {
-    text-align: center;
-    padding: 10px;
-    color: #8b7355;
+.letter-like-btn.liked {
+    color: #e74c3c;
+}
+.letter-like-btn.liked .like-icon {
+    color: #e74c3c;
+}
+
+/* ==================== 点赞列表 ==================== */
+.letter-likes-list {
+    background: #f7f7f7;
+    padding: 6px 10px;
+    margin-top: 10px;
+    border-radius: 4px;
     font-size: 0.8rem;
-    opacity: 0.7;
-    transition: opacity 0.3s ease;
+}
+.letter-likes-list span {
+    color: #4c6b8a;
+    font-weight: 500;
 }
 
-.envelope-card:hover .expand-hint {
-    opacity: 1;
-}
-
-.expand-hint::before {
-    content: '▼ ';
-}
-
-.envelope-card.open .expand-hint::before {
-    content: '▲ ';
-}
-
-/* ==================== 入场动画 ==================== */
-@keyframes envelope-arrive {
-    0% {
-        opacity: 0;
-        transform: translateY(-50px) rotateX(20deg);
-    }
-    60% {
-        transform: translateY(10px) rotateX(-5deg);
-    }
-    100% {
-        opacity: 1;
-        transform: translateY(0) rotateX(0deg);
-    }
-}
-
-.envelope-card {
-    animation: envelope-arrive 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
-}
-
-.envelope-card:nth-child(1) { animation-delay: 0.05s; }
-.envelope-card:nth-child(2) { animation-delay: 0.1s; }
-.envelope-card:nth-child(3) { animation-delay: 0.15s; }
-.envelope-card:nth-child(4) { animation-delay: 0.2s; }
-.envelope-card:nth-child(5) { animation-delay: 0.25s; }
-.envelope-card:nth-child(6) { animation-delay: 0.3s; }
-.envelope-card:nth-child(7) { animation-delay: 0.35s; }
-.envelope-card:nth-child(8) { animation-delay: 0.4s; }
-
-/* ==================== 移动端适配 ==================== */
-@media (max-width: 600px) {
-    .envelope-card {
-        width: calc(100% - 16px);
-        margin-left: 8px;
-        margin-right: 8px;
-        overflow: hidden;
-    }
-
-    .envelope-body {
-        padding: 18px 12px 12px 12px;
-        overflow: hidden;
-    }
-
-    .envelope-flap {
-        height: 30px;
-    }
-
-    .wax-seal {
-        width: 28px;
-        height: 28px;
-        top: -6px;
-    }
-
-    .wax-seal::after {
-        font-size: 11px;
-    }
-
-    .postmark {
-        width: 40px;
-        height: 40px;
-        top: 5px;
-        right: 8px;
-    }
-
-    .postmark-date {
-        font-size: 5px;
-    }
-
-    .postmark-year {
-        font-size: 8px;
-    }
-
-    .letter-content {
-        padding: 15px;
-    }
-
-    .letter-text {
-        font-size: 0.95rem;
-        line-height: 1.8;
-    }
-
-    .letter-text::before,
-    .letter-text::after {
-        font-size: 1.5rem;
-    }
-
-    .letter-avatar {
-        width: 35px;
-        height: 35px;
-    }
-
-    .letter-nickname {
-        font-size: 1rem;
-    }
-}
-
-/* ==================== 评论区样式 ==================== */
+/* ==================== 评论区 ==================== */
 .letter-comments {
-    margin-top: 15px;
-    padding-top: 15px;
-    border-top: 1px dashed #d4a574;
+    margin-top: 10px;
+    padding-top: 0;
+    border-top: none;
+}
+
+.comments-list {
+    background: #f7f7f7;
+    padding: 8px 10px;
+    border-radius: 4px;
 }
 
 .comment-item {
-    display: flex;
-    gap: 10px;
-    padding: 8px 0;
+    display: block;
+    gap: 0;
+    padding: 6px 0;
+    border-bottom: 1px solid #eee;
+    font-size: 0.85rem;
+    line-height: 1.5;
+}
+.comment-item:last-child {
+    border-bottom: none;
 }
 
-.comment-avatar {
-    width: 28px;
-    height: 28px;
-    border-radius: 50%;
-    border: 1px solid #d4a574;
-    object-fit: cover;
-    background: #f5e6d3;
-    flex-shrink: 0;
+.comment-nickname {
+    color: #4c6b8a;
+    font-weight: 500;
 }
 
 .comment-content {
-    flex: 1;
-}
-
-.comment-author {
-    font-weight: 500;
-    color: #2c3e50;
-    font-size: 0.85rem;
-}
-
-.comment-text {
-    font-size: 0.85rem;
-    color: #3d3d3d;
-    margin-top: 2px;
+    color: #333;
 }
 
 .comment-time {
     font-size: 0.7rem;
-    color: #8b7355;
+    color: #b0b0b0;
     margin-top: 2px;
+    display: block;
 }
 
-/* 评论输入区域 - 确保不被底部导航栏遮挡 */
 .comment-input-area {
     display: flex;
     gap: 8px;
-    margin-top: 10px;
+    margin-top: 8px;
     padding-bottom: env(safe-area-inset-bottom, 10px);
 }
 
 .comment-input {
     flex: 1;
     padding: 8px 12px;
-    border: 1px solid #d4a574;
-    border-radius: 20px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
     font-size: 0.85rem;
     min-width: 0;
+    background: #fafafa;
+}
+.comment-input:focus {
+    outline: none;
+    border-color: #4c6b8a;
+    background: #fff;
 }
 
 .comment-submit-btn {
     padding: 8px 16px;
-    background: var(--secondary);
+    background: #4c6b8a;
     color: white;
     border: none;
-    border-radius: 20px;
+    border-radius: 6px;
     cursor: pointer;
     font-size: 0.85rem;
     white-space: nowrap;
     flex-shrink: 0;
 }
+.comment-submit-btn:hover {
+    background: #3d5a73;
+}
 
+/* ==================== 语音留言播放器 ==================== */
+.voice-message-player {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: #f0f2f5;
+    padding: 8px 14px;
+    border-radius: 6px;
+    margin: 10px 0;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.voice-message-player:hover {
+    background: #e8eaed;
+}
+.voice-message-player .voice-play-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1.1rem;
+    padding: 0;
+}
+.voice-wave {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    height: 16px;
+}
+.voice-wave span {
+    display: block;
+    width: 3px;
+    background: #4c6b8a;
+    border-radius: 2px;
+    animation: none;
+}
+.voice-message-player.playing .voice-wave span {
+    animation: voiceWave 0.6s ease-in-out infinite alternate;
+}
+.voice-wave span:nth-child(1) { height: 6px; animation-delay: 0s; }
+.voice-wave span:nth-child(2) { height: 12px; animation-delay: 0.1s; }
+.voice-wave span:nth-child(3) { height: 8px; animation-delay: 0.2s; }
+.voice-wave span:nth-child(4) { height: 14px; animation-delay: 0.3s; }
+.voice-wave span:nth-child(5) { height: 6px; animation-delay: 0.4s; }
+
+@keyframes voiceWave {
+    0% { height: 4px; }
+    100% { height: 16px; }
+}
+
+.voice-duration {
+    font-size: 0.8rem;
+    color: #888;
+}
+
+/* ==================== 删除按钮 ==================== */
+.delete-msg-btn {
+    display: none !important;
+    background: none !important;
+    border: none !important;
+    color: #ccc !important;
+    cursor: pointer;
+    font-size: 0.8rem !important;
+    padding: 4px !important;
+}
+.delete-msg-btn:hover {
+    color: #e74c3c !important;
+}
+
+/* ==================== 留言输入框（朋友圈风格） ==================== */
+.msg-compose-card {
+    background: #fff;
+    border-radius: 8px;
+    padding: 14px;
+    margin-bottom: 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+
+.msg-compose-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.msg-compose-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 6px;
+    background: #4c6b8a;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.9rem;
+    flex-shrink: 0;
+}
+
+.msg-compose-textarea {
+    flex: 1;
+    border: none;
+    resize: none;
+    font-size: 0.95rem;
+    line-height: 1.6;
+    color: #333;
+    min-height: 60px;
+    padding: 8px 0;
+}
+.msg-compose-textarea:focus {
+    outline: none;
+}
+.msg-compose-textarea::placeholder {
+    color: #b0b0b0;
+}
+
+.msg-compose-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid #f0f0f0;
+}
+
+.msg-compose-tools {
+    display: flex;
+    gap: 8px;
+}
+
+.msg-tool-btn {
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    transition: background 0.2s;
+}
+.msg-tool-btn:hover {
+    background: rgba(0,0,0,0.04);
+}
+
+.msg-compose-count {
+    font-size: 0.75rem;
+    color: #b0b0b0;
+}
+
+.msg-compose-preview {
+    max-width: 100%;
+    max-height: 200px;
+    border-radius: 6px;
+    margin-top: 10px;
+    object-fit: cover;
+}
+
+.msg-submit-btn {
+    margin-top: 12px;
+    width: 100%;
+    padding: 10px;
+    background: #4c6b8a;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.msg-submit-btn:hover {
+    background: #3d5a73;
+}
+
+/* AI 生成卡片 */
+.ai-gen-card {
+    background: #fff;
+    border-radius: 8px;
+    margin-bottom: 16px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+.ai-gen-header {
+    padding: 12px 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    background: #f7f7f7;
+}
+.ai-gen-content {
+    padding: 14px;
+}
+.ai-gen-input {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    resize: none;
+    min-height: 50px;
+}
+.ai-gen-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-top: 10px;
+}
+.ai-gen-upload {
+    background: #f0f2f5;
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+}
+.ai-gen-upload input {
+    display: none;
+}
+.ai-gen-ref-preview {
+    max-width: 60px;
+    max-height: 60px;
+    border-radius: 4px;
+    object-fit: cover;
+}
+.ai-gen-select {
+    padding: 6px 10px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    background: #fafafa;
+    margin-left: auto;
+}
+.ai-gen-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+}
+.ai-gen-actions button {
+    flex: 1;
+    padding: 8px;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    cursor: pointer;
+}
+.ai-gen-actions button:first-child {
+    background: #4c6b8a;
+    color: #fff;
+}
+.ai-gen-actions button:last-child {
+    background: #f0f2f5;
+    color: #666;
+}
+
+/* ==================== 未登录遮罩 ==================== */
+.lyb-login-overlay {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 40px 0;
+}
+.lyb-login-card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 30px;
+    text-align: center;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    max-width: 300px;
+}
+.lyb-login-card h3 {
+    margin: 0 0 8px;
+    font-size: 1.1rem;
+    color: #333;
+}
+.lyb-login-card p {
+    color: #888;
+    font-size: 0.9rem;
+    margin-bottom: 16px;
+}
+.lyb-login-btn {
+    padding: 10px 24px;
+    background: #4c6b8a;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.95rem;
+}
+
+/* ==================== 语音留言输入框 ==================== */
+.voice-message-box {
+    background: #fff;
+    border-radius: 8px;
+    padding: 14px;
+    margin-bottom: 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+.voice-back-bar {
+    margin-bottom: 12px;
+}
+.voice-back-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 0.9rem;
+    color: #4c6b8a;
+    padding: 4px 0;
+}
+.voice-record-area {
+    text-align: center;
+}
+.voice-record-btn {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: #4c6b8a;
+    color: #fff;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    transition: transform 0.1s;
+}
+.voice-record-btn:active {
+    transform: scale(0.95);
+}
+
+/* ==================== 移动端适配 ==================== */
 @media (max-width: 600px) {
+    .envelope-card {
+        padding: 12px;
+        margin-bottom: 8px;
+    }
+    .letter-avatar {
+        width: 36px;
+        height: 36px;
+        font-size: 1rem;
+    }
+    .letter-nickname {
+        font-size: 0.9rem;
+    }
+    .letter-text {
+        font-size: 0.9rem;
+    }
     .comment-input-area {
         gap: 6px;
     }
-
     .comment-input {
         padding: 8px 10px;
         font-size: 0.8rem;
     }
-
     .comment-submit-btn {
         padding: 8px 12px;
         font-size: 0.8rem;
     }
-
-    /* 确保评论区在移动端可见，不被底部导航遮挡 */
     .letter-comments {
         padding-bottom: 70px;
     }
+    .msg-compose-avatar {
+        width: 32px;
+        height: 32px;
+    }
+}
+
+/* ==================== 页面标题区域 ==================== */
+.page-header {
+    margin-bottom: 16px;
+}
+.page-title {
+    font-size: 1.3rem;
+    color: #333;
+    margin: 0 0 4px;
+}
+.page-subtitle {
+    font-size: 0.85rem;
+    color: #888;
+    margin: 0;
+}
+
+/* ==================== 空状态 ==================== */
+.empty-message {
+    text-align: center;
+    padding: 60px 20px;
+    color: #b0b0b0;
+    font-size: 0.95rem;
 }

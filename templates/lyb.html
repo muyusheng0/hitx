@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Version: 2026-04-15-v3 | 权限控制修复 -->
+<!-- Version: 2026-04-16-moments | 朋友圈风格 -->
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -7,11 +7,9 @@
     <title>留言信件 - 吉大自动化八班</title>
     <link rel="stylesheet" href="/static/css/style.css">
     <link rel="stylesheet" href="/static/css/film-grain.css">
-    <link rel="stylesheet" href="/static/css/stamp.css">
     <link rel="stylesheet" href="/static/css/message-vintage.css">
     <link rel="stylesheet" href="/static/css/ambient-bg.css">
     <link rel="stylesheet" href="/static/css/special-effects.css">
-    <link rel="stylesheet" href="/static/css/interactions.css">
     <link rel="stylesheet" href="/static/css/night-mode.css">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='80' font-size='80'>📖</text></svg>">
 </head>
@@ -36,11 +34,8 @@
         <div class="ambient-glow warm"></div>
         <div class="ambient-glow cool"></div>
         <div class="ambient-glow accent"></div>
-        <div class="clouds">
-            <div class="cloud"></div><div class="cloud"></div><div class="cloud"></div>
-            <div class="cloud"></div><div class="cloud"></div>
-        </div>
     </div>
+
     <!-- 顶部标题栏 -->
     <header class="top-header">
         <h1 class="header-title">吉大<span>自动化</span>八班</h1>
@@ -64,7 +59,7 @@
                         <span>🔑</span> 登录
                     </button>
                 </div>
-                <!-- 留言表单（登录后显示）- 全新设计 -->
+                <!-- 留言表单（登录后显示） -->
                 <div id="messageForm" class="msg-compose-card" style="display: none;">
                     <div class="msg-compose-header">
                         <div class="msg-compose-avatar" id="msgComposeAvatar">写</div>
@@ -174,86 +169,66 @@
                 <h2 class="section-title">全部留言</h2>
                 <div class="message-list" id="messageList">
                     {% for msg in messages %}
-                    <div class="envelope-card" id="msg-{{ msg.id }}" data-nickname="{{ msg.nickname }}" data-msg-id="{{ msg.id }}" onclick="toggleEnvelope(this)">
-                        <div class="envelope-body">
-                            <!-- 信封封口 -->
-                            <div class="envelope-flap"></div>
-                            <!-- 蜡封 -->
-                            <div class="wax-seal"></div>
-                            <!-- 邮戳 -->
-                            <div class="postmark">
-                                <div class="postmark-date">{{ msg.time[:7] }}</div>
+                    <div class="envelope-card" id="msg-{{ msg.id }}" data-nickname="{{ msg.nickname }}" data-msg-id="{{ msg.id }}">
+                        <!-- 头部：头像 + 昵称 + 时间 -->
+                        <div class="letter-header">
+                            {% if msg.avatar %}
+                            <div class="letter-avatar" style="background-image: url('{{ msg.avatar }}'); background-size: cover; background-position: center;"></div>
+                            {% else %}
+                            <div class="letter-avatar">{{ msg.nickname[0] }}</div>
+                            {% endif %}
+                            <div class="letter-info">
+                                <div class="letter-nickname">{{ msg.nickname }}</div>
+                                <div class="letter-time">{{ msg.time }}</div>
                             </div>
+                        </div>
 
-                            <!-- 信纸内容 -->
-                            <div class="letter-content">
-                                <!-- 头部信息 -->
-                                <div class="letter-header">
-                                    {% if msg.avatar %}
-                                    <div class="letter-avatar" style="background-image: url('{{ msg.avatar }}'); background-size: cover; background-position: center;"></div>
-                                    {% else %}
-                                    <div class="letter-avatar" style="display: flex; align-items: center; justify-content: center; font-family: 'ZCOOL XiaoWei', serif; font-size: 1.2rem; color: var(--primary);">{{ msg.nickname[0] }}</div>
-                                    {% endif %}
-                                    <div class="letter-info">
-                                        <div class="letter-nickname">{{ msg.nickname }}</div>
-                                        <div class="letter-time">{{ msg.time }}</div>
-                                    </div>
-                                </div>
-
-                                <!-- 留言内容 -->
-                                {% if msg.voice %}
-                                <div class="voice-message-player" style="margin: 15px 0;">
-                                    <button class="voice-play-btn" onclick="event.stopPropagation(); toggleVoicePlay(this, '{{ msg.voice }}')">
-                                        <span class="voice-play-icon">▶️</span>
-                                    </button>
-                                    <div class="voice-wave">
-                                        <span></span><span></span><span></span><span></span><span></span>
-                                    </div>
-                                    <span class="voice-duration">8秒</span>
-                                </div>
-                                {% else %}
-                                <div class="letter-text">{{ msg.content }}</div>
-                                {% endif %}
-
-                                <!-- 留言图片 -->
-                                {% if msg.image %}
-                                <div class="letter-image">
-                                    <img src="{{ msg.image }}" onclick="event.stopPropagation(); showLightbox(this.src)">
-                                </div>
-                                {% endif %}
-
-                                <!-- 签名 -->
-                                <div class="letter-signature">{{ msg.nickname }}</div>
-
-                                <!-- 互动按钮 -->
-                                <div class="letter-actions">
-                                    <button class="letter-like-btn" onclick="event.stopPropagation(); toggleLike({{ msg.id }})" data-liked="false">
-                                        <span class="like-icon">🤍</span>
-                                        <span class="like-count">0</span>
-                                    </button>
-                                    <button class="letter-comment-btn" onclick="event.stopPropagation(); toggleComments({{ msg.id }})">
-                                        <span>💬</span>
-                                        <span class="comment-count">0</span>
-                                    </button>
-                                    <button class="delete-msg-btn" onclick="event.stopPropagation(); deleteMessage({{ msg.id }})" style="display: none; background: none; border: 1px solid #d4a574; border-radius: 20px; padding: 6px 12px; cursor: pointer;">🗑️</button>
-                                </div>
-
-                                <!-- 评论区 -->
-                                <div class="letter-comments" id="comments-{{ msg.id }}" style="display: block;">
-                                    <div class="comments-list" id="comments-list-{{ msg.id }}"></div>
-                                    <div class="comment-input-area" id="comment-input-{{ msg.id }}" style="display: flex; gap: 8px; margin-top: 10px;">
-                                        <input type="text" class="comment-input" placeholder="写下你的评论..." onkeypress="handleCommentKeypress(event, {{ msg.id }})" style="flex: 1; padding: 8px 12px; border: 1px solid #d4a574; border-radius: 20px; font-size: 0.85rem;">
-                                        <button class="comment-submit-btn" onclick="submitComment({{ msg.id }})" style="padding: 8px 16px; background: var(--secondary); color: white; border: none; border-radius: 20px; cursor: pointer; font-size: 0.85rem;">发送</button>
-                                    </div>
-                                </div>
+                        <!-- 留言内容 -->
+                        {% if msg.voice %}
+                        <div class="voice-message-player" id="voicePlayer-{{ msg.id }}" onclick="toggleVoicePlay(this, '{{ msg.voice }}')">
+                            <button class="voice-play-btn">
+                                <span class="voice-play-icon">▶️</span>
+                            </button>
+                            <div class="voice-wave">
+                                <span></span><span></span><span></span><span></span><span></span>
                             </div>
+                            <span class="voice-duration">语音</span>
+                        </div>
+                        {% else %}
+                        <div class="letter-text">{{ msg.content }}</div>
+                        {% endif %}
 
-                            <!-- 展开提示 -->
-                            <div class="expand-hint">点击展开</div>
+                        <!-- 留言图片 -->
+                        {% if msg.image %}
+                        <div class="letter-image">
+                            <img src="{{ msg.image }}" onclick="showLightbox(this.src)">
+                        </div>
+                        {% endif %}
+
+                        <!-- 互动按钮 -->
+                        <div class="letter-actions">
+                            <button class="letter-like-btn" onclick="toggleLike({{ msg.id }})" data-liked="false">
+                                <span class="like-icon">🤍</span>
+                                <span class="like-count">0</span>
+                            </button>
+                            <button class="letter-comment-btn" onclick="toggleComments({{ msg.id }})">
+                                <span>💬</span>
+                                <span class="comment-count">0</span>
+                            </button>
+                            <button class="delete-msg-btn" onclick="deleteMessage({{ msg.id }})" style="display: none;">🗑️</button>
+                        </div>
+
+                        <!-- 评论区 -->
+                        <div class="letter-comments" id="comments-{{ msg.id }}" style="display: none;">
+                            <div class="comments-list" id="comments-list-{{ msg.id }}"></div>
+                            <div class="comment-input-area" id="comment-input-{{ msg.id }}">
+                                <input type="text" class="comment-input" placeholder="写下你的评论..." onkeypress="handleCommentKeypress(event, {{ msg.id }})">
+                                <button class="comment-submit-btn" onclick="submitComment({{ msg.id }})">发送</button>
+                            </div>
                         </div>
                     </div>
                     {% else %}
-                    <div class="empty-message" style="text-align: center; padding: 40px; color: var(--text-light);">还没有留言，快来写下第一句吧~</div>
+                    <div class="empty-message">还没有留言，快来写下第一句吧~</div>
                     {% endfor %}
                 </div>
             </div>
@@ -322,14 +297,14 @@
     <script src="/static/js/main.js"></script>
     <script>
         // 页面加载时初始化点赞状态
-        document.querySelectorAll('.message-item[data-msg-id]').forEach(item => {
+        document.querySelectorAll('.envelope-card[data-msg-id]').forEach(item => {
             const msgId = item.dataset.msgId;
             loadLikeStatus(msgId);
             loadCommentCount(msgId);
         });
 
         function loadLikeStatus(msgId) {
-            fetch(`/api/get_message_likes/${msgId}`)
+            fetch(`/api/get_message_likes/${msgId}`, { credentials: 'same-origin' })
                 .then(r => r.json())
                 .then(data => {
                     if (data.success) {
@@ -347,7 +322,7 @@
         }
 
         function loadCommentCount(msgId) {
-            fetch(`/api/get_comments/${msgId}`)
+            fetch(`/api/get_comments/${msgId}`, { credentials: 'same-origin' })
                 .then(r => r.json())
                 .then(data => {
                     if (data.success) {
@@ -355,17 +330,17 @@
                         if (btn) {
                             btn.querySelector('.comment-count').textContent = data.comments.length;
                         }
+                        // 如果有评论，自动展开评论区（像微信朋友圈那样）
+                        if (data.comments && data.comments.length > 0) {
+                            const commentsSection = document.getElementById(`comments-${msgId}`);
+                            if (commentsSection) {
+                                commentsSection.style.display = 'block';
+                            }
+                            // 加载评论内容
+                            loadComments(msgId);
+                        }
                     }
                 });
-        }
-
-        // 信封展开/收起
-        function toggleEnvelope(card) {
-            card.classList.toggle('open');
-            const hint = card.querySelector('.expand-hint');
-            if (hint) {
-                hint.textContent = card.classList.contains('open') ? '点击收起' : '点击展开';
-            }
         }
 
         function toggleLike(msgId) {
@@ -426,7 +401,7 @@
                                 <div class="comment-item">
                                     <span class="comment-nickname">${escapeHtml(c.nickname)}:</span>
                                     <span class="comment-content">${escapeHtml(c.content)}</span>
-                                    <div class="comment-time">${c.time}</div>
+                                    <span class="comment-time">${c.time}</span>
                                     ${canDelete ? `<button onclick="deleteComment(${c.id}, ${msgId})" style="background:none;border:none;color:#e74c3c;cursor:pointer;font-size:0.75rem;margin-left:0.5rem;">删除</button>` : ''}
                                 </div>
                             `;
@@ -447,7 +422,6 @@
             .then(data => {
                 if (data.success) {
                     loadComments(msgId);
-                    // 更新评论数
                     const countEl = document.querySelector(`#msg-${msgId} .comment-count`);
                     if (countEl) {
                         countEl.textContent = parseInt(countEl.textContent) - 1;
@@ -486,7 +460,6 @@
                 if (data.success) {
                     input.value = '';
                     loadComments(msgId);
-                    // 更新评论数
                     const btn = document.querySelector(`#msg-${msgId} .letter-comment-btn .comment-count`);
                     const count = parseInt(btn.textContent) + 1;
                     btn.textContent = count;
@@ -502,26 +475,27 @@
 
         // 语音留言播放
         let currentVoiceAudio = null;
-        function toggleVoicePlay(btn, voiceUrl) {
+        function toggleVoicePlay(player, voiceUrl) {
+            const btn = player.querySelector('.voice-play-btn');
             if (currentVoiceAudio && currentVoiceAudio.src.includes(voiceUrl)) {
                 currentVoiceAudio.pause();
                 currentVoiceAudio = null;
-                btn.classList.remove('playing');
+                player.classList.remove('playing');
                 btn.querySelector('.voice-play-icon').textContent = '▶️';
             } else {
                 if (currentVoiceAudio) {
                     currentVoiceAudio.pause();
-                    document.querySelectorAll('.voice-play-btn').forEach(b => {
-                        b.classList.remove('playing');
-                        b.querySelector('.voice-play-icon').textContent = '▶️';
+                    document.querySelectorAll('.voice-message-player').forEach(p => {
+                        p.classList.remove('playing');
+                        p.querySelector('.voice-play-icon').textContent = '▶️';
                     });
                 }
                 currentVoiceAudio = new Audio(voiceUrl);
                 currentVoiceAudio.play();
-                btn.classList.add('playing');
+                player.classList.add('playing');
                 btn.querySelector('.voice-play-icon').textContent = '⏸️';
                 currentVoiceAudio.onended = () => {
-                    btn.classList.remove('playing');
+                    player.classList.remove('playing');
                     btn.querySelector('.voice-play-icon').textContent = '▶️';
                     currentVoiceAudio = null;
                 };
@@ -659,22 +633,22 @@
         }
 
         // 按住说话按钮
-        const voiceRecordBtn = document.getElementById('voiceRecordBtn');
-        if (voiceRecordBtn) {
-            voiceRecordBtn.addEventListener('mousedown', () => {
+        const voiceRecordBtnEl = document.getElementById('voiceRecordBtn');
+        if (voiceRecordBtnEl) {
+            voiceRecordBtnEl.addEventListener('mousedown', () => {
                 if (!isVoiceRecording) startVoiceRecording();
             });
-            voiceRecordBtn.addEventListener('mouseup', () => {
+            voiceRecordBtnEl.addEventListener('mouseup', () => {
                 if (isVoiceRecording) stopVoiceRecording();
             });
-            voiceRecordBtn.addEventListener('mouseleave', () => {
+            voiceRecordBtnEl.addEventListener('mouseleave', () => {
                 if (isVoiceRecording) stopVoiceRecording();
             });
-            voiceRecordBtn.addEventListener('touchstart', (e) => {
+            voiceRecordBtnEl.addEventListener('touchstart', (e) => {
                 e.preventDefault();
                 if (!isVoiceRecording) startVoiceRecording();
             });
-            voiceRecordBtn.addEventListener('touchend', () => {
+            voiceRecordBtnEl.addEventListener('touchend', () => {
                 if (isVoiceRecording) stopVoiceRecording();
             });
         }
