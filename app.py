@@ -2391,7 +2391,7 @@ def get_student():
     current_id = session['verified_student']['id']
 
     for s in students:
-        if s['name'] == current_name and s['id'] == current_id:
+        if s['name'] == current_name and str(s['id']) == str(current_id):
             s['is_admin'] = is_admin(current_name)
             s['is_super_admin'] = is_super_admin(current_name)
             return jsonify({'success': True, 'student': s})
