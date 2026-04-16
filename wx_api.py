@@ -970,7 +970,7 @@ CLASS_TIMELINE = [
 def get_timeline():
     """获取班级时光时间线"""
     # 获取照片，按年份分组，每年最多3张
-    photos = database.get_all_photos()
+    photos = database.read_photos()
     photos_by_year = {}
     for img in photos:
         year = img.get('year', 2020)
