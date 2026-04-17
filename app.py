@@ -207,6 +207,33 @@ def is_password_verified():
     return session.get('password_verified', False)
 
 
+def login_required(f):
+    """登录保护装饰器 - 检查用户是否已登录"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        # 检查验证状态
+        if 'verified_student' not in session:
+            # 如果是AJAX请求，返回JSON
+            if request.is_json or request.path.startswith('/api/'):
+                return jsonify({'code': 401, 'message': '请先登录', 'data': None}), 401
+            # 否则重定向到登录页面
+            return redirect(url_for('login_page'))
+        
+        # 检查验证时间是否过期（30分钟）
+        try:
+            verify_time = datetime.fromisoformat(session.get('verify_time', ''))
+            if datetime.now() - verify_time > timedelta(minutes=30):
+                session.clear()
+                if request.is_json or request.path.startswith('/api/'):
+                    return jsonify({'code': 401, 'message': '登陆已过期，请重新登录', 'data': None}), 401
+                return redirect(url_for('login_page'))
+        except:
+            pass
+        
+        return f(*args, **kwargs)
+    return decorated_function
+
+
 def compress_avatar(file, filepath, max_size=AVATAR_MAX_SIZE):
     """压缩头像图片,确保不超过max_size"""
     try:
@@ -508,7 +535,22 @@ def sanitize_input(text):
 
 # ==================== 路由 ====================
 
+@app.route('/login')
+def login_page():
+    """登录页面"""
+    # 如果已登录，重定向到首页
+    if 'verified_student' in session:
+        try:
+            verify_time = datetime.fromisoformat(session.get('verify_time', ''))
+            if datetime.now() - verify_time < timedelta(minutes=30):
+                return redirect(url_for('index'))
+        except:
+            pass
+    return render_template('login.html')
+
+
 @app.route('/')
+@login_required
 def index():
     """首页"""
     students = database.read_txl()
@@ -553,7 +595,7 @@ def index():
                            activities=activities[:9],  # 传递最新9条动态
                            photos_by_year=photos_by_year,
                            province_stats=province_stats,
-                           logged_in='verified_student' in session)
+                           logged_in=True)
 
 
 def get_activities():
@@ -773,15 +815,11 @@ def get_gallery_images():
 
 
 @app.route('/txl')
+@login_required
 def txl():
     """通讯录页面"""
-    is_logged = 'verified_student' in session
 
-    # 未登录用户:不能查看同学通讯录
-    if not is_logged:
-        students = []
-    else:
-        students = database.read_txl()
+    students = database.read_txl()
 
     # 为每个学生添加拼音用于排序
     try:
@@ -804,52 +842,51 @@ def txl():
 
     voice_shouts = database.read_voice_shouts()
 
-    # 计算离我最近的同学(仅登录用户)
+    # 计算离我最近的同学(用户已登录)
     nearest_classmates = []
-    if is_logged:
-        current_user = session['verified_student']
-        # 优先使用GPS坐标,其次使用session中的城市坐标,最后根据当前用户的城市查找
-        current_coords = current_user.get('coords', '')
-        current_name = current_user.get('name', '')
-        current_id = current_user.get('id', '')
+    current_user = session['verified_student']
+    # 优先使用GPS坐标,其次使用session中的城市坐标,最后根据当前用户的城市查找
+    current_coords = current_user.get('coords', '')
+    current_name = current_user.get('name', '')
+    current_id = current_user.get('id', '')
 
-        # 查找当前用户的GPS坐标(优先使用)
+    # 查找当前用户的GPS坐标(优先使用)
+    for s in students:
+        if s.get('name') == current_name and s.get('id') == current_id:
+            gps = s.get('gps_coords', '')
+            if gps:
+                current_coords = gps
+            break
+
+    # 如果没有GPS坐标也没有session坐标,根据城市获取
+    if not current_coords:
         for s in students:
             if s.get('name') == current_name and s.get('id') == current_id:
-                gps = s.get('gps_coords', '')
-                if gps:
-                    current_coords = gps
+                current_coords = s.get('coords', '')
                 break
 
-        # 如果没有GPS坐标也没有session坐标,根据城市获取
-        if not current_coords:
+    if current_coords:
+        try:
+            lat1, lon1 = map(float, current_coords.split(','))
+            distances = []
             for s in students:
-                if s.get('name') == current_name and s.get('id') == current_id:
-                    current_coords = s.get('coords', '')
-                    break
-
-        if current_coords:
-            try:
-                lat1, lon1 = map(float, current_coords.split(','))
-                distances = []
-                for s in students:
-                    if s.get('name') == current_name:
+                if s.get('name') == current_name:
+                    continue
+                # 优先使用同学的GPS坐标,其次使用城市坐标
+                s_coords = s.get('gps_coords', '') or s.get('coords', '')
+                if s_coords:
+                    try:
+                        lat2, lon2 = map(float, s_coords.split(','))
+                        dist = haversine_distance(lat1, lon1, lat2, lon2)
+                        distances.append((s['name'], dist, s))
+                    except:
                         continue
-                    # 优先使用同学的GPS坐标,其次使用城市坐标
-                    s_coords = s.get('gps_coords', '') or s.get('coords', '')
-                    if s_coords:
-                        try:
-                            lat2, lon2 = map(float, s_coords.split(','))
-                            dist = haversine_distance(lat1, lon1, lat2, lon2)
-                            distances.append((s['name'], dist, s))
-                        except:
-                            continue
-                distances.sort(key=lambda x: x[1])
-                nearest_classmates = [(d[2], int(d[1])) for d in distances[:2]]
-            except:
-                pass
+            distances.sort(key=lambda x: x[1])
+            nearest_classmates = [(d[2], int(d[1])) for d in distances[:2]]
+        except:
+            pass
 
-    return render_template('txl.html', students=students, voice_shouts=voice_shouts, nearest_classmates=nearest_classmates, logged_in=is_logged)
+    return render_template('txl.html', students=students, voice_shouts=voice_shouts, nearest_classmates=nearest_classmates, logged_in=True)
 
 
 def haversine_distance(lat1, lon1, lat2, lon2):
@@ -1150,9 +1187,9 @@ def update_gps_coords():
 
 
 @app.route('/lyb')
+@login_required
 def lyb():
     """留言板页面"""
-    logged_in = 'verified_student' in session
     messages = database.read_lyb()
     messages.reverse()
     # 为每条留言添加头像信息
@@ -1163,7 +1200,7 @@ def lyb():
             if s.get('name') == msg.get('nickname'):
                 msg['avatar'] = s.get('avatar', '')
                 break
-    return render_template('lyb.html', messages=messages, logged_in=logged_in)
+    return render_template('lyb.html', messages=messages, logged_in=True)
 
 
 @app.route('/api/add_comment', methods=['POST'])
@@ -1321,18 +1358,21 @@ def get_message_likes(message_id):
 
 
 @app.route('/gallery')
+@login_required
 def gallery():
     """相册页面 - 重定向到媒体中心"""
     return redirect('/media')
 
 
 @app.route('/video')
+@login_required
 def video_page():
     """视频页面 - 重定向到媒体中心"""
     return redirect('/media')
 
 
 @app.route('/media')
+@login_required
 def media():
     """媒体中心 - 相册和视频合并页面"""
     from datetime import datetime
@@ -1479,12 +1519,14 @@ def get_media_likes(media_type, media_id):
 
 
 @app.route('/about')
+@login_required
 def about():
     """个人中心页面"""
     return render_template('about.html')
 
 
 @app.route('/ai-chat')
+@login_required
 def ai_chat():
     """AI 聊天助手页面（仅管理员）"""
     return render_template('ai-chat.html')
@@ -1503,6 +1545,13 @@ def generate_captcha():
     session['captcha'] = result
     session['captcha_time'] = datetime.now().isoformat()
     return jsonify({'captcha': captcha_text})
+
+
+@app.route('/api/get_captcha')
+def get_captcha_alias():
+    """获取验证码（别名，兼容登录页面）"""
+    return generate_captcha()
+
 
 @app.route('/api/verify', methods=['POST'])
 def verify_student():
