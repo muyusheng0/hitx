@@ -671,8 +671,13 @@
             }
         }
 
+        // 已登录用户跳过开场动画
+        var isLoggedIn = {{ 'true' if logged_in else 'false' }};
+
         document.addEventListener('DOMContentLoaded', () => {
-            playOpeningAnimation();
+            if (!isLoggedIn) {
+                playOpeningAnimation();
+            }
             loadSeasonalDecor();
             initScrollReveal();
             initScrollHint();
