@@ -87,6 +87,7 @@ if ('caches' in window) {
     <!-- 顶部标题栏 -->
     <header class="top-header">
         <h1 class="header-title">个人中心</h1>
+        <button class="header-search-btn" onclick="openSearchModal()" title="搜索">🔍</button>
         <div id="userStatus" class="user-status"></div>
     </header>
 
@@ -396,6 +397,23 @@ if ('caches' in window) {
             <span class="tab-badge" id="tabNotificationBadge" style="display: none;">0</span>
         </a>
     </nav>
+
+    <!-- 搜索模态框 -->
+    <div class="search-modal-overlay" id="searchModal" onclick="closeSearchOnOverlay(event)">
+        <div class="search-modal" onclick="event.stopPropagation()">
+            <div class="search-modal-header">
+                <span>🔍</span>
+                <input type="text" class="search-modal-input" id="searchInputModal" placeholder="搜索同学、留言、照片..." oninput="performSearch(this.value)">
+                <button class="search-modal-close" onclick="closeSearchModal()">✕</button>
+            </div>
+            <div class="search-modal-results" id="searchResults">
+                <div class="search-result-empty">
+                    <span>🔍</span>
+                    输入关键词搜索同学、留言和照片
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- 验证模态框 -->
     <div class="modal-overlay" id="verifyModal">

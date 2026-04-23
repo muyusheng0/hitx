@@ -12,11 +12,21 @@
     <link rel="stylesheet" href="/static/css/special-effects.css">
     <link rel="stylesheet" href="/static/css/interactions.css">
     <link rel="stylesheet" href="/static/css/night-mode.css">
+    <!-- 腾讯地图 JS API -->
+    <script charset="utf-8" src="https://map.qq.com/api/gljs?v=1.exp&libraries=tools&key=OB4BZ-D4W3U-B7VVO-4PJWW-6TKDJ-WPB77"></script>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='80' font-size='80'>📖</text></svg>">
 </head>
 <body>
     <!-- 胶片颗粒质感层 -->
     <div class="film-grain-overlay"></div>
+
+    <!-- 右侧字母索引（必须在 ambient-bg-container 外面，否则 position: fixed 会失效） -->
+    <div class="wechat-sidebar-index" id="sidebarIndex">
+        <span onclick="scrollToLetter('↑')">↑</span>
+        {% for letter in 'ABCDEFGHIJKLMNOPQRSTUVWXYZ#' | list %}
+        <span onclick="scrollToLetter('{{ letter }}')">{{ letter }}</span>
+        {% endfor %}
+    </div>
 
     <!-- 氛围背景层 -->
     <div class="ambient-bg-container">
@@ -43,6 +53,7 @@
     <!-- 顶部标题栏 -->
     <header class="top-header">
         <h1 class="header-title">吉大<span>自动化</span>八班</h1>
+        <button class="header-search-btn" onclick="openSearchModal()" title="搜索">🔍</button>
         <div id="userStatus" class="user-status"></div>
     </header>
 
@@ -51,24 +62,18 @@
         <div class="container">
             <!-- 顶部标题 -->
             <div class="page-header" style="padding: 20px 16px 10px;">
-                <h1 class="page-title" style="font-size: 22px; margin-bottom: 4px;">通讯录</h1>
-                <p class="page-subtitle" style="font-size: 12px; opacity: 0.6;">{{ students|length }} 位同学</p>
-            </div>
-
-            <!-- 未登录提示 -->
-            {% if not logged_in %}
-            <div class="txl-login-prompt">
-                <div class="txl-login-card">
-                    <div class="txl-login-icon">🔒</div>
-                    <h3>登录后查看完整通讯录</h3>
-                    <p>登录后可查看同学电话、职位、公司等详细信息</p>
-                    <button class="txl-login-btn" onclick="window.location.href='/about'">立即登录</button>
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <h1 class="page-title" style="font-size: 22px; margin-bottom: 4px;">通讯录</h1>
+                        <p class="page-subtitle" style="font-size: 12px; opacity: 0.6;">{{ students|length }} 位同学</p>
+                    </div>
+                    <button id="viewToggleBtn" onclick="toggleView()" style="background:rgba(255,255,255,0.12); color:var(--text-light); border:1px solid var(--border); padding:6px 14px; border-radius:8px; font-size:14px; cursor:pointer; font-weight:500;">
+                        🗺️ 地图
+                    </button>
                 </div>
             </div>
-            {% endif %}
 
             <!-- 微信风格通讯录容器 -->
-            {% if logged_in %}
             <div class="txl-wechat-container">
                 <!-- 搜索栏 -->
                 <div class="wechat-search-bar">
@@ -138,16 +143,12 @@
 
                 <!-- 搜索结果 -->
                 <div class="wechat-search-result" id="searchResults"></div>
-            </div>
 
-            <!-- 右侧字母索引 -->
-            <div class="wechat-sidebar-index" id="sidebarIndex">
-                <span onclick="scrollToLetter('↑')">↑</span>
-                {% for letter in 'ABCDEFGHIJKLMNOPQRSTUVWXYZ#' | list %}
-                <span onclick="scrollToLetter('{{ letter }}')">{{ letter }}</span>
-                {% endfor %}
+                <!-- 地图视图容器 -->
+                <div id="mapContainer" style="display:none; margin-top: 0.5rem;">
+                    <div id="txlMap" style="height: 65vh; border-radius: 12px; border: 1px solid var(--border);"></div>
+                </div>
             </div>
-            {% endif %}
         </div>
     </main>
 
@@ -169,50 +170,20 @@
             <span class="tab-icon">📷</span>
             <span class="tab-label">媒体</span>
         </a>
+        {% if logged_in %}
         <a href="/about" class="tab-item">
             <span class="tab-icon">👤</span>
             <span class="tab-label">我的</span>
         </a>
+        {% else %}
+        <a href="/login" class="tab-item">
+            <span class="tab-icon">🔑</span>
+            <span class="tab-label">登录</span>
+        </a>
+        {% endif %}
     </nav>
 
-    <!-- 验证模态框 -->
-    <div class="modal-overlay" id="verifyModal">
-        <div class="modal">
-            <div class="modal-header">
-                <h3 class="modal-title">身份验证</h3>
-                <button class="modal-close" onclick="closeVerifyModal()">✕</button>
-            </div>
-            <form class="verify-form" onsubmit="submitVerify(event)">
-                <div class="input-group">
-                    <label>姓名</label>
-                    <input type="text" id="verifyName" onblur="checkPasswordRequired()" placeholder="请输入你的姓名" required>
-                </div>
-                <div class="input-group">
-                    <label>学号</label>
-                    <input type="text" id="verifyStudentId" onblur="checkPasswordRequired()" placeholder="请输入你的学号" required>
-                </div>
-                <div class="input-group">
-                    <label>验证码</label>
-                    <div style="display: flex; gap: 0.5rem; align-items: center;">
-                        <span id="captchaQuestion" style="font-size: 1.2rem; font-weight: bold; color: var(--secondary); min-width: 60px;">加载中...</span>
-                        <input type="text" id="verifyCaptcha" placeholder="请输入答案" required style="flex: 1;">
-                        <button type="button" onclick="refreshCaptcha()" style="background: none; border: none; cursor: pointer; font-size: 1.2rem;" title="刷新验证码">🔄</button>
-                    </div>
-                </div>
-                <div class="input-group" id="loginPasswordGroup" style="display: none;">
-                    <label>登录密码</label>
-                    <input type="password" id="verifyLoginPassword" placeholder="请输入登录密码">
-                </div>
-                <div class="verify-error" id="verifyError"></div>
-                <button type="submit" class="verify-btn">验证身份</button>
-            </form>
-            <div style="margin-top: 1rem; text-align: center; font-size: 0.85rem; color: var(--text-light);">
-                登录后可访问留言信件和媒体上传功能<br>编辑个人信息请到「我的」页面
-            </div>
-        </div>
-    </div>
-
-    <script src="/static/js/main.js"></script>
+    <script src="/static/js/main.js?v=3"></script>
     <script>
         // 喊话模态框
         let currentVoiceTarget = '';
@@ -222,7 +193,6 @@
 
         function openVoiceShoutModal(targetName, targetGender) {
             if (!window.currentUser) {
-                showVerifyModal();
                 return;
             }
             if (window.currentUser.name === targetName) {
@@ -379,7 +349,6 @@
 
         function deleteVoice(shoutId) {
             if (!window.currentUser) {
-                showVerifyModal();
                 return;
             }
             if (!confirm('确定要删除这条喊话吗？')) return;
@@ -439,10 +408,24 @@
 
         // 使用事件委托处理联系人点击
         document.addEventListener('DOMContentLoaded', function() {
+            // 联系人列表点击
             const contactList = document.getElementById('contactList');
             if (contactList) {
                 contactList.addEventListener('click', function(e) {
                     const item = e.target.closest('.wechat-contact-item, .wechat-nearest-item');
+                    if (item) {
+                        const name = item.dataset.name;
+                        if (name) {
+                            showStudentDetail(name);
+                        }
+                    }
+                });
+            }
+            // 离我最近的同学点击（在 contactList 外面，需要单独绑定）
+            const nearestSection = document.querySelector('.wechat-nearest-section');
+            if (nearestSection) {
+                nearestSection.addEventListener('click', function(e) {
+                    const item = e.target.closest('.wechat-nearest-item');
                     if (item) {
                         const name = item.dataset.name;
                         if (name) {
@@ -587,13 +570,13 @@
 
             const detailHtml =
                 '<div class="modal-overlay active" onclick="closeStudentDetail(event)">' +
-                '<div class="modal" onclick="event.stopPropagation()" style="max-width:360px;padding:0;border-radius:12px;overflow:hidden;">' +
-                '<div style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);padding:30px 20px;text-align:center;color:#fff;">' +
+                '<div class="modal" onclick="event.stopPropagation()" style="max-width:360px;padding:0;border-radius:12px;max-height:85vh;display:flex;flex-direction:column;">' +
+                '<div style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);padding:30px 20px;text-align:center;color:#fff;flex-shrink:0;">' +
                 '<div class="wechat-avatar" style="width:72px;height:72px;font-size:28px;margin:0 auto 12px;">' + avatarHtml + '</div>' +
                 '<h2 style="margin:0 0 4px;font-size:20px;">' + student.name + '</h2>' +
                 '<p style="margin:0;opacity:0.8;font-size:13px;">' + (student.position || student.company ? (student.position || '') + (student.position && student.company ? ' · ' : '') + (student.company || '') : '') + '</p>' +
                 '</div>' +
-                '<div style="padding:20px;max-height:60vh;overflow-y:auto;">' +
+                '<div style="padding:20px;overflow-y:auto;-webkit-overflow-scrolling:touch;flex:1;">' +
                 infoHtml +
                 shoutsHtml +
                 '<div style="display:flex;gap:12px;padding-top:16px;">' +
@@ -669,7 +652,203 @@
             const lightbox = document.getElementById('avatarLightbox');
             if (lightbox) lightbox.classList.remove('active');
         }
+
+        // ==================== 地图功能 ====================
+        let mapInstance = null;
+        let mapDataLoaded = false;
+
+        async function toggleView() {
+            const btn = document.getElementById('viewToggleBtn');
+            const contactList = document.getElementById('contactList');
+            const mapContainer = document.getElementById('mapContainer');
+            const nearestSection = document.querySelector('.wechat-nearest-section');
+            const searchBar = document.querySelector('.wechat-search-bar');
+            const sidebar = document.getElementById('sidebarIndex');
+
+            if (mapContainer.style.display === 'none') {
+                // 切换到地图视图
+                contactList.style.display = 'none';
+                if (nearestSection) nearestSection.style.display = 'none';
+                if (sidebar) sidebar.style.display = 'none';
+                if (searchBar) searchBar.style.display = 'none';
+                mapContainer.style.display = 'block';
+                btn.innerHTML = '📋 列表';
+
+                // 加载地图
+                if (!mapInstance) {
+                    await initMap();
+                } else {
+                    setTimeout(() => mapInstance.invalidateSize(), 100);
+                }
+            } else {
+                // 切换回列表视图
+                contactList.style.display = 'block';
+                if (nearestSection) nearestSection.style.display = 'block';
+                if (sidebar) sidebar.style.display = 'block';
+                if (searchBar) searchBar.style.display = 'block';
+                mapContainer.style.display = 'none';
+                btn.innerHTML = '🗺️ 地图';
+            }
+        }
+
+        async function initMap() {
+            try {
+                // 动态加载腾讯地图
+                if (typeof TMap === 'undefined') {
+                    await loadScript('https://map.qq.com/api/gljs?v=1.exp&libraries=tools&key=OB4BZ-D4W3U-B7VVO-4PJWW-6TKDJ-WPB77');
+                }
+
+                const resp = await fetch('/api/txl/map', { credentials: 'same-origin' });
+                const data = await resp.json();
+
+                if (!data.success || !data.data || data.data.length === 0) {
+                    document.getElementById('txlMap').innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-light);">暂无位置数据</div>';
+                    return;
+                }
+
+                mapDataLoaded = true;
+                const points = data.data;
+                const userCoords = data.user_coords;
+
+                // 初始化腾讯地图
+                const defaultCenter = new TMap.LatLng(35.0, 105.0);
+                mapInstance = new TMap.Map('txlMap', {
+                    center: defaultCenter,
+                    zoom: 4,
+                    viewMode: '2D'
+                });
+
+                // 创建 InfoWindow 实例（复用）
+                let infoWindow = null;
+
+                // 添加标记
+                const bounds = [];
+                const markers = [];
+                points.forEach(p => {
+                    const marker = new TMap.MultiMarker({
+                        map: mapInstance,
+                        styles: {
+                            alumni: new TMap.MarkerStyle({
+                                width: 32,
+                                height: 32,
+                                anchor: { x: 16, y: 16 },
+                                src: 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32"><circle cx="16" cy="16" r="14" fill="#07c160" stroke="#fff" stroke-width="2"/><text x="16" y="20" text-anchor="middle" fill="#fff" font-size="14">\u{1F464}</text></svg>')
+                            })
+                        },
+                        geometries: [{
+                            id: 'alumni_' + p.name,
+                            styleId: 'alumni',
+                            position: new TMap.LatLng(p.lat, p.lon),
+                            properties: {
+                                title: p.name,
+                                position: p.position,
+                                company: p.company,
+                                city: p.city,
+                                phone: p.phone
+                            }
+                        }]
+                    });
+                    markers.push(marker);
+                    bounds.push({ lat: p.lat, lng: p.lon });
+
+                    // 点击标记弹出 InfoWindow
+                    marker.on('click', function(evt) {
+                        const props = evt.geometry.properties;
+                        let content = '<div style="padding:8px;min-width:200px;font-family:sans-serif;font-size:13px;">';
+                        content += '<strong style="font-size:16px;">' + (props.title || '') + '</strong>';
+                        if (props.position || props.company) {
+                            content += '<br><span style="color:#666;">' + (props.position || '') + (props.position && props.company ? ' · ' : '') + (props.company || '') + '</span>';
+                        }
+                        if (props.city) {
+                            content += '<br><span style="color:#07c160;">📍 ' + props.city + '</span>';
+                        }
+                        if (props.phone) {
+                            content += '<br><span>📱 ' + props.phone + '</span>';
+                        }
+                        content += '</div>';
+
+                        if (!infoWindow) {
+                            infoWindow = new TMap.InfoWindow({
+                                map: mapInstance,
+                                position: evt.geometry.position,
+                                content: content,
+                                offset: { x: 0, y: -32 }
+                            });
+                        } else {
+                            infoWindow.setPosition(evt.geometry.position);
+                            infoWindow.setContent(content);
+                            infoWindow.open();
+                        }
+                    });
+                });
+
+                // 如果有用户坐标，添加"我"的标记
+                if (userCoords) {
+                    try {
+                        const myLat = parseFloat(userCoords.split(',')[0]);
+                        const myLon = parseFloat(userCoords.split(',')[1]);
+                        new TMap.MultiMarker({
+                            map: mapInstance,
+                            styles: {
+                                me: new TMap.MarkerStyle({
+                                    width: 38,
+                                    height: 38,
+                                    anchor: { x: 19, y: 19 },
+                                    src: 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="38" height="38"><circle cx="19" cy="19" r="16" fill="#ff4444" stroke="#fff" stroke-width="3"/><text x="19" y="24" text-anchor="middle" fill="#fff" font-size="16">\u{1F4CD}</text></svg>')
+                                })
+                            },
+                            geometries: [{
+                                id: 'me',
+                                styleId: 'me',
+                                position: new TMap.LatLng(myLat, myLon),
+                                properties: { title: '我在这里' }
+                            }]
+                        });
+                        bounds.push({ lat: myLat, lng: myLon });
+                    } catch (e) { }
+                }
+
+                // 自动调整视野以包含所有标记
+                if (bounds.length > 0) {
+                    const sw = new TMap.LatLng(Math.min(...bounds.map(b => b.lat)), Math.min(...bounds.map(b => b.lng)));
+                    const ne = new TMap.LatLng(Math.max(...bounds.map(b => b.lat)), Math.max(...bounds.map(b => b.lng)));
+                    mapInstance.fitBounds(new TMap.LatLngBounds(sw, ne), { padding: 50 });
+                }
+
+            } catch (err) {
+                console.error('地图加载失败:', err);
+                const errMsg = err.message || String(err);
+                document.getElementById('txlMap').innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--text-light);text-align:center;padding:1rem;"><div style="font-size:2rem;margin-bottom:0.5rem;">🗺️</div><div>地图加载失败</div><div style="font-size:0.75rem;margin-top:0.5rem;opacity:0.7;">' + errMsg.substring(0, 100) + '</div></div>';
+            }
+        }
+
+        function loadScript(url) {
+            return new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = url;
+                script.onload = resolve;
+                script.onerror = reject;
+                document.head.appendChild(script);
+            });
+        }
     </script>
+
+    <!-- 搜索模态框 -->
+    <div class="search-modal-overlay" id="searchModal" onclick="closeSearchOnOverlay(event)">
+        <div class="search-modal" onclick="event.stopPropagation()">
+            <div class="search-modal-header">
+                <span>🔍</span>
+                <input type="text" class="search-modal-input" id="searchInputModal" placeholder="搜索同学、留言、照片..." oninput="performSearch(this.value)">
+                <button class="search-modal-close" onclick="closeSearchModal()">✕</button>
+            </div>
+            <div class="search-modal-results" id="searchResults">
+                <div class="search-result-empty">
+                    <span>🔍</span>
+                    输入关键词搜索同学、留言和照片
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- 喊话模态框 -->
     <div class="modal-overlay" id="voiceShoutModal">

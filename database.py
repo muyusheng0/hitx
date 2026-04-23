@@ -843,6 +843,29 @@ def init_db():
         )
     ''')
 
+    # 访客记录表（个人主页）
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS visits (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            visitor TEXT NOT NULL,
+            target TEXT NOT NULL,
+            visit_time TEXT NOT NULL
+        )
+    ''')
+
+    # 评论回复表（支持回复到评论）
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS replies (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            message_id INTEGER NOT NULL,
+            parent_comment_id INTEGER DEFAULT 0,
+            nickname TEXT NOT NULL,
+            reply_to TEXT DEFAULT '',
+            content TEXT NOT NULL,
+            time TEXT NOT NULL
+        )
+    ''')
+
     # 创建索引提升查询性能
     _create_indexes(conn)
 
@@ -868,6 +891,16 @@ def _create_indexes(conn=None):
         # 通知表索引
         'CREATE INDEX IF NOT EXISTS idx_notifications_recipient ON notifications(recipient)',
         'CREATE INDEX IF NOT EXISTS idx_notifications_is_read ON notifications(is_read)',
+        # 搜索相关索引
+        'CREATE INDEX IF NOT EXISTS idx_students_name ON students(name)',
+        'CREATE INDEX IF NOT EXISTS idx_students_city ON students(city)',
+        'CREATE INDEX IF NOT EXISTS idx_students_hometown ON students(hometown_name)',
+        # 评论回复索引
+        'CREATE INDEX IF NOT EXISTS idx_replies_message ON replies(message_id)',
+        'CREATE INDEX IF NOT EXISTS idx_replies_parent ON replies(parent_comment_id)',
+        # 访客记录索引
+        'CREATE INDEX IF NOT EXISTS idx_visits_target ON visits(target)',
+        'CREATE INDEX IF NOT EXISTS idx_visits_time ON visits(visit_time)',
     ]
 
     for idx_sql in indexes:
@@ -1812,6 +1845,244 @@ def mark_all_notifications_read(recipient):
     cursor.execute('UPDATE notifications SET is_read = 1 WHERE recipient = ?', (recipient,))
     conn.commit()
     return True
+
+
+# ==================== 访客记录 ====================
+
+def record_visit(visitor, target):
+    """记录访客"""
+    if visitor == target:
+        return
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('''
+        INSERT INTO visits (visitor, target, visit_time)
+        VALUES (?, ?, ?)
+    ''', (visitor, target, datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+    conn.commit()
+    return cursor.lastrowid
+
+
+def get_visitors(target, limit=20):
+    """获取访客记录"""
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT visitor, MAX(visit_time) as last_visit, COUNT(*) as visit_count
+        FROM visits
+        WHERE target = ?
+        GROUP BY visitor
+        ORDER BY last_visit DESC
+        LIMIT ?
+    ''', (target, limit))
+    visitors = []
+    for row in cursor.fetchall():
+        visitors.append({
+            'visitor': row[0],
+            'last_visit': row[1],
+            'visit_count': row[2]
+        })
+    return visitors
+
+
+# ==================== 评论回复 ====================
+
+def add_reply(message_id, nickname, reply_to, content, parent_comment_id=0):
+    """添加回复（回复到评论）"""
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('''
+        INSERT INTO replies (message_id, parent_comment_id, nickname, reply_to, content, time)
+        VALUES (?, ?, ?, ?, ?, ?)
+    ''', (message_id, parent_comment_id, nickname, reply_to, content,
+          datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+    conn.commit()
+    return cursor.lastrowid
+
+
+def get_replies_by_message(message_id):
+    """获取某留言的所有回复"""
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT * FROM replies WHERE message_id = ? ORDER BY id ASC
+    ''', (message_id,))
+    replies = []
+    for row in cursor.fetchall():
+        replies.append(dict(row))
+    return replies
+
+
+def get_replies_by_comment(comment_id):
+    """获取某评论的所有回复"""
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT * FROM replies WHERE parent_comment_id = ? ORDER BY id ASC
+    ''', (comment_id,))
+    replies = []
+    for row in cursor.fetchall():
+        replies.append(dict(row))
+    return replies
+
+
+def delete_reply(reply_id):
+    """删除回复"""
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('DELETE FROM replies WHERE id = ?', (reply_id,))
+    conn.commit()
+    return cursor.rowcount > 0
+
+
+def get_reply_count(message_id):
+    """获取某留言的回复数"""
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('SELECT COUNT(*) FROM replies WHERE message_id = ?', (message_id,))
+    return cursor.fetchone()[0]
+
+
+# ==================== 全站搜索 ====================
+
+def search_students(keyword):
+    """搜索同学（姓名/籍贯/城市）"""
+    conn = get_db()
+    cursor = conn.cursor()
+    pattern = f'%{keyword}%'
+    cursor.execute('''
+        SELECT id, name, hometown_name, city, avatar, industry, company
+        FROM students
+        WHERE name LIKE ? OR hometown_name LIKE ? OR city LIKE ?
+        ORDER BY name
+    ''', (pattern, pattern, pattern))
+    results = []
+    for row in cursor.fetchall():
+        results.append(dict(row))
+    return results
+
+
+def search_messages(keyword):
+    """搜索留言内容"""
+    conn = get_db()
+    cursor = conn.cursor()
+    pattern = f'%{keyword}%'
+    cursor.execute('''
+        SELECT id, nickname, content, time, image
+        FROM messages
+        WHERE content LIKE ?
+        ORDER BY time DESC
+    ''', (pattern,))
+    results = []
+    for row in cursor.fetchall():
+        results.append(dict(row))
+    return results
+
+
+def search_photos(keyword):
+    """搜索照片（上传者/文件名）"""
+    conn = get_db()
+    cursor = conn.cursor()
+    pattern = f'%{keyword}%'
+    cursor.execute('''
+        SELECT id, filename, owner, time
+        FROM photos
+        WHERE owner LIKE ? OR filename LIKE ?
+        ORDER BY time DESC
+    ''', (pattern, pattern))
+    results = []
+    for row in cursor.fetchall():
+        results.append(dict(row))
+    return results
+
+
+# ==================== 个人主页增强 ====================
+
+def get_messages_by_user(nickname, limit=50):
+    """获取某用户的留言列表"""
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT id, nickname, content, time, image, voice
+        FROM messages
+        WHERE nickname = ?
+        ORDER BY time DESC
+        LIMIT ?
+    ''', (nickname, limit))
+    results = []
+    for row in cursor.fetchall():
+        results.append(dict(row))
+    return results
+
+
+def get_photos_by_user(owner, limit=50):
+    """获取某用户上传的照片"""
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT id, filename, owner, time
+        FROM photos
+        WHERE owner = ?
+        ORDER BY time DESC
+        LIMIT ?
+    ''', (owner, limit))
+    results = []
+    for row in cursor.fetchall():
+        results.append(dict(row))
+    return results
+
+
+def get_activities_by_user(actor, limit=50):
+    """获取某用户参与的活动"""
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT time, actor, type, content
+        FROM activities
+        WHERE actor = ?
+        ORDER BY time DESC
+        LIMIT ?
+    ''', (actor, limit))
+    results = []
+    for row in cursor.fetchall():
+        results.append(dict(row))
+    return results
+
+
+def get_user_last_active(name):
+    """获取用户最近活跃时间"""
+    conn = get_db()
+    cursor = conn.cursor()
+    # 检查留言、照片、活动、登录日志
+    times = []
+    cursor.execute('SELECT MAX(time) FROM messages WHERE nickname = ?', (name,))
+    r = cursor.fetchone()[0]
+    if r:
+        times.append(r)
+    cursor.execute('SELECT MAX(time) FROM photos WHERE owner = ?', (name,))
+    r = cursor.fetchone()[0]
+    if r:
+        times.append(r)
+    cursor.execute('SELECT MAX(time) FROM activities WHERE actor = ?', (name,))
+    r = cursor.fetchone()[0]
+    if r:
+        times.append(r)
+    cursor.execute('SELECT MAX(login_time) FROM login_logs WHERE username = ?', (name,))
+    r = cursor.fetchone()[0]
+    if r:
+        times.append(r)
+    return max(times) if times else None
+
+
+def get_student_by_name(name):
+    """根据姓名获取学生信息"""
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM students WHERE name = ?', (name,))
+    row = cursor.fetchone()
+    if row:
+        return dict(row)
+    return None
 
 
 # ==================== 新闻模块 ====================

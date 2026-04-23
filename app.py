@@ -506,6 +506,38 @@ def sanitize_input(text):
     return text.strip()
 
 
+# ==================== 登录保护 ====================
+
+# 公开路由（无需登录）
+PUBLIC_ROUTES = {'/login', '/api/captcha', '/api/check_user_login_password', '/api/verify', '/static'}
+
+def is_public_path(path):
+    """检查是否是公开路径"""
+    if path in PUBLIC_ROUTES:
+        return True
+    if path.startswith('/static/'):
+        return True
+    return False
+
+@app.before_request
+def require_login():
+    """未登录用户只能访问登录页"""
+    if 'verified_student' not in session and not is_public_path(request.path):
+        redirect_url = request.path
+        if request.query_string:
+            redirect_url += '?' + request.query_string.decode('utf-8')
+        return redirect(f'/login?redirect={redirect_url}')
+
+@app.route('/login')
+def login_page():
+    """登录页"""
+    if 'verified_student' in session:
+        # 已登录，跳转到原页面或留言页
+        redirect_url = request.args.get('redirect', '/lyb')
+        return redirect(redirect_url)
+    return render_template('login.html')
+
+
 # ==================== 路由 ====================
 
 @app.route('/')
@@ -1569,6 +1601,50 @@ def txl_list():
     return jsonify({'success': True, 'students': result})
 
 
+@app.route('/api/txl/map')
+def txl_map():
+    """获取通讯录地图数据(仅已验证用户)"""
+    if 'verified_student' not in session:
+        return jsonify({'success': False, 'message': '请先登录'})
+    students = database.read_txl()
+    points = []
+    for s in students:
+        coords = s.get('gps_coords', '') or s.get('coords', '')
+        if not coords:
+            city = s.get('city', '') or s.get('hometown_name', '')
+            district = s.get('district', '')
+            if city:
+                coords = database.get_coords_by_city(city, district)
+        if coords:
+            try:
+                lat, lon = map(float, coords.split(','))
+                points.append({
+                    'name': s.get('name', ''),
+                    'lat': lat,
+                    'lon': lon,
+                    'city': s.get('city', '') or s.get('hometown_name', ''),
+                    'position': s.get('position', ''),
+                    'company': s.get('company', ''),
+                    'phone': s.get('phone', ''),
+                })
+            except (ValueError, AttributeError):
+                pass
+
+    # 获取当前用户坐标
+    user_coords = None
+    current_name = session['verified_student']['name']
+    for s in students:
+        if s.get('name') == current_name:
+            user_coords = s.get('gps_coords', '') or s.get('coords', '')
+            break
+
+    return jsonify({'success': True, 'data': points, 'user_coords': user_coords})
+
+
+# 腾讯地图 Key 配置
+TENCENT_MAP_KEY = ''  # 请替换为您的腾讯地图 Key
+
+
 @app.route('/api/stats')
 def public_stats():
     """获取公开统计数据"""
@@ -2109,6 +2185,156 @@ def update_profile_pc():
             return jsonify({'success': True, 'message': '更新成功'})
 
     return jsonify({'success': False, 'message': '未找到该同学信息'})
+
+
+# ==================== 全站搜索 ====================
+
+@app.route('/api/search')
+def api_search():
+    """全站搜索"""
+    keyword = request.args.get('q', '').strip()
+    if not keyword:
+        return jsonify({'success': False, 'message': '请输入搜索关键词'})
+
+    results = {
+        'students': database.search_students(keyword),
+        'messages': database.search_messages(keyword),
+        'photos': database.search_photos(keyword),
+    }
+    return jsonify({'success': True, 'keyword': keyword, 'results': results})
+
+
+# ==================== 个人主页增强 ====================
+
+@app.route('/api/profile/data')
+def api_profile_data():
+    """获取个人主页增强数据"""
+    if 'verified_student' not in session:
+        return jsonify({'success': False, 'message': '请先登录'})
+
+    user = session['verified_student']
+    name = user['name']
+
+    data = {
+        'messages': database.get_messages_by_user(name),
+        'photos': database.get_photos_by_user(name),
+        'activities': database.get_activities_by_user(name),
+        'last_active': database.get_user_last_active(name),
+        'visitors': database.get_visitors(name),
+    }
+    return jsonify({'success': True, 'data': data})
+
+
+@app.route('/api/profile/<name>')
+def api_public_profile(name):
+    """获取他人公开主页信息"""
+    student = database.get_student_by_name(name)
+    if not student:
+        return jsonify({'success': False, 'message': '未找到该同学'})
+
+    data = {
+        'name': student.get('name', ''),
+        'hometown_name': student.get('hometown_name', ''),
+        'city': student.get('city', ''),
+        'industry': student.get('industry', ''),
+        'company': student.get('company', ''),
+        'position': student.get('position', ''),
+        'avatar': student.get('avatar', ''),
+        'custom_intro': student.get('custom_intro', ''),
+        'last_active': database.get_user_last_active(name),
+        'messages': database.get_messages_by_user(name, limit=10),
+        'photos': database.get_photos_by_user(name, limit=10),
+    }
+    return jsonify({'success': True, 'data': data})
+
+
+@app.route('/api/visit/<name>', methods=['POST'])
+def api_record_visit(name):
+    """记录访客"""
+    if 'verified_student' not in session:
+        return jsonify({'success': False, 'message': '请先登录'})
+
+    visitor = session['verified_student']['name']
+    database.record_visit(visitor, name)
+    return jsonify({'success': True})
+
+
+# ==================== 评论回复 ====================
+
+@app.route('/api/add_reply', methods=['POST'])
+def api_add_reply():
+    """添加回复（回复到评论）"""
+    if 'verified_student' not in session:
+        return jsonify({'success': False, 'message': '请先登录'})
+
+    data = request.get_json()
+    message_id = data.get('message_id')
+    parent_comment_id = data.get('parent_comment_id', 0)
+    reply_to = data.get('reply_to', '')
+    content = sanitize_input(data.get('content', ''))
+
+    if not message_id or not content:
+        return jsonify({'success': False, 'message': '参数错误'})
+
+    nickname = session['verified_student']['name']
+    reply_id = database.add_reply(message_id, nickname, reply_to, content, parent_comment_id)
+
+    # 发送通知给评论作者或留言作者
+    if reply_to:
+        # 通知被回复的人
+        database.create_notification(
+            recipient=reply_to,
+            sender=nickname,
+            notif_type='reply',
+            ref_id=message_id,
+            content=f'{nickname}回复了你: {content[:50]}'
+        )
+    else:
+        # 通知留言作者
+        messages = database.read_lyb()
+        for msg in messages:
+            if str(msg['id']) == str(message_id):
+                msg_owner = msg.get('nickname', '')
+                if msg_owner and msg_owner != nickname:
+                    database.create_notification(
+                        recipient=msg_owner,
+                        sender=nickname,
+                        notif_type='reply',
+                        ref_id=message_id,
+                        content=f'{nickname}回复了你的留言: {content[:50]}'
+                    )
+                break
+
+    return jsonify({
+        'success': True,
+        'id': reply_id,
+        'nickname': nickname,
+        'reply_to': reply_to,
+        'content': content,
+        'time': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    })
+
+
+@app.route('/api/get_replies/<int:message_id>')
+def api_get_replies(message_id):
+    """获取某留言的所有回复"""
+    replies = database.get_replies_by_message(message_id)
+    return jsonify({'success': True, 'replies': replies})
+
+
+@app.route('/api/delete_reply', methods=['POST'])
+def api_delete_reply():
+    """删除回复"""
+    if 'verified_student' not in session:
+        return jsonify({'success': False, 'message': '请先登录'})
+
+    data = request.get_json()
+    reply_id = data.get('id')
+    if not reply_id:
+        return jsonify({'success': False, 'message': '无效的回复ID'})
+
+    database.delete_reply(reply_id)
+    return jsonify({'success': True})
 
 
 @app.route('/api/upload_image', methods=['POST'])

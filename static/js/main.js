@@ -359,6 +359,8 @@ async function submitVerify(e) {
 
                     // 触发登录成功事件
                     window.dispatchEvent(new CustomEvent('userLoginSuccess', { detail: window.currentUser }));
+                    // 启动 session 心跳检查
+                    startSessionHeartbeat();
                     if (typeof loadStudentData === 'function') {
                         loadStudentData();
                     }
@@ -419,9 +421,45 @@ function logout() {
         updateVerifyUI(false);
         updateMessageInputUI(false);
     }).then(() => {
-        window.location.reload();
+        // 退出登录后跳转到登录页
+        window.location.href = '/login';
     });
 }
+
+// ==================== 登录有效性心跳检查 ====================
+let sessionCheckInterval = null;
+
+function startSessionHeartbeat() {
+    // 每5分钟检查一次登录有效性
+    if (sessionCheckInterval) clearInterval(sessionCheckInterval);
+    
+    sessionCheckInterval = setInterval(async () => {
+        try {
+            const res = await fetch('/api/check_verify', { credentials: 'same-origin' });
+            const data = await res.json();
+            if (!data.verified && state.verified) {
+                // Session 已失效
+                console.log('[Heartbeat] Session 已失效，跳转到登录页');
+                state.verified = false;
+                state.currentStudent = null;
+                window.currentUser = null;
+                localStorage.removeItem('currentUser');
+                // 提示并跳转
+                alert('登录已过期，请重新登录');
+                window.location.href = '/login';
+            }
+        } catch (e) {
+            console.error('[Heartbeat] 检查 session 失败:', e);
+        }
+    }, 5 * 60 * 1000); // 5分钟
+}
+
+// 页面加载时启动心跳（如果已登录）
+document.addEventListener('DOMContentLoaded', () => {
+    if (state.verified) {
+        startSessionHeartbeat();
+    }
+});
 
 function showEditButton() {
     document.querySelectorAll('.edit-btn').forEach(btn => {
@@ -2207,6 +2245,102 @@ function handleScroll() {
 }
 
 window.scrollToTop = scrollToTop;
+
+// ==================== 全站搜索 ====================
+
+let searchDebounceTimer = null;
+
+window.openSearchModal = function() {
+    const modal = document.getElementById('searchModal');
+    if (modal) {
+        modal.classList.add('active');
+        const input = document.getElementById('searchInputModal');
+        if (input) {
+            setTimeout(() => input.focus(), 100);
+        }
+    }
+};
+
+window.closeSearchModal = function() {
+    const modal = document.getElementById('searchModal');
+    if (modal) {
+        modal.classList.remove('active');
+        const input = document.getElementById('searchInputModal');
+        if (input) input.value = '';
+        const results = document.getElementById('searchResults');
+        if (results) {
+            results.innerHTML = '<div class="search-result-empty"><span>🔍</span>输入关键词搜索同学、留言和照片</div>';
+        }
+    }
+};
+
+window.closeSearchOnOverlay = function(event) {
+    if (event.target.classList.contains('search-modal-overlay')) {
+        closeSearchModal();
+    }
+};
+
+window.performSearch = function(keyword) {
+    clearTimeout(searchDebounceTimer);
+    const results = document.getElementById('searchResults');
+    if (!results) return;
+
+    if (!keyword.trim()) {
+        results.innerHTML = '<div class="search-result-empty"><span>🔍</span>输入关键词搜索同学、留言和照片</div>';
+        return;
+    }
+
+    searchDebounceTimer = setTimeout(() => {
+        results.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-light);">搜索中...</div>';
+        fetch('/api/search?q=' + encodeURIComponent(keyword))
+            .then(res => res.json())
+            .then(data => {
+                if (!data.success) {
+                    results.innerHTML = '<div class="search-result-empty"><span>⚠️</span>' + (data.message || '搜索失败') + '</div>';
+                    return;
+                }
+                let html = '';
+                const r = data.results;
+                if (r.students && r.students.length > 0) {
+                    html += '<div class="search-result-section"><div class="search-result-title">👥 同学 (' + r.students.length + ')</div>';
+                    r.students.forEach(function(s) {
+                        const avatarHtml = s.avatar ? '<div class="search-result-avatar"><img src="' + s.avatar + '" alt="' + s.name + '"></div>' : '<div class="search-result-avatar">' + s.name.charAt(0) + '</div>';
+                        const detail = [s.hometown_name, s.city].filter(Boolean).join(' · ') || '';
+                        html += '<div class="search-result-item" onclick="location.href=\'/txl\'">' + avatarHtml + '<div class="search-result-info"><div class="search-result-name">' + s.name + '</div><div class="search-result-detail">' + detail + '</div></div></div>';
+                    });
+                    html += '</div>';
+                }
+                if (r.messages && r.messages.length > 0) {
+                    html += '<div class="search-result-section"><div class="search-result-title">💬 留言 (' + r.messages.length + ')</div>';
+                    r.messages.forEach(function(m) {
+                        html += '<div class="search-result-item" onclick="location.href=\'/lyb#msg-' + m.id + '\'">' + '<div class="search-result-avatar">' + m.nickname.charAt(0) + '</div>' + '<div class="search-result-info"><div class="search-result-name">' + m.nickname + '</div><div class="search-result-detail">' + (m.content || '').substring(0, 60) + '</div></div>' + '<div class="search-result-detail" style="flex-shrink:0;">' + (m.time || '').substring(0, 10) + '</div></div>';
+                    });
+                    html += '</div>';
+                }
+                if (r.photos && r.photos.length > 0) {
+                    html += '<div class="search-result-section"><div class="search-result-title">📷 照片 (' + r.photos.length + ')</div>';
+                    r.photos.forEach(function(p) {
+                        html += '<div class="search-result-item" onclick="location.href=\'/media\'">' + '<div class="search-result-avatar">📷</div>' + '<div class="search-result-info"><div class="search-result-name">' + (p.owner || '匿名') + '</div><div class="search-result-detail">' + p.filename + '</div></div>' + '<div class="search-result-detail" style="flex-shrink:0;">' + (p.time || '').substring(0, 10) + '</div></div>';
+                    });
+                    html += '</div>';
+                }
+                if (!html) {
+                    html = '<div class="search-result-empty"><span>😅</span>没有找到相关内容</div>';
+                }
+                results.innerHTML = html;
+            })
+            .catch(() => {
+                results.innerHTML = '<div class="search-result-empty"><span>⚠️</span>搜索失败，请稍后重试</div>';
+            });
+    }, 300);
+};
+
+// ESC键关闭搜索
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeSearchModal();
+    }
+});
 
 // 监听滚动事件
 window.addEventListener('scroll', handleScroll);

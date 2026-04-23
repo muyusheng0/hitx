@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>登录 - 吉大自动化八班</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            min-height: 100vh;
+            padding: 20px;
+            background: #f5f0eb;
+            font-family: sans-serif;
+        }
+        .login-container {
+            max-width: 380px;
+            margin: 0 auto;
+        }
+        .login-card {
+            background: #fff;
+            border-radius: 16px;
+            padding: 32px 24px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+        .login-logo {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+        .login-logo h1 {
+            font-size: 18px;
+            color: #333;
+        }
+        .login-logo p {
+            font-size: 13px;
+            color: #999;
+            margin-top: 6px;
+        }
+        .input-group {
+            margin-bottom: 14px;
+        }
+        .input-group label {
+            display: block;
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+        .input-group input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #e0d8cf;
+            border-radius: 8px;
+            font-size: 15px;
+            outline: none;
+            background: #faf8f5;
+        }
+        .captcha-row {
+            display: flex;
+            align-items: center;
+        }
+        .captcha-row input {
+            flex: 1;
+            margin-right: 8px;
+        }
+        .captcha-display {
+            font-size: 18px;
+            font-weight: bold;
+            color: #d4a574;
+            min-width: 50px;
+            text-align: center;
+            background: #faf8f5;
+            padding: 8px;
+            border-radius: 8px;
+            border: 1px solid #e0d8cf;
+            margin-right: 4px;
+        }
+        .captcha-refresh {
+            background: none;
+            border: none;
+            font-size: 16px;
+            cursor: pointer;
+            padding: 6px;
+        }
+        .login-btn {
+            width: 100%;
+            padding: 12px;
+            background: #d4a574;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 8px;
+        }
+        .login-btn:disabled {
+            opacity: 0.6;
+        }
+        .login-error {
+            color: #e74c3c;
+            font-size: 12px;
+            text-align: center;
+            margin-top: 10px;
+            min-height: 18px;
+        }
+        .password-group {
+            display: none;
+        }
+        #js-test {
+            text-align: center;
+            color: green;
+            font-size: 12px;
+            margin-top: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-card">
+            <div class="login-logo">
+                <h1>吉大自动化八班</h1>
+                <p>请登录以继续访问</p>
+            </div>
+            <div class="login-form">
+                <div class="input-group">
+                    <label>姓名</label>
+                    <input type="text" id="loginName" placeholder="请输入你的姓名" onchange="checkPassword()">
+                </div>
+                <div class="input-group">
+                    <label>学号</label>
+                    <input type="text" id="loginStudentId" placeholder="请输入你的学号" onchange="checkPassword()">
+                </div>
+                <div class="input-group">
+                    <label>验证码</label>
+                    <div class="captcha-row">
+                        <input type="text" id="loginCaptcha" placeholder="请输入答案">
+                        <div class="captcha-display" id="loginCaptchaQ">...</div>
+                        <button type="button" class="captcha-refresh" onclick="getCapt()">刷新</button>
+                    </div>
+                </div>
+                <div class="input-group password-group" id="passwordGroup">
+                    <label>登录密码</label>
+                    <input type="password" id="loginPassword" placeholder="请输入登录密码">
+                </div>
+                <button type="button" class="login-btn" id="loginBtn" onclick="doLogin()">登录</button>
+                <div class="login-error" id="loginError"></div>
+                <div id="js-test"></div>
+            </div>
+        </div>
+    </div>
+    <script>
+        var _captcha = '';
+        var _needPw = false;
+
+        // JS运行测试
+        document.getElementById('js-test').textContent = 'JS运行正常';
+
+        function getCapt() {
+            var xhr = new XMLHttpRequest();
+            xhr.open('GET', '/api/captcha');
+            xhr.onload = function() {
+                if (xhr.status === 200) {
+                    var d = JSON.parse(xhr.responseText);
+                    _captcha = d.captcha;
+                    document.getElementById('loginCaptchaQ').textContent = d.captcha;
+                }
+            };
+            xhr.send();
+        }
+
+        function checkPassword() {
+            var name = document.getElementById('loginName').value.replace(/^\s+|\s+$/g, '');
+            var sid = document.getElementById('loginStudentId').value.replace(/^\s+|\s+$/g, '');
+            if (!name || !sid) return;
+            var xhr = new XMLHttpRequest();
+            xhr.open('POST', '/api/check_user_login_password');
+            xhr.setRequestHeader('Content-Type', 'application/json');
+            xhr.onload = function() {
+                if (xhr.status === 200) {
+                    var d = JSON.parse(xhr.responseText);
+                    if (d.has_password) {
+                        document.getElementById('passwordGroup').style.display = 'block';
+                        _needPw = true;
+                    } else {
+                        document.getElementById('passwordGroup').style.display = 'none';
+                        _needPw = false;
+                    }
+                }
+            };
+            xhr.send(JSON.stringify({ name: name, student_id: sid }));
+        }
+
+        function doLogin() {
+            var err = document.getElementById('loginError');
+            var btn = document.getElementById('loginBtn');
+            err.textContent = '';
+            btn.disabled = true;
+            btn.textContent = '登录中...';
+
+            var name = document.getElementById('loginName').value.replace(/^\s+|\s+$/g, '');
+            var sid = document.getElementById('loginStudentId').value.replace(/^\s+|\s+$/g, '');
+            var capt = document.getElementById('loginCaptcha').value.replace(/^\s+|\s+$/g, '');
+            var pw = document.getElementById('loginPassword').value;
+
+            var xhr = new XMLHttpRequest();
+            xhr.open('POST', '/api/verify');
+            xhr.setRequestHeader('Content-Type', 'application/json');
+            xhr.onload = function() {
+                if (xhr.status === 200) {
+                    var d = JSON.parse(xhr.responseText);
+                    if (d.success) {
+                        btn.textContent = '登录成功！';
+                        setTimeout(function() {
+                            // 获取 redirect 参数，没有则默认跳转到首页
+                            var params = new URLSearchParams(window.location.search);
+                            var redirect = params.get('redirect') || '/';
+                            window.location.href = redirect;
+                        }, 500);
+                    } else if (d.message === 'password_required') {
+                        document.getElementById('passwordGroup').style.display = 'block';
+                        document.getElementById('loginPassword').focus();
+                        err.textContent = d.prompt || '请输入登录密码';
+                        btn.disabled = false;
+                        btn.textContent = '登录';
+                    } else {
+                        err.textContent = d.message || '登录失败';
+                        getCapt();
+                        document.getElementById('loginCaptcha').value = '';
+                        btn.disabled = false;
+                        btn.textContent = '登录';
+                    }
+                } else {
+                    err.textContent = '网络错误';
+                    btn.disabled = false;
+                    btn.textContent = '登录';
+                }
+            };
+            xhr.onerror = function() {
+                err.textContent = '网络错误';
+                btn.disabled = false;
+                btn.textContent = '登录';
+            };
+            xhr.send(JSON.stringify({
+                name: name,
+                student_id: sid,
+                captcha: capt,
+                login_password: _needPw ? pw : ''
+            }));
+        }
+
+        // 加载验证码
+        getCapt();
+    </script>
+</body>
+</html>
