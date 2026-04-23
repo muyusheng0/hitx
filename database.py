@@ -11,7 +11,7 @@ import threading
 from datetime import datetime
 
 # 数据库文件路径
-DB_FILE = '/home/ubuntu/jlu8/alumni.db'
+DB_FILE = '/tmp/hitx/alumni.db'
 
 # 中国城市经纬度坐标表（部分常用城市）
 CHINA_CITY_COORDS = {

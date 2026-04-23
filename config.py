@@ -56,7 +56,7 @@ CACHE_TTL = 300  # 5分钟
 
 # ==================== 公开路由 ====================
 
-PUBLIC_ROUTES = {'/login', '/api/captcha', '/api/check_user_login_password', '/api/verify', '/static', '/api/stats'}
+PUBLIC_ROUTES = {'/login', '/api/captcha', '/api/check_user_login_password', '/api/verify', '/static', '/api/stats', '/api/news', '/api/alumni', '/api/location/provinces', '/api/location/cities', '/api/location/districts', '/api/location/lookup', '/api/location/codes_to_names'}
 
 # ==================== OpenClaw ====================
 

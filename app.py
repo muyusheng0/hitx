@@ -1,5 +1,5 @@
 """
-吉大通信八班 同学录网站
+吉达通信八班 同学录网站
 Flask Web Application
 """
 
@@ -12,54 +12,51 @@ import re
 from datetime import datetime, timedelta
 from functools import wraps
 import database
-from PIL import Image
-from apscheduler.schedulers.background import BackgroundScheduler
 import news_crawler
 from wx_api import wx_bp
 
+# ===== 从新模块导入 =====
+from config import (
+    SECRET_KEY, MAX_CONTENT_LENGTH, UPLOAD_FOLDER, ALLOWED_EXTENSIONS,
+    SESSION_COOKIE_SAMESITE, SESSION_COOKIE_SECURE, SESSION_COOKIE_HTTPONLY,
+    SESSION_COOKIE_NAME, SESSION_COOKIE_PATH,
+    DATA_DIR, TXL_FILE, LYB_FILE, VIDEOS_FILE, PHOTOS_FILE, DELETED_FILE,
+    CACHE_TTL, ADMIN_USERS,
+    AVATAR_MAX_SIZE, IMAGE_MAX_SIZE, IMAGE_QUALITY, THUMBNAIL_SIZE,
+    PUBLIC_ROUTES,
+)
+from utils import (
+    compress_avatar, compress_image, create_thumbnail,
+    get_ip_location, get_real_ip, allowed_file, sanitize_input,
+    haversine_distance, is_public_path,
+    _news_cache, _alumni_cache,
+    _get_cached_news, _set_cached_news,
+    _get_cached_alumni, _set_cached_alumni,
+)
+from decorators import is_admin, is_super_admin, is_password_verified, require_login
+from errors import register_error_handlers
+from extensions import init_news_scheduler, update_news_scheduler
+from location_data import (
+    LOCATION_DATA, PROVINCE_NAME_TO_CODE, PROVINCE_CODE_TO_NAME,
+    CITY_NAME_TO_CODE, CITY_CODE_TO_NAME, NAME_TO_PROVINCE_PINYIN,
+    _strip_province_suffix,
+)
+from blueprints.news import news_bp
+from blueprints.location import location_bp
+
 app = Flask(__name__)
 app.register_blueprint(wx_bp)
-app.secret_key = 'jlu_tongxin_8_class_2024_secret_key'
-app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # 100MB max for video uploads
-app.config['UPLOAD_FOLDER'] = 'static/imgs/avatars'
-app.config['ALLOWED_EXTENSIONS'] = {'png', 'jpg', 'jpeg', 'gif'}
-# Session 配置 - 兼容微信浏览器
-app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'  # 兼容微信内置浏览器
-app.config['SESSION_COOKIE_SECURE'] = False  # 开发环境用HTTP，生产环境建议用HTTPS
-app.config['SESSION_COOKIE_HTTPONLY'] = True
-app.config['SESSION_COOKIE_NAME'] = 'jlu_session'  # 自定义 cookie 名称
-app.config['SESSION_COOKIE_PATH'] = '/'  # 全站可用
-
-# 新闻和校友会数据缓存(5分钟)
-_news_cache = {'data': None, 'timestamp': None}
-_alumni_cache = {'data': None, 'timestamp': None}
-_CACHE_TTL = 300  # 5分钟缓存
-
-def _get_cached_news():
-    """获取缓存的新闻数据"""
-    now = datetime.now().timestamp()
-    if _news_cache['data'] and _news_cache['timestamp']:
-        if now - _news_cache['timestamp'] < _CACHE_TTL:
-            return _news_cache['data']
-    return None
-
-def _set_cached_news(data):
-    """设置缓存的新闻数据"""
-    _news_cache['data'] = data
-    _news_cache['timestamp'] = datetime.now().timestamp()
-
-def _get_cached_alumni():
-    """获取缓存的校友会数据"""
-    now = datetime.now().timestamp()
-    if _alumni_cache['data'] and _alumni_cache['timestamp']:
-        if now - _alumni_cache['timestamp'] < _CACHE_TTL:
-            return _alumni_cache['data']
-    return None
-
-def _set_cached_alumni(data):
-    """设置缓存的校友会数据"""
-    _alumni_cache['data'] = data
-    _alumni_cache['timestamp'] = datetime.now().timestamp()
+app.register_blueprint(news_bp)
+app.register_blueprint(location_bp)
+app.secret_key = SECRET_KEY
+app.config['MAX_CONTENT_LENGTH'] = MAX_CONTENT_LENGTH
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.config['ALLOWED_EXTENSIONS'] = ALLOWED_EXTENSIONS
+app.config['SESSION_COOKIE_SAMESITE'] = SESSION_COOKIE_SAMESITE
+app.config['SESSION_COOKIE_SECURE'] = SESSION_COOKIE_SECURE
+app.config['SESSION_COOKIE_HTTPONLY'] = SESSION_COOKIE_HTTPONLY
+app.config['SESSION_COOKIE_NAME'] = SESSION_COOKIE_NAME
+app.config['SESSION_COOKIE_PATH'] = SESSION_COOKIE_PATH
 
 # 禁用页面缓存
 @app.after_request
@@ -79,281 +76,18 @@ def add_no_cache_headers(response):
 
 AVATAR_MAX_SIZE = 500 * 1024  # 500KB for avatars
 
-@app.errorhandler(413)
-def request_entity_too_large(e):
-    return jsonify({'success': False, 'message': '文件大小超过100MB限制'}), 413
+# 错误处理统一注册（见 errors.py）
 
-# IP归属地缓存
-_ip_location_cache = {}
-
-def get_ip_location(ip_address):
-    """获取IP归属地（中文）"""
-    if not ip_address:
-        return ''
-
-    # 忽略本地IP
-    if ip_address in ('127.0.0.1', 'localhost', '0.0.0.0') or ip_address.startswith('192.168.') or ip_address.startswith('10.'):
-        return '本地网络'
-
-    # 检查缓存(缓存1小时)
-    if ip_address in _ip_location_cache:
-        cached_time, cached_location = _ip_location_cache[ip_address]
-        if (datetime.now() - cached_time).seconds < 3600:
-            return cached_location
-
-    # 中英文映射表
-    country_map = {
-        'China': '中国', 'United States': '美国', 'Japan': '日本',
-        'South Korea': '韩国', 'Germany': '德国', 'France': '法国',
-        'United Kingdom': '英国', 'Russia': '俄罗斯', 'Canada': '加拿大',
-        'Australia': '澳大利亚', 'Singapore': '新加坡', 'India': '印度',
-        'Brazil': '巴西', 'Netherlands': '荷兰', 'Italy': '意大利',
-        'Spain': '西班牙', 'Mexico': '墨西哥', 'Indonesia': '印尼',
-        'Thailand': '泰国', 'Vietnam': '越南', 'Malaysia': '马来西亚',
-        'Philippines': '菲律宾', 'Pakistan': '巴基斯坦', 'Bangladesh': '孟加拉国',
-        'Turkey': '土耳其', 'Saudi Arabia': '沙特阿拉伯', 'United Arab Emirates': '阿联酋',
-        'Nigeria': '尼日利亚', 'Egypt': '埃及', 'South Africa': '南非',
-        'Kenya': '肯尼亚', 'Morocco': '摩洛哥', 'Ghana': '加纳',
-        'Tanzania': '坦桑尼亚', 'Ethiopia': '埃塞俄比亚', 'Uganda': '乌干达',
-        'Argentina': '阿根廷', 'Colombia': '哥伦比亚', 'Peru': '秘鲁',
-        'Chile': '智利', 'Venezuela': '委内瑞拉', 'Ecuador': '厄瓜多尔',
-        'Cuba': '古巴', 'Dominican Republic': '多米尼加', 'Guatemala': '危地马拉',
-        'Portugal': '葡萄牙', 'Poland': '波兰', 'Netherlands': '荷兰',
-        'Belgium': '比利时', 'Sweden': '瑞典', 'Norway': '挪威',
-        'Denmark': '丹麦', 'Finland': '芬兰', 'Austria': '奥地利',
-        'Switzerland': '瑞士', 'Czech Republic': '捷克', 'Greece': '希腊',
-        'Hungary': '匈牙利', 'Romania': '罗马尼亚', 'Bulgaria': '保加利亚',
-        'Ukraine': '乌克兰', 'Israel': '以色列', 'Jordan': '约旦',
-        'Lebanon': '黎巴嫩', 'Iraq': '伊拉克', 'Iran': '伊朗',
-        'Afghanistan': '阿富汗', 'Kazakhstan': '哈萨克斯坦', 'Uzbekistan': '乌兹别克斯坦',
-        'Mongolia': '蒙古', 'North Korea': '朝鲜', 'Taiwan': '台湾',
-        'Hong Kong': '香港', 'Macau': '澳门',
-    }
-
-    region_map = {
-        'Beijing': '北京', 'Shanghai': '上海', 'Guangdong': '广东', 'Zhejiang': '浙江',
-        'Jiangsu': '江苏', 'Shandong': '山东', 'Sichuan': '四川', 'Henan': '河南',
-        'Hubei': '湖北', 'Shaanxi': '陕西', 'Fujian': '福建', 'Liaoning': '辽宁',
-        'Tianjin': '天津', 'Chongqing': '重庆', 'Jilin': '吉林', 'Heilongjiang': '黑龙江',
-        'Inner Mongolia': '内蒙古', 'Guangxi': '广西', 'Yunnan': '云南', 'Guizhou': '贵州',
-        'Xinjiang': '新疆', 'Tibet': '西藏', 'Ningxia': '宁夏', 'Qinghai': '青海',
-        'Gansu': '甘肃', 'Hainan': '海南', 'Hunan': '湖南', 'Anhui': '安徽',
-        'Jiangxi': '江西', 'Shanxi': '山西', 'Hebei': '河北', 'Taiwan': '台湾',
-        'Hong Kong': '香港', 'Macau': '澳门',
-        'California': '加利福尼亚', 'New York': '纽约', 'Texas': '得克萨斯',
-        'Florida': '佛罗里达', 'Illinois': '伊利诺伊', 'Pennsylvania': '宾夕法尼亚',
-        'Ohio': '俄亥俄', 'Georgia': '乔治亚', 'Michigan': '密歇根', 'Arizona': '亚利桑那',
-    }
-
-    try:
-        import requests
-        resp = requests.get(f'http://ip-api.com/json/{ip_address}?fields=status,country,regionName,city', timeout=3)
-        data = resp.json()
-        if data.get('status') == 'success':
-            country = country_map.get(data.get('country', ''), data.get('country', ''))
-            region = region_map.get(data.get('regionName', ''), data.get('regionName', ''))
-            city = data.get('city', '')
-            location = f"{country} {region} {city}".strip()
-            _ip_location_cache[ip_address] = (datetime.now(), location)
-            return location
-    except:
-        pass
-
-    return ip_address
+# get_ip_location, get_real_ip 已迁移到 utils.py
+# get_real_ip 需要传入 request 参数（保持兼容）
+# get_real_ip 已迁移到 utils.py, 调用 get_real_ip(request)
+# ADMIN_USERS 已从 config.py 导入
+# is_admin, is_super_admin, is_password_verified 已迁移到 decorators.py
 
 
-def get_real_ip():
-    """获取真实客户端IP(支持代理)"""
-    # 优先从代理头获取
-    if request.headers.get('X-Forwarded-For'):
-        ip = request.headers.get('X-Forwarded-For').split(',')[0].strip()
-    elif request.headers.get('X-Real-IP'):
-        ip = request.headers.get('X-Real-IP')
-    else:
-        ip = request.remote_addr or ''
-    return ip
+# compress_avatar, compress_image, create_thumbnail 已迁移到 utils.py
+# DATA_DIR 等路径配置已迁移到 config.py
 
-# 管理员名单
-ADMIN_USERS = ['穆玉升']
-
-
-def is_admin(name):
-    """检查用户是否为管理员"""
-    if name in ADMIN_USERS:
-        return True
-    students = database.read_txl()
-    for s in students:
-        if s.get('name') == name and s.get('is_admin'):
-            return True
-    return False
-
-
-def is_super_admin(name):
-    """检查用户是否为超级管理员"""
-    if name not in ADMIN_USERS:
-        return False
-    students = database.read_txl()
-    for s in students:
-        if s.get('name') == name:
-            return bool(s.get('super_admin'))
-    return False
-
-
-def is_password_verified():
-    """检查当前用户是否已验证密码"""
-    if 'verified_student' not in session:
-        return False
-    current_name = session['verified_student']['name']
-    return session.get('password_verified', False)
-
-
-def compress_avatar(file, filepath, max_size=AVATAR_MAX_SIZE):
-    """压缩头像图片,确保不超过max_size"""
-    try:
-        # 先尝试保存原始图片
-        file.save(filepath)
-
-        # 获取文件大小
-        file_size = os.path.getsize(filepath)
-
-        # 如果小于限制,直接返回True
-        if file_size <= max_size:
-            return True
-
-        # 需要压缩
-        img = Image.open(filepath)
-
-        # 逐步降低质量直到文件大小符合要求
-        quality = 95
-        while file_size > max_size and quality > 20:
-            img.save(filepath, quality=quality, optimize=True)
-            file_size = os.path.getsize(filepath)
-            quality -= 10
-
-        # 如果还是太大,缩小图片尺寸
-        if file_size > max_size:
-            width, height = img.size
-            while file_size > max_size and width > 100:
-                width = int(width * 0.8)
-                height = int(height * 0.8)
-                img = img.resize((width, height), Image.LANCZOS)
-                img.save(filepath, quality=85, optimize=True)
-                file_size = os.path.getsize(filepath)
-    except Exception as e:
-        app.logger.error(f"Avatar compression error: {e}")
-        # 如果压缩失败,尝试删除可能创建的文件
-        try:
-            if os.path.exists(filepath):
-                os.remove(filepath)
-        except:
-            pass
-        # 返回 False 表示压缩失败
-        return False
-
-    return True
-
-
-# 图片压缩和缩略图配置
-IMAGE_MAX_SIZE = 1024 * 1024  # 1MB 最大图片大小
-IMAGE_QUALITY = 85  # 压缩质量
-THUMBNAIL_SIZE = (800, 800)  # 缩略图最大尺寸
-
-
-def compress_image(input_path, max_size=IMAGE_MAX_SIZE):
-    """压缩图片,确保文件大小不超过max_size"""
-    try:
-        img = Image.open(input_path)
-
-        # 处理 EXIF 方向信息
-        exif = img._getexif()
-        if exif:
-            orientation = exif.get(274, 1)
-            if orientation == 3:
-                img = img.rotate(180, expand=True)
-            elif orientation == 6:
-                img = img.rotate(270, expand=True)
-            elif orientation == 8:
-                img = img.rotate(90, expand=True)
-
-        # 转换为 RGB(如果是 RGBA 或其他模式)
-        if img.mode in ('RGBA', 'P', 'LA'):
-            rgb_img = Image.new('RGB', img.size, (255, 255, 255))
-            rgb_img.paste(img, mask=img.split()[-1] if img.mode == 'RGBA' else None)
-            img = rgb_img
-
-        # 获取文件大小
-        file_size = os.path.getsize(input_path)
-
-        # 如果小于限制,直接返回
-        if file_size <= max_size:
-            # 但确保质量为85
-            img.save(input_path, quality=IMAGE_QUALITY, optimize=True)
-            return True
-
-        # 需要压缩 - 逐步降低质量
-        quality = 90
-        while file_size > max_size and quality >= 50:
-            img.save(input_path, quality=quality, optimize=True)
-            file_size = os.path.getsize(input_path)
-            quality -= 10
-
-        # 如果还是太大,缩小图片尺寸
-        if file_size > max_size:
-            width, height = img.size
-            scale = 1
-            while file_size > max_size and width > 800:
-                scale *= 0.8
-                width = int(width * 0.8)
-                height = int(height * 0.8)
-                img_resized = img.resize((width, height), Image.LANCZOS)
-                img_resized.save(input_path, quality=IMAGE_QUALITY, optimize=True)
-                file_size = os.path.getsize(input_path)
-
-        return True
-    except Exception as e:
-        app.logger.error(f"Image compression error: {e}")
-        return False
-
-
-def create_thumbnail(input_path, output_path, size=THUMBNAIL_SIZE):
-    """生成缩略图"""
-    try:
-        img = Image.open(input_path)
-
-        # 处理 EXIF 方向信息
-        exif = img._getexif()
-        if exif:
-            orientation = exif.get(274, 1)  # 274 is the EXIF tag for Orientation
-            if orientation == 3:
-                img = img.rotate(180, expand=True)
-            elif orientation == 6:
-                img = img.rotate(270, expand=True)
-            elif orientation == 8:
-                img = img.rotate(90, expand=True)
-
-        # 转换为 RGB
-        if img.mode in ('RGBA', 'P', 'LA'):
-            rgb_img = Image.new('RGB', img.size, (255, 255, 255))
-            rgb_img.paste(img, mask=img.split()[-1] if img.mode == 'RGBA' else None)
-            img = rgb_img
-
-        # 生成缩略图(保持宽高比)
-        img.thumbnail(size, Image.LANCZOS)
-
-        # 保存缩略图
-        img.save(output_path, quality=IMAGE_QUALITY, optimize=True)
-        return True
-    except Exception as e:
-        app.logger.error(f"Thumbnail creation error: {e}")
-        return False
-
-
-DATA_DIR = '/home/ubuntu/jlu8'
-TXL_FILE = os.path.join(DATA_DIR, 'txl.csv')
-LYB_FILE = os.path.join(DATA_DIR, 'lyb.csv')
-VIDEOS_FILE = os.path.join(DATA_DIR, 'videos.csv')
-PHOTOS_FILE = os.path.join(DATA_DIR, 'photos.csv')
-DELETED_FILE = os.path.join(DATA_DIR, 'deleted.csv')
 
 # 初始化数据库
 database.init_db()
@@ -483,42 +217,16 @@ def get_city_name(pinyin):
     return CITY_PINYIN_TO_NAME.get(pinyin.lower(), pinyin)
 
 
-def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in app.config['ALLOWED_EXTENSIONS']
-
-
-def get_province_name(pinyin):
-    """将拼音转换为省份名称"""
-    return PROVINCE_MAP.get(pinyin.lower(), pinyin)
-
-
-def get_student_coords(province_name):
-    """获取省份坐标"""
-    return PROVINCE_COORDS.get(province_name, (50, 50))
-
-
-def sanitize_input(text):
-    """简单的XSS过滤"""
-    if not text:
-        return ''
-    text = re.sub(r'<script[^>]*>.*?</script>', '', text, flags=re.IGNORECASE | re.DOTALL)
-    text = re.sub(r'<[^>]+>', '', text)
-    return text.strip()
-
-
+# allowed_file 已迁移到 utils.py
+# get_province_name 已迁移到 utils.py
+# get_student_coords 已迁移到 utils.py (get_province_name + PROVINCE_COORDS)
+# sanitize_input 已迁移到 utils.py
 # ==================== 登录保护 ====================
 
 # 公开路由（无需登录）
 PUBLIC_ROUTES = {'/login', '/api/captcha', '/api/check_user_login_password', '/api/verify', '/static'}
 
-def is_public_path(path):
-    """检查是否是公开路径"""
-    if path in PUBLIC_ROUTES:
-        return True
-    if path.startswith('/static/'):
-        return True
-    return False
-
+# is_public_path 已迁移到 utils.py
 @app.before_request
 def require_login():
     """未登录用户只能访问登录页"""
@@ -884,22 +592,8 @@ def txl():
     return render_template('txl.html', students=students, voice_shouts=voice_shouts, nearest_classmates=nearest_classmates, logged_in=is_logged)
 
 
-def haversine_distance(lat1, lon1, lat2, lon2):
-    """计算两点之间的直线距离(公里)"""
-    import math
-    R = 6371  # 地球半径(公里)
-    lat1_rad = math.radians(lat1)
-    lat2_rad = math.radians(lat2)
-    delta_lat = math.radians(lat2 - lat1)
-    delta_lon = math.radians(lon2 - lon1)
-
-    a = math.sin(delta_lat/2)**2 + math.cos(lat1_rad) * math.cos(lat2_rad) * math.sin(delta_lon/2)**2
-    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
-
-    return R * c
-
-
-# 动态加载地区数据 API
+# haversine_distance 已迁移到 utils.py
+# 地区数据加载已迁移到 location_data.py
 LOCATION_DATA = {
     'provinces': [],
     'cities': {},
@@ -1022,24 +716,9 @@ def codes_to_names():
     result = get_location_names(province_code, city_code, district_code)
     return jsonify({'success': True, 'data': result})
 
-@app.route('/api/location/provinces')
-def get_provinces():
-    """获取所有省份"""
-    return jsonify({'success': True, 'data': LOCATION_DATA['provinces']})
-
-@app.route('/api/location/cities/<province_code>')
-def get_cities(province_code):
-    """获取指定省份的所有城市"""
-    # 省份代码的前两位作为城市字典的键
-    prov_prefix = province_code[:2] if len(province_code) >= 2 else province_code
-    cities = LOCATION_DATA['cities'].get(prov_prefix, [])
-    return jsonify({'success': True, 'data': cities})
-
-@app.route('/api/location/districts/<city_code>')
-def get_districts(city_code):
-    """获取指定城市的所有区县"""
-    districts = LOCATION_DATA['districts'].get(city_code, [])
-    return jsonify({'success': True, 'data': districts})
+# @app.route('/api/location/provinces') -> migrated to blueprints/location
+# @app.route('/api/location/cities/<province_code>') -> migrated to blueprints/location
+# @app.route('/api/location/districts/<city_code>') -> migrated to blueprints/location
 
 @app.route('/api/location/lookup')
 def lookup_location():
@@ -1524,17 +1203,7 @@ def ai_chat():
 
 # ==================== API接口 ====================
 
-@app.route('/api/captcha')
-def generate_captcha():
-    """生成数学验证码"""
-    import random
-    a = random.randint(1, 9)
-    b = random.randint(1, 9)
-    captcha_text = f"{a}+{b}="
-    result = str(a + b)
-    session['captcha'] = result
-    session['captcha_time'] = datetime.now().isoformat()
-    return jsonify({'captcha': captcha_text})
+# @app.route('/api/captcha') -> migrated to blueprints/news
 
 @app.route('/api/verify', methods=['POST'])
 def verify_student():
@@ -1577,7 +1246,7 @@ def verify_student():
             session.pop('captcha', None)
             session.pop('captcha_time', None)
             # 记录登录日志
-            ip = get_real_ip()
+            ip = get_real_ip(request)
             ua = request.headers.get('User-Agent', '')[:200]
             database.write_login_log(name, ip, ua)
             return jsonify({'success': True, 'message': '验证成功'})
@@ -3021,188 +2690,9 @@ def delete_login_logs():
     return jsonify({'success': True, 'message': f'已删除 {deleted} 条记录'})
 
 
-# ==================== 新闻模块 ====================
-
-@app.route('/api/news')
-def get_news():
-    """获取新闻列表(只排除校友会内容,按日期排序)"""
-    # 检查缓存
-    cached = _get_cached_news()
-    if cached is not None:
-        return jsonify({'success': True, 'news': cached})
-
-    from datetime import datetime
-
-    news = database.get_news(100)
-
-    # 过滤掉旧新闻,只展示今年的新闻
-    current_year = datetime.now().year
-    news = [n for n in news if int(n['published_time'][:4]) >= current_year]
-
-    # 只排除校友会相关内容(留给校友会tab展示)
-    alumni_keywords = ['校友会', '校友总会', '北京校友会', '上海校友会', '深圳校友会', '广州校友会',
-                      '成都校友会', '武汉校友会', '杭州校友会', '北美校友会', '欧洲校友会', '澳大利亚校友会',
-                      '校友大会', '校友联谊', '校友活动', '校友交流', '校友企业', '校友返校']
-
-    news = [n for n in news if not any(kw in (n.get('title', '') + ' ' + n.get('content', '')).lower() for kw in alumni_keywords)]
-
-    # 按日期+图片排序(最新优先,有图片的放前面)
-    def news_sort_key(n):
-        pub_time = n.get('published_time', '')
-        if pub_time:
-            try:
-                date = datetime.strptime(pub_time[:10], '%Y-%m-%d')
-            except:
-                date = datetime.min
-        else:
-            date = datetime.min
-        has_image = 1 if n.get('image_url') else 0
-        return (date, has_image)
-
-    news.sort(key=news_sort_key, reverse=True)
-    news = news[:50]  # 最多返回50条
-
-    # 缓存结果
-    _set_cached_news(news)
-
-    return jsonify({'success': True, 'news': news})
-
-
-@app.route('/api/alumni')
-def get_alumni():
-    """获取校友会信息和相关新闻"""
-    # 检查缓存
-    cached = _get_cached_alumni()
-    if cached is not None:
-        return jsonify({'success': True, 'alumni': cached})
-
-    # 预定义各地校友会基本信息
-    alumni_associations = [
-        {
-            'name': '吉林大学校友总会',
-            'location': '长春',
-            'contact': '0431-85166001',
-            'wechat': 'JLU_alumni',
-            'email': 'xyh@jlu.edu.cn',
-            'join_method': '联系校友总会咨询',
-            'description': '吉林大学官方校友组织,统筹各地校友会工作',
-            'type': 'association'
-        },
-        {
-            'name': '吉林大学北京校友会',
-            'location': '北京',
-            'contact': '微信群:BJ_JLUers',
-            'wechat': 'jlu_bj',
-            'email': 'jlu_bj@126.com',
-            'join_method': '扫码加入北京校友群',
-            'description': '京城吉大人的温馨家园,定期举办联谊活动',
-            'type': 'association'
-        },
-        {
-            'name': '吉林大学上海校友会',
-            'location': '上海',
-            'contact': '联系人:王师兄',
-            'wechat': 'sh_jlu',
-            'email': 'shjlu@163.com',
-            'join_method': '联系负责人邀请入群',
-            'description': '海纳百川,沪上吉大人交流合作的平台',
-            'type': 'association'
-        },
-        {
-            'name': '吉林大学深圳校友会',
-            'location': '深圳',
-            'contact': '联系人:李师兄',
-            'wechat': 'sz_jlu8',
-            'email': 'jlu_sz@qq.com',
-            'join_method': '扫码加入深圳校友群',
-            'description': '创新之城,吉大人共谋发展的桥梁',
-            'type': 'association'
-        },
-        {
-            'name': '吉林大学广州校友会',
-            'location': '广州',
-            'contact': '联系人:张师姐',
-            'wechat': 'gz_jlu',
-            'join_method': '联系负责人邀请入群',
-            'description': '花城吉大人,资源共享事业互助',
-            'type': 'association'
-        },
-        {
-            'name': '吉林大学北美校友会',
-            'location': '海外',
-            'contact': '联系人:刘师兄',
-            'wechat': 'namerica_jlu',
-            'email': 'jlu.us@gmail.com',
-            'join_method': '邮件联系或微信群',
-            'description': '跨越重洋,海外学子的精神家园',
-            'type': 'association'
-        },
-        {
-            'name': '吉林大学成都校友会',
-            'location': '成都',
-            'contact': '联系人:赵师兄',
-            'wechat': 'cd_jlu',
-            'join_method': '扫码加入成都校友群',
-            'description': '天府之国,吉大人的巴蜀情缘',
-            'type': 'association'
-        },
-        {
-            'name': '吉林大学武汉校友会',
-            'location': '武汉',
-            'contact': '联系人:陈师兄',
-            'wechat': 'wh_jlu',
-            'email': 'jlu_wh@126.com',
-            'join_method': '联系负责人邀请入群',
-            'description': '江城吉大人,九省通衢共发展',
-            'type': 'association'
-        },
-    ]
-
-    # 获取校友会相关新闻
-    news = database.get_news(100)
-    alumni_keywords = ['校友', '校友会', '校友活动', '校友交流', '校友企业', '校友返校']
-    alumni_news = []
-    for n in news:
-        title = n.get('title', '').lower()
-        content = n.get('content', '').lower()
-        text = title + ' ' + content
-        if any(kw in text for kw in alumni_keywords):
-            n['type'] = 'news'
-            alumni_news.append(n)
-
-    # 按内容类型排序
-    def alumni_priority(n):
-        text = (n.get('title', '') + ' ' + n.get('content', '')).lower()
-        score = 0
-        for kw in ['北京校友会', '上海校友会', '深圳校友会', '广州校友会', '北美校友会', '成都校友会', '武汉校友会', '欧洲校友会', '澳大利亚校友会']:
-            if kw in text:
-                score += 10
-        for kw in ['校友大会', '校友联谊', '校友讲座', '校友走访', '校友活动', '校友交流', '校友企业']:
-            if kw in text:
-                score += 5
-        return score
-    alumni_news.sort(key=alumni_priority, reverse=True)
-
-    # 提取地点信息
-    def extract_location(n):
-        title = n.get('title', '')
-        content = n.get('content', '')[:200]
-        locations = ['北京', '上海', '深圳', '广州', '成都', '武汉', '杭州', '南京', '西安', '天津', '大连', '青岛', '厦门', '长沙', '郑州', '济南', '合肥', '昆明', '重庆', '哈尔滨', '长春', '沈阳', '北美', '欧洲', '澳大利亚', '海外']
-        for loc in locations:
-            if loc in title or loc in content:
-                return loc
-        return ''
-
-    for n in alumni_news:
-        n['location'] = extract_location(n)
-
-    # 合并:校友会信息 + 新闻
-    result = alumni_associations + alumni_news[:15]
-
-    # 缓存结果
-    _set_cached_alumni(result)
-
-    return jsonify({'success': True, 'alumni': result})
+# ==================== 新闻模块 (已迁移到 blueprints/news) ====================
+# @app.route('/api/news') -> migrated to blueprints/news
+# @app.route('/api/alumni') -> migrated to blueprints/news
 
 
 @app.route('/api/admin/news/crawl', methods=['POST'])
