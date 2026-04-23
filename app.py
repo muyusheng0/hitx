@@ -46,6 +46,11 @@ from blueprints.location import location_bp
 from blueprints.pages import pages_bp
 from blueprints.auth import auth_bp
 from blueprints.txl import txl_bp
+from blueprints.activity import activity_bp
+from blueprints.recycle import recycle_bp
+from blueprints.notification import notification_bp
+from blueprints.voice import voice_bp
+from blueprints.message import message_bp
 
 app = Flask(__name__)
 app.register_blueprint(wx_bp)
@@ -54,6 +59,11 @@ app.register_blueprint(news_bp)
 app.register_blueprint(location_bp)
 app.register_blueprint(pages_bp)
 app.register_blueprint(txl_bp)
+app.register_blueprint(activity_bp)
+app.register_blueprint(recycle_bp)
+app.register_blueprint(notification_bp)
+app.register_blueprint(voice_bp)
+app.register_blueprint(message_bp)
 app.secret_key = SECRET_KEY
 app.config['MAX_CONTENT_LENGTH'] = MAX_CONTENT_LENGTH
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
@@ -1098,41 +1108,6 @@ def mark_activities_viewed():
 # @app.route('/api/logout') -> migrated to blueprints/auth
 
 
-@app.route('/api/notifications')
-def get_notifications():
-    """获取当前用户通知列表"""
-    if 'verified_student' not in session:
-        return jsonify({'success': False, 'message': '请先登录'})
-    nickname = session['verified_student']['name']
-    notifications = database.get_notifications(nickname)
-    return jsonify({'success': True, 'notifications': notifications})
-
-
-@app.route('/api/notifications/count')
-def get_notification_count():
-    """获取未读通知数量"""
-    if 'verified_student' not in session:
-        return jsonify({'success': False, 'message': '请先登录'})
-    nickname = session['verified_student']['name']
-    count = database.get_unread_notification_count(nickname)
-    return jsonify({'success': True, 'count': count})
-
-
-@app.route('/api/notifications/mark_read', methods=['POST'])
-def mark_notifications_read():
-    """标记通知为已读"""
-    if 'verified_student' not in session:
-        return jsonify({'success': False, 'message': '请先登录'})
-    data = request.get_json()
-    nickname = session['verified_student']['name']
-    notification_id = data.get('id')
-    if notification_id:
-        database.mark_notification_read(notification_id, nickname)
-    else:
-        database.mark_all_notifications_read(nickname)
-    return jsonify({'success': True})
-
-
 @app.route('/api/update_profile', methods=['POST'])
 def update_profile():
     """更新个人信息"""
@@ -1236,50 +1211,6 @@ def add_message():
 
     # 记录活动日志
     database.write_activity(nickname, 'message', content[:50])
-
-    return jsonify({'success': True, 'message': message})
-
-
-@app.route('/api/add_voice_message', methods=['POST'])
-def add_voice_message():
-    """添加语音留言"""
-    if 'verified_student' not in session:
-        return jsonify({'success': False, 'message': '请先登录'})
-
-    if 'file' not in request.files:
-        return jsonify({'success': False, 'message': '没有音频文件'})
-
-    file = request.files['file']
-    if file.filename == '':
-        return jsonify({'success': False, 'message': '没有选择文件'})
-
-    nickname = session['verified_student']['name']
-
-    # 保存音频文件
-    ext = file.filename.rsplit('.', 1)[1].lower() if '.' in file.filename else 'wav'
-    filename = f"{uuid.uuid4().hex}.{ext}"
-    voice_dir = os.path.join(DATA_DIR, 'static/voice/lyb')
-    os.makedirs(voice_dir, exist_ok=True)
-    filepath = os.path.join(voice_dir, filename)
-    file.save(filepath)
-
-    voice_url = f'/static/voice/lyb/{filename}'
-
-    message = {
-        'id': database.get_next_lyb_id(),
-        'nickname': nickname,
-        'content': '[语音留言]',
-        'time': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-        'image': '',
-        'voice': voice_url
-    }
-
-    messages = database.read_lyb()
-    messages.append(message)
-    database.write_lyb(messages)
-
-    # 记录活动日志
-    database.write_activity(nickname, 'message', '发表了语音留言')
 
     return jsonify({'success': True, 'message': message})
 
@@ -1998,144 +1929,6 @@ def delete_photo():
         return jsonify({'success': True, 'message': '删除成功'})
 
     return jsonify({'success': False, 'message': '无效的照片ID或文件名'})
-
-
-@app.route('/api/get_deleted')
-def get_deleted():
-    """获取当前用户的已删除项目,管理员可以看到所有删除记录"""
-    if 'verified_student' not in session:
-        return jsonify({'success': False, 'message': '请先登录'})
-
-    current_name = session['verified_student']['name']
-    is_admin_user = is_admin(current_name)
-
-    deleted_items = database.read_deleted()
-    # 管理员可以看到所有删除记录,其他人只能看到自己的
-    if is_admin_user:
-        user_items = deleted_items
-    else:
-        user_items = [item for item in deleted_items if item['owner'] == current_name]
-
-    # 按删除时间倒序
-    user_items.sort(key=lambda x: x['deleted_time'], reverse=True)
-
-    # 分页:每页3条
-    page = request.args.get('page', 1, type=int)
-    per_page = 3
-    total = len(user_items)
-    start = (page - 1) * per_page
-    end = start + per_page
-    page_items = user_items[start:end]
-
-    return jsonify({
-        'success': True,
-        'items': page_items,
-        'total': total,
-        'page': page,
-        'per_page': per_page,
-        'total_pages': (total + per_page - 1) // per_page
-    })
-
-
-@app.route('/api/restore_deleted', methods=['POST'])
-def restore_deleted():
-    """恢复已删除的项目"""
-    if 'verified_student' not in session:
-        return jsonify({'success': False, 'message': '请先登录'})
-
-    data = request.get_json()
-    deleted_id = data.get('id')
-
-    if not deleted_id:
-        return jsonify({'success': False, 'message': '无效的项目ID'})
-
-    current_name = session['verified_student']['name']
-    is_muyusheng = current_name in ADMIN_USERS
-    deleted_items = database.read_deleted()
-
-    for i, item in enumerate(deleted_items):
-        if str(item['id']) == str(deleted_id):
-            # 检查权限
-            if not is_muyusheng and item['owner'] != current_name:
-                return jsonify({'success': False, 'message': '只能恢复自己的删除记录'})
-
-            item_type = item['type']
-            restored = False
-
-            # 根据类型恢复
-            if item_type == 'message':
-                # 恢复留言
-                messages = database.read_lyb()
-                messages.append({
-                    'id': database.get_next_lyb_id(),
-                    'nickname': item['owner'],
-                    'content': item['content'],
-                    'time': item['time'],
-                    'image': item.get('extra', '')
-                })
-                database.write_lyb(messages)
-                restored = True
-            elif item_type == 'video':
-                # 恢复视频
-                videos = database.read_videos()
-                videos.append({
-                    'id': database.get_next_video_id(),
-                    'title': item['content'],
-                    'url': item.get('extra', ''),
-                    'cover': '',
-                    'owner': item['owner']
-                })
-                database.write_videos(videos)
-                restored = True
-            elif item_type == 'photo':
-                # 恢复照片记录
-                photos = database.read_photos()
-                photos.append({
-                    'id': database.get_next_photo_id(),
-                    'filename': item.get('extra', ''),
-                    'owner': item['owner'],
-                    'time': item.get('time', datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
-                })
-                database.write_photos(photos)
-                restored = True
-
-            if restored:
-                # 从删除记录中移除
-                deleted_items.pop(i)
-                database.write_deleted(deleted_items)
-                return jsonify({'success': True, 'message': '恢复成功'})
-
-    return jsonify({'success': False, 'message': '项目不存在'})
-
-
-@app.route('/api/permanent_delete', methods=['POST'])
-def permanent_delete():
-    """彻底删除项目"""
-    if 'verified_student' not in session:
-        return jsonify({'success': False, 'message': '请先登录'})
-
-    data = request.get_json()
-    deleted_id = data.get('id')
-
-    if not deleted_id:
-        return jsonify({'success': False, 'message': '无效的项目ID'})
-
-    current_name = session['verified_student']['name']
-    is_muyusheng = current_name in ADMIN_USERS
-    deleted_items = database.read_deleted()
-
-    for i, item in enumerate(deleted_items):
-        if str(item['id']) == str(deleted_id):
-            # 检查权限
-            if not is_muyusheng and item['owner'] != current_name:
-                return jsonify({'success': False, 'message': '只能删除自己的删除记录'})
-
-            # 从删除记录中彻底删除
-            deleted_items.pop(i)
-            database.write_deleted(deleted_items)
-            return jsonify({'success': True, 'message': '彻底删除成功'})
-
-    return jsonify({'success': False, 'message': '项目不存在'})
 
 
 @app.route('/api/delete_activity', methods=['POST'])
