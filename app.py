@@ -1057,54 +1057,6 @@ def public_stats():
 # @app.route('/api/super_admin/set_admin') -> migrated to blueprints/auth
 
 
-@app.route('/api/get_unread_activity_count')
-def get_unread_activity_count():
-    """获取未读活动数量"""
-    activities = get_activities()
-    nickname = session.get('verified_student', {}).get('name', '') if 'verified_student' in session else ''
-    if not nickname:
-        return jsonify({'success': True, 'count': 0})
-    count = database.get_unread_activity_count(nickname, activities)
-    return jsonify({'success': True, 'count': count})
-
-
-@app.route('/api/get_activities')
-def api_get_activities():
-    """获取所有动态(用于管理,分页)"""
-    if 'verified_student' not in session:
-        return jsonify({'success': False, 'message': '请先登录'})
-
-    page = int(request.args.get('page', 1))
-    per_page = 3
-    max_items = 30  # 最多显示30条
-    activities = get_activities()[:max_items]
-
-    total = len(activities)
-    total_pages = (total + per_page - 1) // per_page
-    start = (page - 1) * per_page
-    end = start + per_page
-
-    return jsonify({
-        'success': True,
-        'activities': activities[start:end],
-        'page': page,
-        'per_page': per_page,
-        'total': total,
-        'total_pages': total_pages
-    })
-
-
-@app.route('/api/mark_activities_viewed', methods=['POST'])
-def mark_activities_viewed():
-    """标记活动为已浏览"""
-    if 'verified_student' not in session:
-        return jsonify({'success': False, 'message': '请先登录'})
-    nickname = session['verified_student']['name']
-    activities = get_activities()
-    database.mark_activities_viewed(nickname, activities)
-    return jsonify({'success': True})
-
-
 # @app.route('/api/logout') -> migrated to blueprints/auth
 
 
@@ -1576,95 +1528,6 @@ def upload_image():
     return jsonify({'success': False, 'message': '不支持的文件类型'})
 
 
-@app.route('/api/upload_voice_shout', methods=['POST'])
-def upload_voice_shout():
-    """上传喊话音频"""
-    if 'verified_student' not in session:
-        return jsonify({'success': False, 'message': '请先验证身份'})
-
-    if 'file' not in request.files:
-        return jsonify({'success': False, 'message': '没有音频文件'})
-
-    if 'to_name' not in request.form:
-        return jsonify({'success': False, 'message': '缺少目标用户'})
-
-    file = request.files['file']
-    if file.filename == '':
-        return jsonify({'success': False, 'message': '没有选择文件'})
-
-    from_name = session['verified_student']['name']
-    to_name = request.form['to_name']
-
-    # 不能对自己喊话
-    if from_name == to_name:
-        return jsonify({'success': False, 'message': '不能对自己喊话'})
-
-    # 保存音频文件
-    ext = file.filename.rsplit('.', 1)[1].lower() if '.' in file.filename else 'wav'
-    filename = f"{uuid.uuid4().hex}.{ext}"
-    voice_dir = os.path.join(DATA_DIR, 'static/voice')
-    os.makedirs(voice_dir, exist_ok=True)
-    filepath = os.path.join(voice_dir, filename)
-    file.save(filepath)
-
-    # 记录到数据库
-    audio_url = f'/static/voice/{filename}'
-    shout_id = database.add_voice_shout(from_name, to_name, audio_url)
-    database.write_activity(from_name, 'voice_shout', f'对{to_name}喊了一段话')
-
-    # 发送通知
-    database.create_notification(
-        recipient=to_name,
-        sender=from_name,
-        notif_type='voice_shout',
-        ref_id=shout_id,
-        content=f'{from_name}对你喊了一段话,快去听听吧!',
-        target_name=to_name
-    )
-
-    return jsonify({
-        'success': True,
-        'message': '喊话成功',
-        'id': shout_id,
-        'url': audio_url
-    })
-
-
-@app.route('/api/get_voice_shouts/<target_name>')
-def get_voice_shouts(target_name):
-    """获取某人的喊话"""
-    shouts = database.get_voice_shouts_by_target(target_name)
-    return jsonify({'success': True, 'shouts': shouts})
-
-
-@app.route('/api/voice_shout/delete', methods=['POST'])
-def delete_voice_shout():
-    """删除喊话"""
-    if 'verified_student' not in session:
-        return jsonify({'success': False, 'message': '请先验证身份'})
-    data = request.get_json()
-    shout_id = data.get('id')
-    if not shout_id:
-        return jsonify({'success': False, 'message': '缺少喊话ID'})
-    user_name = session['verified_student']['name']
-    success, msg = database.delete_voice_shout(shout_id, user_name)
-    return jsonify({'success': success, 'message': msg})
-
-
-@app.route('/api/voice_shout/restore', methods=['POST'])
-def restore_voice_shout():
-    """恢复喊话"""
-    if 'verified_student' not in session:
-        return jsonify({'success': False, 'message': '请先验证身份'})
-    data = request.get_json()
-    shout_id = data.get('id')
-    if not shout_id:
-        return jsonify({'success': False, 'message': '缺少喊话ID'})
-    user_name = session['verified_student']['name']
-    success, msg = database.restore_voice_shout(shout_id, user_name)
-    return jsonify({'success': success, 'message': msg})
-
-
 @app.route('/api/add_video', methods=['POST'])
 def add_video():
     """添加视频链接"""
@@ -1929,37 +1792,6 @@ def delete_photo():
         return jsonify({'success': True, 'message': '删除成功'})
 
     return jsonify({'success': False, 'message': '无效的照片ID或文件名'})
-
-
-@app.route('/api/delete_activity', methods=['POST'])
-def delete_activity():
-    """删除动态(仅管理员)"""
-    if 'verified_student' not in session:
-        return jsonify({'success': False, 'message': '请先登录'})
-
-    current_name = session['verified_student']['name']
-
-    # 只有管理员可以删除动态
-    if not is_admin(current_name):
-        return jsonify({'success': False, 'message': '只有管理员可以删除动态'})
-
-    data = request.get_json()
-    activity_time = data.get('time')
-    activity_actor = data.get('actor')
-    activity_type = data.get('type', 'message')
-    activity_content = data.get('original_content') or data.get('content')
-
-    if not activity_time or not activity_actor:
-        return jsonify({'success': False, 'message': '参数不完整'})
-
-    try:
-        # 如果是留言动态,同时删除messages表中的记录
-        if activity_type == 'message':
-            database.delete_message_by_time_nickname(activity_time, activity_actor)
-        database.delete_activity(activity_time, activity_actor, activity_content)
-        return jsonify({'success': True, 'message': '删除成功'})
-    except Exception as e:
-        return jsonify({'success': False, 'message': f'删除失败: {str(e)}'})
 
 
 @app.route('/api/get_login_logs')
